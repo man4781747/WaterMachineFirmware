@@ -22,10 +22,11 @@ void setup() {
 
   Machine_Ctrl.INIT_SPIFFS_config();
   
-  ESP_LOGI(LOG_TAG,"Machine name : %s", Machine_Ctrl.MachineInfo.device_no.c_str());
+  ESP_LOGI(LOG_TAG,"Device Info : %s", Machine_Ctrl.MachineInfo.GetDeviceInfoString().c_str());
 
   Machine_Ctrl.BackendServer.ConnectToWifi("IDWATER","56651588");
   Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
+  ESP_LOGI(LOG_TAG,"Net Info : %s", Machine_Ctrl.BackendServer.GetWifiInfoString().c_str());
   Machine_Ctrl.BackendServer.ServerStart();
 
   Machine_Ctrl.poolsCtrl.addNewPool("pool-1");
@@ -40,25 +41,15 @@ void setup() {
   Machine_Ctrl.motorCtrl.AddNewMotor(12);
   Machine_Ctrl.motorCtrl.AddNewMotor(11);
 
-  ESP_LOGI(LOG_TAG,"Machine JSON : %s", Machine_Ctrl.GetDeviceInfosString().c_str());
+  Machine_Ctrl.Build_SwitchMotorScan();
+
+  // ESP_LOGI(LOG_TAG,"Machine JSON : %s", Machine_Ctrl.GetDeviceInfosString().c_str());
 }
 
 void loop() {
   // https://www.rapidtables.com/convert/number/binary-to-hex.html
+
   // Machine_Ctrl.PumpPoolWaterToTempTank();
-  
-  // Machine_Ctrl.ChangeMotorStatus(MOTOR_STATUS::ALL_CLOSE);
-  // delay(2000);
-  // Machine_Ctrl.ChangeMotorStatus(MOTOR_STATUS::GET_TEMP_TANK);
-  // delay(2000);
-  // Machine_Ctrl.ChangeMotorStatus(MOTOR_STATUS::GET_REAGENT_1);
-  // delay(2000);
-  // Machine_Ctrl.ChangeMotorStatus(MOTOR_STATUS::GET_REAGENT_2);
-  // delay(2000);
-  // Machine_Ctrl.ChangeMotorStatus(MOTOR_STATUS::GET_REAGENT_3);
-  // delay(2000);
-  // Machine_Ctrl.ChangeMotorStatus(MOTOR_STATUS::GET_REAGENT_4);
-  // BackendServer.UploadNewData();
-  delay(60000);
+  delay(10000);
 }
 

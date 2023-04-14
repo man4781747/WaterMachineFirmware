@@ -20,7 +20,11 @@ void SPIFFS_Ctrl::INIT_SPIFFS()
   }
 }
 
-
+/**
+ * @brief 獲得儀器設定
+ * 
+ * @return Machine_Info 
+ */
 Machine_Info SPIFFS_Ctrl::LoadMachineSetting()
 {
   Machine_Info MachineInfo;
@@ -30,7 +34,7 @@ Machine_Info SPIFFS_Ctrl::LoadMachineSetting()
     ESP_LOGW(LOG_TAG_SPIFFS, "Can't open /config/base_config.json in SPIFFS ! Rebuild it !");
     MachineInfo.device_no = "Wxxxxx";
     File file = SPIFFS.open("/config/base_config.json", FILE_WRITE);
-    file.print(MachineInfo.GetInfoJSONString());
+    file.print(MachineInfo.GetDeviceInfoString());
   } else {
     File file = SPIFFS.open("/config/base_config.json", FILE_READ);
     StaticJsonDocument<200> json_doc;
@@ -39,24 +43,6 @@ Machine_Info SPIFFS_Ctrl::LoadMachineSetting()
   }
   return MachineInfo;
 }
-
-// String SPIFFS_Ctrl::GetMotorSetting()
-// {
-  // if (!SPIFFS.exists("/config")) {
-  //   SPIFFS.mkdir("/config");
-  // }
-  // if (!SPIFFS.exists("/config/motor_config.json")) {
-  //   ESP_LOGW(LOG_TAG_SPIFFS, "Can't open /config/motor_config.json in SPIFFS ! Rebuild it !");
-  //   MachineInfo.device_no = "Wxxxxx";
-  //   File file = SPIFFS.open("/config/motor_config.json", FILE_WRITE);
-  //   file.print(MachineInfo.GetInfoJSONString());
-  // } else {
-  //   File file = SPIFFS.open("/config/motor_config.json", FILE_READ);
-  //   StaticJsonDocument<200> json_doc;
-  //   deserializeJson(json_doc, file.readString());
-  //   MachineInfo.LoadInfoByJSONItem(json_doc);
-  // }
-// }
 
 /**
  * @brief 如果不存在，建立檔案

@@ -82,6 +82,17 @@ class SMachine_Ctrl
     void INIT_SPIFFS_config();
 
 
+    ////////////////////////////////////////////////////
+    // For 不間斷監聽
+    ////////////////////////////////////////////////////
+
+    void Build_SwitchMotorScan();
+
+
+    ////////////////////////////////////////////////////
+    // For 互動相關
+    ////////////////////////////////////////////////////
+
     DynamicJsonDocument GetDeviceInfos();
     String GetDeviceInfosString();
 
@@ -89,7 +100,6 @@ class SMachine_Ctrl
     // For 基礎行為
     ////////////////////////////////////////////////////
 
-    void ChangeMotorStatus(MOTOR_STATUS StatusCode);
 
     ////////////////////////////////////////////////////
     // For 組合行為
@@ -98,6 +108,7 @@ class SMachine_Ctrl
     void PumpPoolWaterToTempTank();
     void PreparePumpTempTankWater();
 
+
     ////////////////////////////////////////////////////
     // For 測試
     ////////////////////////////////////////////////////
@@ -105,11 +116,24 @@ class SMachine_Ctrl
     void UpdateAllPoolsDataRandom();
 
 
+    ////////////////////////////////////////////////////
+    // 公用參數
+    ////////////////////////////////////////////////////
+
     Motor_Ctrl motorCtrl;
     SPOOLS_Ctrl poolsCtrl;
     CWIFI_Ctrler BackendServer;
     SPIFFS_Ctrl spiffs;
     Machine_Info MachineInfo;
+
+
+    ////////////////////////////////////////////////////
+    // 捨棄使用，純紀錄
+    ////////////////////////////////////////////////////
+
+    void ChangeMotorStatus(MOTOR_STATUS StatusCode, char* TaskName, char* NextTaskName="", bool waitForTigger=false);
+
+
   private:
 };
 extern SMachine_Ctrl Machine_Ctrl;

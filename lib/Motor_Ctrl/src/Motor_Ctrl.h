@@ -17,6 +17,17 @@ class Single_Motor
 };
 
 
+enum MotorCtrlSteps {
+  Idel,
+  Active,
+  Running
+};
+
+enum MotorSwitchStatus : int {
+  CLOSE = 0,
+  OPEN = 180
+};
+
 class Motor_Ctrl
 {
   public:
@@ -25,6 +36,7 @@ class Motor_Ctrl
     void AddNewMotor(int channelIndex_, String motorName="", String descrption="");
     void SetMotorTo(int channelIndex_, int angle);
     u_int32_t motorsStatusCode = 0;
+    int active = MotorCtrlSteps::Idel;
     Single_Motor motorsArray[16];
   private:
     Adafruit_PWMServoDriver pwm;
