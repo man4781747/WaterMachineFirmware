@@ -1,11 +1,11 @@
 #include "Motor_Ctrl.h"
 
-#include <ArduinoJson.h>
-#include <ESP32Servo.h>
-#include <Adafruit_PWMServoDriver.h>
 #include <vector>
 #include <esp_system.h>
-#include <Wire.h>
+
+#include <ArduinoJson.h>
+#include <Adafruit_PWMServoDriver.h>
+
 
 #define FREQUENCY 50;
 
@@ -50,7 +50,7 @@ void Motor_Ctrl::AddNewMotor(int channelIndex_, String motorName_, String descrp
 void Motor_Ctrl::SetMotorTo(int channelIndex_, int angle)
 {
   ESP_LOGI("Motor","Motor %02d to: %03d", channelIndex_, angle);
-  int pulse_wide = map(angle, 0, 180, MIN_PULSE_WIDTH, MAX_PULSE_WIDTH);
+  int pulse_wide = map(angle, 0, 180, 500, 2500);
   int pulse_width = int((float)pulse_wide / 1000000.*50.*4096.);
   ESP_LOGI("Motor","pulse_width %d", pulse_width);
   pwm.setPWM(channelIndex_, 0, pulse_width);

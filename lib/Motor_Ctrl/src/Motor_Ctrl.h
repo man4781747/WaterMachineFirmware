@@ -3,11 +3,7 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
-#include <ESP32Servo.h>
 #include <Adafruit_PWMServoDriver.h>
-#include <vector>
-
-
 
 class Single_Motor
 {

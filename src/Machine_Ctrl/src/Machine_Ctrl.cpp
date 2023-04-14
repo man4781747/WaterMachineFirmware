@@ -4,15 +4,14 @@
 #include <ESP32Servo.h>
 
 #include <Pools_Ctrl.h>
-#include "../../Machine_Base_info/src/Machine_Base_info.h"
+#include <Machine_Base_info.h>
 #include <Motor_Ctrl.h>
 
 
 // 伺服馬達相關
-// Motor_Ctrl motorCtrl;
 
-extern Machine_Info MachineInfo;
-extern SMachine_Ctrl Machine_Ctrl;
+// extern Machine_Info MachineInfo;
+// extern SMachine_Ctrl Machine_Ctrl;
 
 TaskHandle_t TASK_PumpPoolWaterToTempTank = NULL;
 TaskHandle_t TASK_ChangeMotorStatus = NULL;
@@ -95,7 +94,7 @@ void Task_ChangeMotorStatus(void * parameter)
 };
 void SMachine_Ctrl::ChangeMotorStatus(MOTOR_STATUS StatusCode)
 {
-  Machine_Ctrl.motorCtrl.motorsStatusCode = StatusCode;
+  motorCtrl.motorsStatusCode = StatusCode;
   TaskHandle_t myTaskHandle;
   myTaskHandle = xTaskGetHandle("TCgMotorStatus");
   if (myTaskHandle == NULL) {

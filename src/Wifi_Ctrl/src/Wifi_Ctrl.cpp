@@ -8,22 +8,16 @@
 #include <ESP32Servo.h>
 #include <NTPClient.h>
 
-#include "../../Machine_Base_info/src/Machine_Base_info.h"
-#include "../../Motor_Ctrl/src/Motor_Ctrl.h"
 #include "../../Machine_Ctrl/src/Machine_Ctrl.h"
+
+extern SMachine_Ctrl Machine_Ctrl;
 
 AsyncWebServer asyncServer(80);
 AsyncWebSocket ws("/ws");
-
 const long  gmtOffset_sec = 3600*8; // GMT+8
 const int   daylightOffset_sec = 0; // DST+0
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", gmtOffset_sec, daylightOffset_sec);
-
-
-extern Machine_Info MachineInfo;
-extern Motor_Ctrl motorCtrl;
-extern SMachine_Ctrl Machine_Ctrl;
 const char* LOG_TAG_WIFI = "WIFI";
 
 void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
