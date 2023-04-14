@@ -7,18 +7,20 @@
 #include <Machine_Base_info.h>
 #include <Motor_Ctrl.h>
 
-
-// 伺服馬達相關
-
-// extern Machine_Info MachineInfo;
-// extern SMachine_Ctrl Machine_Ctrl;
-
 TaskHandle_t TASK_PumpPoolWaterToTempTank = NULL;
 TaskHandle_t TASK_ChangeMotorStatus = NULL;
 
+void SMachine_Ctrl::INIT_SPIFFS_config()
+{
+  spiffs.INIT_SPIFFS();
+  MachineInfo = spiffs.LoadMachineSetting();
+}
+
+
+
 DynamicJsonDocument SMachine_Ctrl::GetDeviceInfos()
 {
-  DynamicJsonDocument json_doc(6000);
+  DynamicJsonDocument json_doc(10000);
   JsonVariant json_obj = json_doc.to<JsonVariant>();
   json_doc["device_no"].set(MachineInfo.device_no);
   json_doc["FIRMWARE_VERSION"].set(MachineInfo.FIRMWARE_VERSION);
@@ -29,16 +31,14 @@ DynamicJsonDocument SMachine_Ctrl::GetDeviceInfos()
 
 String SMachine_Ctrl::GetDeviceInfosString()
 {
-  void* json_output = malloc(6000);
-  DynamicJsonDocument json_doc(6000);
-  JsonVariant json_obj = json_doc.to<JsonVariant>();
-  json_doc["device_no"].set(MachineInfo.device_no);
-  json_doc["FIRMWARE_VERSION"].set(MachineInfo.FIRMWARE_VERSION);
-  json_doc["mode"].set("Mode_Slave");
-  json_doc["parameter"].set(poolsCtrl.GetAllPoolsBaseInfo());
-  serializeJsonPretty(json_doc, json_output, 6000);
+  void* json_output = malloc(10000);
+  DynamicJsonDocument json_doc = GetDeviceInfos();
+  serializeJsonPretty(json_doc, json_output, 10000);
   String returnString = String((char*)json_output);
   free(json_output);
+  json_doc.clear();
+  // json_doc.shrinkToFit();
+  // delete &json_doc;
   return returnString;
 };
 
@@ -47,7 +47,6 @@ void SMachine_Ctrl::UpdateAllPoolsDataRandom()
   poolsCtrl.UpdateAllPoolsDataRandom();
 };
 
-
 void Task_PumpPoolWaterToTempTank(void * parameter)
 {
   ESP_LOGI("Task_PumpPoolWaterToTempTank","PumpPoolWaterToTempTank START");
@@ -55,6 +54,7 @@ void Task_PumpPoolWaterToTempTank(void * parameter)
   ESP_LOGI("Task_PumpPoolWaterToTempTank","PumpPoolWaterToTempTank END");
   vTaskDelete(NULL);
 };
+
 void SMachine_Ctrl::PumpPoolWaterToTempTank()
 {
   TaskHandle_t myTaskHandle;

@@ -18,7 +18,6 @@ void SPIFFS_Ctrl::INIT_SPIFFS()
       delay(5000);
     }
   }
-  LoadMachineSetting();
 }
 
 
