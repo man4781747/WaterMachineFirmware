@@ -53,9 +53,10 @@
   }
 }
 ```
-## "GetLatestInformation?<PoolID>"
+## "GetLatestInformation?pool=<PoolID>"
 > 獲得指定蝦池資訊
 ```
+Ex:  GetLatestInformation?pool=pool-1
 {
   "PoolID": "pool-ID",                     // 蝦池名稱
   "Data_datetime": "2023-04-14 16:46:13",  // 資料更新時間
@@ -75,5 +76,24 @@
   "residual_chlorine": 93.18,              // 餘氯
   "ca_mg": 38.98,                          // 鈣鎂離子濃度
   "vibrio": 787.34                         // 弧菌數
+}
+```
+## "Set_Devno?name=<newName>"
+> 設定機器名稱 
+```
+Ex:  Set_Devno?name=testtest
+{
+  "Message":"Change Devno:testtest -> testtest"
+}
+```
+
+## "Set_Parameter?NewTimeIntervals=<時間>&Devno=<newName>&Mode=<Master|Slave>"
+> 參數設定
+
+* NewTimeIntervals 排程執行時間設定，格式HH:MM，複數時間用 , 分隔，每次輸入後舊的數值會清空後，套用新的設定
+```
+Ex:  Set_Devno?NewTimeIntervals=10:00,12:00
+{
+  "Message":"Change Devno:testtest -> testtest"
 }
 ```

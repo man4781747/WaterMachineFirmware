@@ -21,12 +21,9 @@ void setup() {
   Serial.begin(115200);
 
   Machine_Ctrl.INIT_SPIFFS_config();
-  
-  ESP_LOGI(LOG_TAG,"Device Info : %s", Machine_Ctrl.MachineInfo.GetDeviceInfoString().c_str());
 
   Machine_Ctrl.BackendServer.ConnectToWifi("IDWATER","56651588");
   Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
-  ESP_LOGI(LOG_TAG,"Net Info : %s", Machine_Ctrl.BackendServer.GetWifiInfoString().c_str());
   Machine_Ctrl.BackendServer.ServerStart();
 
   Machine_Ctrl.poolsCtrl.addNewPool("pool-1");
@@ -48,7 +45,9 @@ void setup() {
 
 void loop() {
   // https://www.rapidtables.com/convert/number/binary-to-hex.html
-
+  // Machine_Ctrl.spiffs.ReWriteMachineSettingFile(
+  //   Machine_Ctrl.MachineInfo.MachineInfo
+  // );
   // Machine_Ctrl.PumpPoolWaterToTempTank();
   delay(10000);
 }

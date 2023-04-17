@@ -2,26 +2,43 @@
 
 #include <ArduinoJson.h>
 #include <ESP32Servo.h>
+#include <sstream>
+#include <iostream>
+#include <unordered_map>
+#include <iomanip>
+#include <regex>
 
 
 DynamicJsonDocument Machine_Info::GetDeviceInfo()
 {
   DynamicJsonDocument json_doc(10000);
-  JsonVariant json_obj = json_doc.to<JsonVariant>();
-  json_doc["device_no"].set(device_no);
-  json_doc["FIRMWARE_VERSION"].set(FIRMWARE_VERSION);
-  json_doc["mode"].set(mode);
+  json_doc["device_no"].set(MachineInfo.device_no);
+  json_doc["FIRMWARE_VERSION"].set(MachineInfo.FIRMWARE_VERSION);
+  json_doc["mode"].set(MachineInfo.mode);
+  json_doc["time_interval"].set(*MachineInfo.time_interval);
   return json_doc;
 };
 
 String Machine_Info::GetDeviceInfoString()
 {
-  void* json_output = malloc(10000);
+  String returnString;
   DynamicJsonDocument json_doc = GetDeviceInfo();
-  serializeJsonPretty(json_doc, json_output, 10000);
-  String returnString = String((char*)json_output);
-  free(json_output);
+  serializeJsonPretty(json_doc, returnString);
   json_doc.clear();
   return returnString;
 };
 
+
+void Machine_Info::updateTimeInterval(String NewTimeIntervals)
+{
+  std::string str(NewTimeIntervals.c_str());
+  std::regex pattern("\\d\\d:\\d\\d");
+  std::smatch matches;
+  while (std::regex_search(str, matches, pattern)) {
+    for (auto match : matches) {
+      
+
+    }
+    str = matches.suffix().str();
+  }
+}

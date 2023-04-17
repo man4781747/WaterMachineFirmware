@@ -69,19 +69,20 @@ void SMachine_Ctrl::Build_SwitchMotorScan() {
 // For 互動相關
 ////////////////////////////////////////////////////
 
+/**
+ * @brief 獲得儀器基本資訊
+ * 
+ * @return DynamicJsonDocument 
+ */
 DynamicJsonDocument SMachine_Ctrl::GetDeviceInfos()
 {
-  DynamicJsonDocument json_doc(10000);
-  json_doc["device_no"].set(MachineInfo.device_no);
-  json_doc["FIRMWARE_VERSION"].set(MachineInfo.FIRMWARE_VERSION);
-  json_doc["mode"].set("Mode_Slave");
-  return json_doc;
+  return MachineInfo.GetDeviceInfo();
 };
 
 String SMachine_Ctrl::GetDeviceInfosString()
 {
   void* json_output = malloc(10000);
-  DynamicJsonDocument json_doc = GetDeviceInfos();
+  DynamicJsonDocument json_doc = MachineInfo.GetDeviceInfo();
   serializeJsonPretty(json_doc, json_output, 10000);
   String returnString = String((char*)json_output);
   free(json_output);

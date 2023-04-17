@@ -33,6 +33,27 @@ StaticJsonDocument<2048> SPOOLS_Ctrl::GetAllPoolsBaseInfo()
   return json_doc;
 };
 
+
+DynamicJsonDocument SPOOLS_Ctrl::GetPoolInfo(String poolID)
+{
+  DynamicJsonDocument json_doc(2048);
+  int arrayLen = (int)poolsArray.size();
+  bool ifPoolExists = false;
+  for (int poolIndex = 0; poolIndex<(int)poolsArray.size(); poolIndex++) {
+    if (poolsArray[poolIndex].PoolID == poolID) {
+      json_doc.set(poolsArray[poolIndex].GetThisPoolData());
+      ifPoolExists = true;
+      break;
+    }
+  }
+  if (ifPoolExists == false) {
+    json_doc["WaringMessage"] = "Pool: "+poolID+" don't exists";
+  }
+  return json_doc;
+};
+
+
+
 /**
  * @brief (測試用)亂數更新每個pool的資料
  * 

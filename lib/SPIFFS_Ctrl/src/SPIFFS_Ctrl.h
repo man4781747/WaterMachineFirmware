@@ -15,6 +15,7 @@ class SPIFFS_Ctrl
     void CreateFolder(String FolderPath);
 
     Machine_Info LoadMachineSetting();
+    void ReWriteMachineSettingFile(MachineInfo_t MachineInfo_);
 
     // String GetMotorSetting();
   private:

@@ -8,6 +8,12 @@
 #include <ESP32Servo.h>
 #include <NTPClient.h>
 
+#include <sstream>
+#include <iostream>
+#include <unordered_map>
+#include <iomanip>
+#include <regex>
+
 #include "../../Machine_Ctrl/src/Machine_Ctrl.h"
 
 extern SMachine_Ctrl Machine_Ctrl;
@@ -20,15 +26,42 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", gmtOffset_sec, daylightOffset_sec);
 const char* LOG_TAG_WIFI = "WIFI";
 
+DynamicJsonDocument urlParamsToJSON(const std::string& urlParams) {
+  std::stringstream ss(urlParams);
+  std::string item;
+  std::unordered_map<std::string, std::string> paramMap;
+  while (std::getline(ss, item, '&')) {
+    std::stringstream ss2(item);
+    std::string key, value;
+    std::getline(ss2, key, '=');
+    std::getline(ss2, value, '=');
+    paramMap[key] = value;
+  }
+  DynamicJsonDocument json_doc(1000);
+  for (auto& it : paramMap) {
+    json_doc[it.first].set(it.second);
+  }
+  return json_doc;
+}
+
+
 ////////////////////////////////////////////////////
 // For WebSocketEvent
 ////////////////////////////////////////////////////
+
+DynamicJsonDocument GetBaseWSReturnData(String MessageString)
+{
+  DynamicJsonDocument json_doc = Machine_Ctrl.MachineInfo.GetDeviceInfo();
+  json_doc["cmd"].set(MessageString);
+  json_doc["wifi"].set(Machine_Ctrl.BackendServer.GetWifiInfo());
+  return json_doc;
+} 
 
 void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
   if (type == WS_EVT_CONNECT) {
     Serial.println("WebSocket client connected");
     Machine_Ctrl.UpdateAllPoolsDataRandom();
-    DynamicJsonDocument json_doc = Machine_Ctrl.GetDeviceInfos();
+    DynamicJsonDocument json_doc = Machine_Ctrl.MachineInfo.GetDeviceInfo();
   
     json_doc["messageType"] = "WS_EVT_CONNECT";
     json_doc["CMDType"] = "AllData";
@@ -40,11 +73,9 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
     );
 
     json_doc["time"] = datetimeChar;
-    void* json_output = malloc(6000);
-    serializeJsonPretty(json_doc, json_output, 6000);
-    String returnString = String((char*)json_output);
+    String returnString;
+    serializeJsonPretty(json_doc, returnString);
     client->text(returnString);
-    free(json_output);
   } else if (type == WS_EVT_DISCONNECT) {
     Serial.println("WebSocket client disconnected");
   } else if (type == WS_EVT_DATA) {
@@ -52,77 +83,113 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
     AwsFrameInfo * info = (AwsFrameInfo*)arg;
     char* swData = ((char *)data);
     ESP_LOGD(LOG_TAG_WIFI, "Get message: %s", swData);
-    // DynamicJsonDocument json_doc(1024);
-    // deserializeJson(json_doc, swData);
-    // const char* MessageType = json_doc["MessageType"];
-    // ESP_LOGD(LOG_TAG_WIFI, "MessageType: %s", MessageType);
-
     String MessageString = String(swData);
     int index = MessageString.indexOf('?');
     String Message_CMD, Message_Parameter;
     
     if (index >= 0) {
-      Message_CMD = MessageString.substring(0,index+1);
+      Message_CMD = MessageString.substring(0,index);
       Message_Parameter = MessageString.substring(index+1,MessageString.length());
     } else {
       Message_CMD = MessageString;
       Message_Parameter = "";
     }
+    ESP_LOGD(LOG_TAG_WIFI, "Message_CMD: %s", Message_CMD.c_str());
+    ESP_LOGD(LOG_TAG_WIFI, "Message_Parameter: %s", Message_Parameter.c_str());
+    const std::string const_str(Message_Parameter.c_str());
+    DynamicJsonDocument parameters = urlParamsToJSON(const_str);
+
+    DynamicJsonDocument json_doc = GetBaseWSReturnData(MessageString);
+
     if (Message_CMD==String("GetLatestInformation")) {
+      Machine_Ctrl.UpdateAllPoolsDataRandom();
       if (Message_Parameter == "") {
-        ESP_LOGD(LOG_TAG_WIFI, "UpdateAllPoolsDataRandom");
-        Machine_Ctrl.UpdateAllPoolsDataRandom();
-        ESP_LOGD(LOG_TAG_WIFI, "GetDeviceInfos");
-        DynamicJsonDocument json_doc = Machine_Ctrl.GetDeviceInfos();
-        ESP_LOGD(LOG_TAG_WIFI, "Put Data");
-        json_doc["cmd"].set(MessageString);
-        json_doc["message"].set("OK");
+        // 新增參數
         json_doc["parameter"].set(Machine_Ctrl.poolsCtrl.GetAllPoolsBaseInfo());
-        json_doc["wifi"].set(Machine_Ctrl.BackendServer.GetWifiInfo());
-        ESP_LOGD(LOG_TAG_WIFI, "malloc 10000");
-        void* json_output = malloc(10000);
-        ESP_LOGD(LOG_TAG_WIFI, "serializeJsonPretty");
-        serializeJsonPretty(json_doc, json_output, 10000);
-        ESP_LOGD(LOG_TAG_WIFI, "to String");
-        String returnString = String((char*)json_output);
+        json_doc["message"].set("OK");
+        // 發出訊息
+        String returnString;
+        serializeJsonPretty(json_doc, returnString);
         client->text(returnString);
-        free(json_output);
-        json_doc.clear();
+      } else {
+        String poolChose = parameters["pool"] | "";
+        if (poolChose.length() != 0) {
+          // 新增參數
+          json_doc["parameter"].set(Machine_Ctrl.poolsCtrl.GetPoolInfo(poolChose));
+          json_doc["message"].set("OK");
+          // 發出訊息 
+          String returnString;
+          serializeJsonPretty(json_doc, returnString);
+          client->text(returnString);
+        } else {
+          // 新增參數
+          json_doc["parameter"]["WaringMessage"].set("Wrong parameter");
+          json_doc["message"].set("FAIL");
+          // 發出訊息 
+          String returnString;
+          serializeJsonPretty(json_doc, returnString);
+          client->text(returnString);
+        }
       }
     }
-
-
-    // if (strcmp(MessageType, "GetLatestInformation") == 0) {
-    //   int newAngle = json_doc["AngleSet"];
-    //   const char* MotorID = json_doc["MotorID"];
-    //   ESP_LOGD(LOG_TAG_WIFI, "ChangeMotor %s to %d", MotorID, newAngle);
-    //   StaticJsonDocument<1024> return_json_doc;
-    //   char json_output[1024];
-    //   DeserializationError json_error;
-
-    //   return_json_doc["messageType"] = "SomeOneChangeMotorAngle";
-    //   return_json_doc["data"]["newAngle"] = newAngle;
-    //   return_json_doc["data"]["MotorID"] = MotorID;
-    //   serializeJson(return_json_doc, json_output);
-    //   ws.textAll(json_output);
-    // } else if (strcmp(MessageType, "GetMachineInfo") == 0) {
-    //   Machine_Ctrl.UpdateAllPoolsDataRandom();
-    //   DynamicJsonDocument json_doc = Machine_Ctrl.GetDeviceInfos();
-    //   json_doc["messageType"] = "WS_EVT_DATA";
-    //   time_t nowTime = now();
-    //   char datetimeChar[30];
-    //   sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
-    //     year(nowTime), month(nowTime), day(nowTime),
-    //     hour(nowTime), minute(nowTime), second(nowTime)
-    //   );
-    //   json_doc["time"] = datetimeChar;
-    //   json_doc["CMDType"] = "AllData";
-    //   void* json_output = malloc(6000);
-    //   serializeJsonPretty(json_doc, json_output, 6000);
-    //   String returnString = String((char*)json_output);
-    //   client->text(returnString);
-    //   free(json_output);
-    // }
+    else if (Message_CMD==String("Set_Devno")) {
+      String NewDeviceName = parameters["name"] | "";
+      // 新增參數&動作
+      if (NewDeviceName != "") {
+        json_doc["device_no"] = NewDeviceName;
+        json_doc["parameter"]["Message"].set("Change Devno:"+Machine_Ctrl.MachineInfo.MachineInfo.device_no+" -> "+NewDeviceName);
+        json_doc["message"].set("OK");
+        Machine_Ctrl.MachineInfo.MachineInfo.device_no = NewDeviceName;
+        Machine_Ctrl.spiffs.ReWriteMachineSettingFile(Machine_Ctrl.MachineInfo.MachineInfo);
+      } else {
+        json_doc["message"].set("FAIL");
+        json_doc["parameter"]["WaringMessage"].set("Change Devno Fail");
+      }
+      // 發出訊息 
+      String returnString;
+      serializeJsonPretty(json_doc, returnString);
+      ws.textAll(returnString);
+    }
+    else if (Message_CMD==String("Set_Parameter")) {
+      String NewTimeIntervals = parameters["NewTimeIntervals"] | "";
+      // 排程時間設定
+      String changeMessageSave = "";
+      if (NewTimeIntervals != "") {
+        std::string str(NewTimeIntervals.c_str());
+        std::regex pattern("\\d\\d:\\d\\d");
+        std::smatch matches;
+        changeMessageSave += "Change TimeIntervals: "+NewTimeIntervals+"\r\n";
+        Machine_Ctrl.MachineInfo.MachineInfo.time_interval->clear();
+        while (std::regex_search(str, matches, pattern)) {
+          for (auto match : matches) {
+            Machine_Ctrl.MachineInfo.MachineInfo.time_interval->createNestedObject(String(match.str().c_str()));
+          }
+          str = matches.suffix().str();
+        }
+      }
+      String NewDevno = parameters["Devno"] | "";
+      if (NewDevno != "") {
+        changeMessageSave += "Change Devno:"+Machine_Ctrl.MachineInfo.MachineInfo.device_no+" -> "+NewDevno+"\r\n";
+        Machine_Ctrl.MachineInfo.MachineInfo.device_no = NewDevno;
+      }
+      String Mode = parameters["Mode"] | "";
+      if ( Mode == "Mode_Master" | Mode == "Mode_Slave" ) {
+        changeMessageSave += "Change Mode:"+Machine_Ctrl.MachineInfo.MachineInfo.mode+" -> "+Mode+"\r\n";
+        Machine_Ctrl.MachineInfo.MachineInfo.mode = Mode;
+      }
+      
+      Machine_Ctrl.spiffs.ReWriteMachineSettingFile(Machine_Ctrl.MachineInfo.MachineInfo);
+      // 重新獲得參數設定
+      json_doc = GetBaseWSReturnData(MessageString);
+      // 新增參數
+      json_doc["parameter"]["Message"] = changeMessageSave;
+      json_doc["message"].set("OK");
+      // 發出訊息 
+      String returnString;
+      serializeJsonPretty(json_doc, returnString);
+      ws.textAll(returnString);
+    }
+    json_doc.clear();
   }
 }
 
@@ -221,7 +288,7 @@ String CWIFI_Ctrler::GetWifiInfoString()
 void CWIFI_Ctrler::UploadNewData()
 {
   Machine_Ctrl.UpdateAllPoolsDataRandom();
-  DynamicJsonDocument json_doc = Machine_Ctrl.GetDeviceInfos();
+  DynamicJsonDocument json_doc = Machine_Ctrl.MachineInfo.GetDeviceInfo();
 
   json_doc["messageType"] = "Loop";
   json_doc["CMDType"] = "AllData";

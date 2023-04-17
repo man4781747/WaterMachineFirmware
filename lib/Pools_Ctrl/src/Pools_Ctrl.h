@@ -17,6 +17,8 @@ class SPOOLS_Ctrl
     SPOOLS_Ctrl(void){};
     void addNewPool(String poolID);
     StaticJsonDocument<2048> GetAllPoolsBaseInfo();
+    DynamicJsonDocument GetPoolInfo(String poolID);
+
     void UpdateAllPoolsDataRandom();
 
   private:

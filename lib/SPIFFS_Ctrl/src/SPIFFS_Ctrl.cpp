@@ -32,14 +32,24 @@ Machine_Info SPIFFS_Ctrl::LoadMachineSetting()
   if (!SPIFFS.exists("/config/base_config.json")) {
     CreateFile("/config/base_config.json");
     ESP_LOGW(LOG_TAG_SPIFFS, "Can't open /config/base_config.json in SPIFFS ! Rebuild it !");
-    MachineInfo.device_no = "Wxxxxx";
+    MachineInfo.MachineInfo.device_no = "Wxxxxx";
     File file = SPIFFS.open("/config/base_config.json", FILE_WRITE);
     file.print(MachineInfo.GetDeviceInfoString());
+    file.close();
   } else {
     File file = SPIFFS.open("/config/base_config.json", FILE_READ);
-    StaticJsonDocument<200> json_doc;
-    deserializeJson(json_doc, file.readString());
+    String FileContent = file.readString();
+    file.close();
+    ESP_LOGE(LOG_TAG_SPIFFS, "config: %s",FileContent.c_str());
+    DynamicJsonDocument json_doc(10000);
+    DeserializationError error = deserializeJson(json_doc, FileContent);
+    if (error) {
+      Serial.print("deserializeJson() failed: ");
+      Serial.println(error.f_str());
+    }
     MachineInfo.LoadInfoByJSONItem(json_doc);
+
+    json_doc.clear();
   }
   return MachineInfo;
 }
@@ -106,5 +116,25 @@ void SPIFFS_Ctrl::CreateFolder(String FolderPath){
     ESP_LOGD(LOG_TAG_SPIFFS, "Create folder: %s", FolderPath.c_str());
     SPIFFS.mkdir(FolderPath);
   }
+}
+
+
+void SPIFFS_Ctrl::ReWriteMachineSettingFile(MachineInfo_t MachineInfo_)
+{
+  DynamicJsonDocument json_doc(10000);
+  json_doc["device_no"].set(MachineInfo_.device_no);
+  json_doc["FIRMWARE_VERSION"].set(MachineInfo_.FIRMWARE_VERSION);
+  json_doc["mode"].set(MachineInfo_.mode);
+  json_doc["time_interval"].set(*MachineInfo_.time_interval);
+  void* json_output = malloc(10000);
+  serializeJsonPretty(json_doc, json_output, 6000);
+  String returnString = String((char*)json_output);
+  json_doc.clear();
+  free(json_output);
+  ESP_LOGD(LOG_TAG_SPIFFS, "New config content: %s", returnString.c_str());
+  CreateFile("/config/base_config.json");
+  File file = SPIFFS.open("/config/base_config.json", FILE_WRITE);
+  file.print(returnString);
+  file.close();
 }
 
