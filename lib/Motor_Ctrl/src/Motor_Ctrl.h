@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <Adafruit_PWMServoDriver.h>
+#include <unordered_map>
 
 enum MotorSwitchStatus : int {
   LeftCenter = 0,
@@ -41,6 +42,9 @@ class Motor_Ctrl
     u_int32_t motorsStatusCode = 0;
     int active = MotorCtrlSteps::Idel;
     Single_Motor motorsArray[64];
+
+    std::unordered_map<std::string, Single_Motor> motorsDict;
+
   private:
     Adafruit_PWMServoDriver pwm_1;
     Adafruit_PWMServoDriver pwm_2;

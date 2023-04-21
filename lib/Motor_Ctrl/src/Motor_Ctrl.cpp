@@ -1,6 +1,7 @@
 #include "Motor_Ctrl.h"
 
 #include <vector>
+#include <unordered_map>
 #include <esp_system.h>
 
 #include <ArduinoJson.h>
@@ -62,8 +63,12 @@ void Motor_Ctrl::INIT_Motors()
 void Motor_Ctrl::AddNewMotor(int channelIndex_, String motorID_, String motorName_, String descrption)
 {
   ESP_LOGI("Motor_Ctrl","AddNewMotor: %02d, %s, %s", channelIndex_, motorName_.c_str(), descrption.c_str());
-  motorsArray[channelIndex_] = Single_Motor();
-  motorsArray[channelIndex_].ActiveMotor(channelIndex_, motorID_, motorName_, descrption);
+  // motorsArray[channelIndex_] = Single_Motor();
+  // motorsArray[channelIndex_].ActiveMotor(channelIndex_, motorID_, motorName_, descrption);
+
+  // Single_Motor newMotor;
+  motorsDict[std::string(motorID_.c_str())] = Single_Motor();
+  motorsDict[std::string(motorID_.c_str())].ActiveMotor(channelIndex_, motorID_, motorName_, descrption);
 }
 
 /**
