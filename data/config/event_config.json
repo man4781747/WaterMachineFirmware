@@ -1,0 +1,126 @@
+{
+    "pwm_motor": {
+        "S_B1": {
+            "index": 31,
+            "title": "test",
+            "description": "description"
+        },
+        "S_B2": {
+            "index": 30,
+            "title": "test",
+            "description": "description"
+        },
+        "S_B3": {
+            "index": 29,
+            "title": "test",
+            "description": "description"
+        },
+        "S_B4": {
+            "index": 28,
+            "title": "test",
+            "description": "description"
+        },
+        "S_M0": {
+            "index": 19,
+            "title": "test",
+            "description": "description"
+        },
+        "S_M1": {
+            "index": 18,
+            "title": "test",
+            "description": "description"
+        },
+        "S_M2": {
+            "index": 17,
+            "title": "test",
+            "description": "description"
+        },
+        "S_M3": {
+            "index": 16,
+            "title": "test",
+            "description": "description"
+        },
+        "S_M4": {
+            "index": 3,
+            "title": "test",
+            "description": "description"
+        },
+        "S_M5": {
+            "index": 2,
+            "title": "test",
+            "description": "description"
+        },
+        "S_M6": {
+            "index": 1,
+            "title": "test",
+            "description": "description"
+        },
+        "S_M7": {
+            "index": 0,
+            "title": "test",
+            "description": "description"
+        },
+        "S_M8": {
+            "index": 4,
+            "title": "test",
+            "description": "description"
+        },
+        "S_L1": {
+            "index": 8,
+            "title": "test",
+            "description": "description"
+        },
+        "S_L2": {
+            "index": 9,
+            "title": "test",
+            "description": "description"
+        },
+        "S_PH1": {
+            "index": 22,
+            "title": "test",
+            "description": "description"
+        },
+        "S_PH2": {
+            "index": 23,
+            "title": "test",
+            "description": "description"
+        }
+    },
+    "peristaltic_motor": {
+        "M1": {
+            "index": 0,
+            "title": "test",
+            "description": "description"
+        },
+        "M2": {
+            "index": 1,
+            "title": "test",
+            "description": "description"
+        },
+        "M3": {
+            "index": 2,
+            "title": "test",
+            "description": "description"
+        },
+        "M4": {
+            "index": 3,
+            "title": "test",
+            "description": "description"
+        },
+        "M5": {
+            "index": 4,
+            "title": "test",
+            "description": "description"
+        },
+        "M6": {
+            "index": 5,
+            "title": "test",
+            "description": "description"
+        },
+        "M7": {
+            "index": 6,
+            "title": "test",
+            "description": "description"
+        }
+    }
+}

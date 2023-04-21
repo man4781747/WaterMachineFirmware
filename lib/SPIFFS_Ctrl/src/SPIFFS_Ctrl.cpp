@@ -138,3 +138,27 @@ void SPIFFS_Ctrl::ReWriteMachineSettingFile(MachineInfo_t MachineInfo_)
   file.close();
 }
 
+DynamicJsonDocument* SPIFFS_Ctrl::GetDeviceSetting()
+{
+  if (!SPIFFS.exists("/config/event_config.json")) {
+    CreateFile("/config/event_config.json");
+    ESP_LOGW(LOG_TAG_SPIFFS, "Can't open /config/event_config.json in SPIFFS ! Rebuild it !");
+    String fileString;
+    serializeJsonPretty(*DeviceSetting, fileString);
+    File file = SPIFFS.open("/config/event_config.json", FILE_WRITE);
+    file.print(fileString);
+    file.close();
+  } else {
+    File file = SPIFFS.open("/config/event_config.json", FILE_READ);
+    String FileContent = file.readString();
+    file.close();
+    DeserializationError error = deserializeJson(*DeviceSetting, FileContent);
+    if (error) {
+      Serial.print("deserializeJson() failed: ");
+      Serial.println(error.f_str());
+    }
+  }
+  return DeviceSetting;
+}
+
+

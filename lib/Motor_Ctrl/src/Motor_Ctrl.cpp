@@ -17,8 +17,10 @@ TwoWire myWire(0);
  * @param channelIndex_ 
  * @param motorName_ 
  */
-void Single_Motor::ActiveMotor(int channelIndex_,String motorName_ = "") {
+void Single_Motor::ActiveMotor(int channelIndex_, String motorID_, String motorName_, String descrption) {
   channelIndex=channelIndex_;
+  motorID = motorID_;
+  motorDescription = descrption;
   if (motorName_ == String("")) {
     uint64_t randomValue = ((uint64_t)esp_random()) << 32 | esp_random();
     char uuidString[32];
@@ -57,11 +59,11 @@ void Motor_Ctrl::INIT_Motors()
  * @param motorName_ 
  * @param descrption 
  */
-void Motor_Ctrl::AddNewMotor(int channelIndex_, String motorName_, String descrption)
+void Motor_Ctrl::AddNewMotor(int channelIndex_, String motorID_, String motorName_, String descrption)
 {
   ESP_LOGI("Motor_Ctrl","AddNewMotor: %02d, %s, %s", channelIndex_, motorName_.c_str(), descrption.c_str());
   motorsArray[channelIndex_] = Single_Motor();
-  motorsArray[channelIndex_].ActiveMotor(channelIndex_, motorName_);
+  motorsArray[channelIndex_].ActiveMotor(channelIndex_, motorID_, motorName_, descrption);
 }
 
 /**
@@ -100,8 +102,10 @@ void Motor_Ctrl::MotorStatusChange(int channelIndex_)
  * @param motorIndex_ 
  * @param motorName_ 
  */
-void C_Single_Peristaltic_Motor::ActiveMotor(int motorIndex_,String motorName_ = "") {
+void C_Single_Peristaltic_Motor::ActiveMotor(int motorIndex_, String motorID_, String motorName_, String descrption) {
   motorIndex=motorIndex_;
+  motorID = motorID_;
+  motorDescription = descrption;
   if (motorName_ == String("")) {
     uint64_t randomValue = ((uint64_t)esp_random()) << 32 | esp_random();
     char uuidString[32];
@@ -122,11 +126,11 @@ void C_Peristaltic_Motors_Ctrl::INIT_Motors()
   ESP_LOGI("Motor_Ctrl","INIT_Motors");
 }
 
-void C_Peristaltic_Motors_Ctrl::AddNewMotor(int channelIndex_, String motorName_, String descrption)
+void C_Peristaltic_Motors_Ctrl::AddNewMotor(int channelIndex_, String motorID, String motorName_, String descrption)
 {
-  ESP_LOGI("Peristaltic_Motors_Ctrl","AddNewMotor: %02d, %s, %s", channelIndex_, motorName_.c_str(), descrption.c_str());
+  ESP_LOGI("Peristaltic_Motors_Ctrl","AddNewPeristalticMotor: %02d, %s, %s", channelIndex_, motorName_.c_str(), descrption.c_str());
   motorsArray[channelIndex_] = C_Single_Peristaltic_Motor();
-  motorsArray[channelIndex_].ActiveMotor(channelIndex_, motorName_);
+  motorsArray[channelIndex_].ActiveMotor(channelIndex_, motorID, motorName_, descrption );
 }
 
 void C_Peristaltic_Motors_Ctrl::RunMotor(int channelIndex_, int type, int durationTime)

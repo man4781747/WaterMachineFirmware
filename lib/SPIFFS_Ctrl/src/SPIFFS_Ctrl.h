@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 
+#include <ArduinoJson.h>
+
 #include <Machine_Base_info.h>
 
 class SPIFFS_Ctrl
@@ -16,6 +18,10 @@ class SPIFFS_Ctrl
 
     Machine_Info LoadMachineSetting();
     void ReWriteMachineSettingFile(MachineInfo_t MachineInfo_);
+
+    DynamicJsonDocument* GetDeviceSetting();
+
+    DynamicJsonDocument *DeviceSetting = new DynamicJsonDocument(10000);
 
     // String GetMotorSetting();
   private:

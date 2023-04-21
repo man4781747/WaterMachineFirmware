@@ -192,6 +192,48 @@ RUN_EVENT_GROUP RUN_NO2_Original_Value {
   }
 };
 
+RUN_EVENT_GROUP RUN_NO2_Test_Solution_Value {
+  "亞硝酸鹽待測液檢測", "亞硝酸鹽待測液檢測",
+  {
+    EVENT_GROUP(&Clear_MixRoom),
+    EVENT_GROUP(&Push_RO_Liquid_To_MixRoom),
+    EVENT_GROUP(&Push_Sample_Liquid_To_MixRoom),
+    EVENT_GROUP(&Mix_Liquid_In_MixRoom),
+    EVENT_GROUP(&Push_NO2_Liquid_To_MixRoom),
+    EVENT_GROUP(&Mix_Liquid_In_MixRoom),
+    EVENT_GROUP(&Push_MixRoom_To_NO2_SensorRoom),
+    EVENT_GROUP(&Clear_NO2_SensorRoom_To_MixRoom),
+    EVENT_GROUP(&Clear_MixRoom),
+  }
+};
+
+RUN_EVENT_GROUP RUN_NH3_Original_Value {
+  "氨氮原點檢測", "氨氮原點檢測",
+  {
+    EVENT_GROUP(&Clear_MixRoom),
+    EVENT_GROUP(&Push_Sample_Liquid_To_MixRoom),
+    EVENT_GROUP(&Push_MixRoom_To_NH3_SensorRoom),
+    EVENT_GROUP(&Clear_NH3_SensorRoom_To_MixRoom),
+    EVENT_GROUP(&Clear_MixRoom),
+  }
+};
+
+RUN_EVENT_GROUP RUN_NH3_Test_Solution_Value {
+  "氨氮試劑檢測", "氨氮試劑檢測",
+  {
+    EVENT_GROUP(&Clear_MixRoom),
+    EVENT_GROUP(&Push_Sample_Liquid_To_MixRoom),
+    EVENT_GROUP(&Push_NH3R1_Liquid_To_MixRoom),
+    EVENT_GROUP(&Clear_MixRoom),
+    EVENT_GROUP(&Push_NH3R2_Liquid_To_MixRoom),
+    EVENT_GROUP(&Clear_MixRoom),
+    EVENT_GROUP(&Push_MixRoom_To_NH3_SensorRoom),
+    EVENT_GROUP(&Clear_NH3_SensorRoom_To_MixRoom),
+    EVENT_GROUP(&Clear_MixRoom),
+  }
+};
+
+
 ////////////////////////////////////////////////////
 // For 初始化
 ////////////////////////////////////////////////////
@@ -200,42 +242,83 @@ void SMachine_Ctrl::INIT_SPIFFS_config()
 {
   spiffs.INIT_SPIFFS();
   MachineInfo = spiffs.LoadMachineSetting();
+  // DynamicJsonDocument DeviceSetting_ = spiffs.GetDeviceSetting();
+  spiffs.GetDeviceSetting();
+
+  // JsonObject obj = DeviceSetting->as<JsonObject>();
+  // obj = obj["pwm_motor"];
+
+
+  // UpdatePWMMotorSetting(obj);
+
+  // for (JsonObject::iterator it = obj.begin(); it != obj.end(); ++it) {
+  //   Serial.println(it->key().c_str());
+  // }
 }
 
 void SMachine_Ctrl::INIT_SW_Moter()
 {
   motorCtrl.INIT_Motors();
-  motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_B1);
-  motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_B2);
-  motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_B3);
-  motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_B4);
-  motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_M0);
-  motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_M1);
-  motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_M2);
-  motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_M3);
-  motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_M4);
-  motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_M5);
-  motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_M6);
-  motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_M7);
-  motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_M8);
-  motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_L1);
-  motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_L2);
-  motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_PH1);
-  motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_PH2);
+  JsonObject obj = spiffs.DeviceSetting->as<JsonObject>();
+  UpdatePWMMotorSetting(obj["pwm_motor"]);
+  // motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_B1);
+  // motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_B2);
+  // motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_B3);
+  // motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_B4);
+  // motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_M0);
+  // motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_M1);
+  // motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_M2);
+  // motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_M3);
+  // motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_M4);
+  // motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_M5);
+  // motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_M6);
+  // motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_M7);
+  // motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_M8);
+  // motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_L1);
+  // motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_L2);
+  // motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_PH1);
+  // motorCtrl.AddNewMotor(PWM_POSITION_MAPPING::S_PH2);
 }
 
 void SMachine_Ctrl::INIT_Peristaltic_Moter()
 {
   peristalticMotorsCtrl.INIT_Motors();
-  peristalticMotorsCtrl.AddNewMotor(PERISTALTIC_MOTOR_MAPPING::M1);
-  peristalticMotorsCtrl.AddNewMotor(PERISTALTIC_MOTOR_MAPPING::M2);
-  peristalticMotorsCtrl.AddNewMotor(PERISTALTIC_MOTOR_MAPPING::M3);
-  peristalticMotorsCtrl.AddNewMotor(PERISTALTIC_MOTOR_MAPPING::M4);
-  peristalticMotorsCtrl.AddNewMotor(PERISTALTIC_MOTOR_MAPPING::M5);
-  peristalticMotorsCtrl.AddNewMotor(PERISTALTIC_MOTOR_MAPPING::M6);
-  peristalticMotorsCtrl.AddNewMotor(PERISTALTIC_MOTOR_MAPPING::M7);
+  JsonObject obj = spiffs.DeviceSetting->as<JsonObject>();
+  UpdatePeristalticMotorSetting(obj["peristaltic_motor"]);
+
+
+  // peristalticMotorsCtrl.AddNewMotor(PERISTALTIC_MOTOR_MAPPING::M1);
+  // peristalticMotorsCtrl.AddNewMotor(PERISTALTIC_MOTOR_MAPPING::M2);
+  // peristalticMotorsCtrl.AddNewMotor(PERISTALTIC_MOTOR_MAPPING::M3);
+  // peristalticMotorsCtrl.AddNewMotor(PERISTALTIC_MOTOR_MAPPING::M4);
+  // peristalticMotorsCtrl.AddNewMotor(PERISTALTIC_MOTOR_MAPPING::M5);
+  // peristalticMotorsCtrl.AddNewMotor(PERISTALTIC_MOTOR_MAPPING::M6);
+  // peristalticMotorsCtrl.AddNewMotor(PERISTALTIC_MOTOR_MAPPING::M7);
 }
 
+////////////////////////////////////////////////////
+// For 更新設定
+////////////////////////////////////////////////////
+
+void SMachine_Ctrl::UpdatePWMMotorSetting(JsonObject PWMMotorSetting)
+{
+  for (JsonObject::iterator it = PWMMotorSetting.begin(); it != PWMMotorSetting.end(); ++it) {
+    motorCtrl.AddNewMotor(
+      PWMMotorSetting[it->key().c_str()]["index"], String(it->key().c_str()), 
+      PWMMotorSetting[it->key().c_str()]["title"], PWMMotorSetting[it->key().c_str()]["description"]
+    );
+  }
+}
+
+void SMachine_Ctrl::UpdatePeristalticMotorSetting(JsonObject PeristalticMotorSetting)
+{
+  for (JsonObject::iterator it = PeristalticMotorSetting.begin(); it != PeristalticMotorSetting.end(); ++it) {
+    peristalticMotorsCtrl.AddNewMotor(
+      PeristalticMotorSetting[it->key().c_str()]["index"], String(it->key().c_str()),
+      PeristalticMotorSetting[it->key().c_str()]["title"], PeristalticMotorSetting[it->key().c_str()]["description"]
+    );
+  }
+}
 
 
 ////////////////////////////////////////////////////

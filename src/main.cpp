@@ -24,6 +24,12 @@ void setup() {
 
   Machine_Ctrl.INIT_SPIFFS_config();
 
+
+  // String FileContent;
+  // serializeJsonPretty(*(Machine_Ctrl.DeviceSetting), FileContent);
+  // Serial.println(FileContent);
+
+
   Machine_Ctrl.BackendServer.ConnectToWifi("IDWATER","56651588");
   Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
   Machine_Ctrl.BackendServer.ServerStart();
