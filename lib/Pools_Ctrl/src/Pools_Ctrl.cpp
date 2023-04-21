@@ -12,6 +12,7 @@
  */
 void SPOOLS_Ctrl::addNewPool(String poolID)
 {
+  ESP_LOGI("POOLS_Ctrl","Add new pool %s", poolID.c_str());
   poolsArray.push_back(SSINGLE_POOL_Ctrl(poolID));
 };
 

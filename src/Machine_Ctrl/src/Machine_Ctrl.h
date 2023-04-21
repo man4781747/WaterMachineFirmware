@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <vector>
+#include <variant>
 
 #include <Pools_Ctrl.h>
 #include <Motor_Ctrl.h>
@@ -12,59 +13,107 @@
 
 #include "../../Wifi_Ctrl/src/Wifi_Ctrl.h"
 
-enum Steps
-{
-  Idle,
-  INIT_Machine,                            // 儀器初始化
-  CloseAllSwitch,                          // 關閉所有 閥門
-  OpenPoolSwitch,                          // 打開 指定蝦池 的 抽水閥門
-  PullWaterFromPool,                       // 從 蝦池 抽水至 暫存室
-  PushWaterToPool,                         // 將水推回 蝦池
-
-  //// 測定未知濃度亞硝酸鹽樣本
-  // 獲得原點濃度值
-  PullOriginReagentToMixRoom_NO2_Origin,   // (測定未知濃度亞硝酸鹽樣本 - 獲得原點濃度值) 抽取 原點試劑 至 混合室
-  PushMixRoomToDetectionRoom_NO2_Origin,   // (測定未知濃度亞硝酸鹽樣本 - 獲得原點濃度值) 將 混和室 液體 移動至 檢測室
-  DetectionValue_NO2_Origin,               // (測定未知濃度亞硝酸鹽樣本 - 獲得原點濃度值) 檢測水質
-  DropWater_NO2_Origin,                    // (測定未知濃度亞硝酸鹽樣本 - 獲得原點濃度值) 丟棄溶液
-  // 獲得亞硝酸鹽濃度值
-  PullOriginReagentToMixRoom_NO2_Target,   // (測定未知濃度亞硝酸鹽樣本 - 獲得亞硝酸鹽濃度值) 抽取 原點試劑 至 混合室
-  PullPoolWaterToMixRoom_NO2_Target,       // (測定未知濃度亞硝酸鹽樣本 - 獲得亞硝酸鹽濃度值) 抽取 暫存室 至 混合室
-  MixPoolAndOrigin_NO2_Target,             // (測定未知濃度亞硝酸鹽樣本 - 獲得亞硝酸鹽濃度值) 混和 暫存室 與 標準溶液
-  PullNO2ToMixRoom_NO2_Target,             // (測定未知濃度亞硝酸鹽樣本 - 獲得亞硝酸鹽濃度值) 抽取 亞硝酸鹽 至 混合室
-  MixNO2AndWater_NO2_Target,               // (測定未知濃度亞硝酸鹽樣本 - 獲得亞硝酸鹽濃度值) 混和 亞硝酸鹽 與 溶液
-  WaitFiceMin_NO2_Target,                  // (測定未知濃度亞硝酸鹽樣本 - 獲得亞硝酸鹽濃度值) 等待 5分鐘
-  PushMixRoomToDetectionRoom_NO2_Target,   // (測定未知濃度亞硝酸鹽樣本 - 獲得亞硝酸鹽濃度值) 將 混和室 液體 移動至 檢測室
-  DetectionValue_NO2_Target,               // (測定未知濃度亞硝酸鹽樣本 - 獲得亞硝酸鹽濃度值) 檢測水質
-  DropWater_NO2_Target,                    // (測定未知濃度亞硝酸鹽樣本 - 獲得亞硝酸鹽濃度值) 丟棄溶液
-
-  //// 測定未知濃度氨氮樣本
-  // 獲得樣本濃度值
-  PullPoolWaterToMixRoom_NH3_Origin,       // (測定未知濃度氨氮樣本 - 獲得樣本濃度值) 抽取 暫存室 至 混合室
-  PushMixRoomToDetectionRoom_NH3_Origin,   // (測定未知濃度氨氮樣本 - 獲得樣本濃度值) 將 混和室 液體 移動至 檢測室
-  DetectionValue_NH3_Origin,               // (測定未知濃度氨氮樣本 - 獲得樣本濃度值) 檢測水質
-  DropWater_NH3_Origin,                    // (測定未知濃度氨氮樣本 - 獲得樣本濃度值) 丟棄溶液
-  // 獲得亞硝酸鹽濃度值
-  PullPoolWaterToMixRoom_NH3_Target,       // (測定未知濃度氨氮樣本 - 獲得氨氮濃度值) 抽取 暫存室 至 混合室
-  Pull_NH3_R1_ToMixRoom_NH3_Target,        // (測定未知濃度氨氮樣本 - 獲得氨氮濃度值) 抽取 氨氮R1 至 混合室
-  Mix_NH3_R1_NH3_Target,                   // (測定未知濃度氨氮樣本 - 獲得氨氮濃度值) 混和 氨氮R1 與 溶液
-  Pull_NH3_R2_ToMixRoom_NH3_Target,        // (測定未知濃度氨氮樣本 - 獲得氨氮濃度值) 抽取 氨氮R2 至 混合室
-  Mix_NH3_R2_And_Wait_NH3_Target,          // (測定未知濃度氨氮樣本 - 獲得氨氮濃度值) 混和 氨氮R2 與 溶液 並等待 5分鐘
-  PushMixRoomToDetectionRoom_NH3_Target,   // (測定未知濃度氨氮樣本 - 獲得氨氮濃度值) 將 混和室 液體 移動至 檢測室
-  DetectionValue_NH3_Target,               // (測定未知濃度氨氮樣本 - 獲得氨氮濃度值) 檢測水質
-  DropWater_NH3_Target,                    // (測定未知濃度氨氮樣本 - 獲得氨氮濃度值) 丟棄溶液
+struct PWM_MOTOR_STATUS_SET_OBJ {
+  int motortIndex;
+  int motortStatus;
 };
 
-enum MOTOR_STATUS : u_int16_t
+enum PWM_POSITION_MAPPING : int
 {
-  ALL_OPEN          = 0b1111111111111111,
-  ALL_CLOSE         = 0b0000000000000000,
-  GET_TEMP_TANK     = 0b1000000000000000,
-  GET_REAGENT_1     = 0b0100000000000000,
-  GET_REAGENT_2     = 0b0010000000000000,
-  GET_REAGENT_3     = 0b0001000000000000,
-  GET_REAGENT_4     = 0b0000100000000000,
+  S_B1 = 31, S_B2 = 30, S_B3 = 29, S_B4 = 28, S_M0 = 19,
+  S_M1 = 18, S_M2 = 17, S_M3 = 16, S_M4 = 3, S_M5 = 2,
+  S_M6 = 1, S_M7 = 0, S_M8 = 4, S_L1 = 8, S_L2 = 9,
+  S_PH1 = 22, S_PH2 = 23,
 };
+
+struct PERISTALTIC_STATUS_SET_OBJ {
+  int motortIndex;
+  int motortStatus;
+  int activeTime;
+};
+
+enum PERISTALTIC_MOTOR_MAPPING : int
+{
+  M1, M2, M3, M4, M5, M6, M7
+};
+
+/**
+ * @brief 伺服馬達與蠕動馬達的控制組設定物件
+ * 
+ */
+struct RUN_MOTOR_GROUP {
+  String Title;
+  String Description;
+  std::vector<PWM_MOTOR_STATUS_SET_OBJ> pwmCtrlList;
+  // PWM_MOTOR_STATUS_SET_OBJ* pwmCtrlList;
+  // int pwmCtrlListLength;
+  PERISTALTIC_STATUS_SET_OBJ perostalicMotorCtrl;
+};
+
+/**
+ * @brief 伺服馬達與蠕動馬達的控制組設定
+ * 請至 Machine_Ctrl.cpp 中編輯細節內容
+ */
+
+extern RUN_MOTOR_GROUP Clear_MixRoom;
+extern RUN_MOTOR_GROUP Mix_Liquid_In_MixRoom;
+
+extern RUN_MOTOR_GROUP Push_RO_Liquid_To_MixRoom;
+extern RUN_MOTOR_GROUP Push_Sample_Liquid_To_MixRoom;
+
+extern RUN_MOTOR_GROUP Push_NO2_Liquid_To_MixRoom;
+extern RUN_MOTOR_GROUP Push_NH3R1_Liquid_To_MixRoom;
+extern RUN_MOTOR_GROUP Push_NH3R2_Liquid_To_MixRoom;
+
+extern RUN_MOTOR_GROUP Push_MixRoom_To_NO2_SensorRoom;
+extern RUN_MOTOR_GROUP Clear_NO2_SensorRoom_To_MixRoom;
+
+extern RUN_MOTOR_GROUP Push_MixRoom_To_NH3_SensorRoom;
+extern RUN_MOTOR_GROUP Clear_NH3_SensorRoom_To_MixRoom;
+
+/**
+ * @brief 單一事件組的設定物件
+ * 
+ */
+
+class EVENT_GROUP
+{
+  public:
+    EVENT_GROUP(RUN_MOTOR_GROUP *motorGroupEvent_){
+      motorGroupEvent = motorGroupEvent_;
+    };
+    RUN_MOTOR_GROUP *motorGroupEvent = NULL;
+};
+
+/**
+ * @brief 事件組組合的設定物件
+ * 
+ */
+struct RUN_EVENT_GROUP {
+  String Title;
+  String Description;
+  std::vector<EVENT_GROUP> eventGroup;
+};
+
+/**
+ * @brief 事件組組合的設定設定
+ * 請至 Machine_Ctrl.cpp 中編輯細節內容
+ */
+
+extern RUN_EVENT_GROUP RUN_NO2_Original_Value;
+
+enum DeviceStatusCode : int
+{
+  device_idel, device_busy
+};
+
+struct DeviceStatus {
+  DeviceStatusCode deviceStatusCode = DeviceStatusCode::device_idel;
+  String StartTime = "";
+  int NowStep = 0;
+  RUN_EVENT_GROUP *NowRunningEvent = NULL;
+};
+
 
 
 /**
@@ -81,6 +130,9 @@ class SMachine_Ctrl
 
     void INIT_SPIFFS_config();
 
+    void INIT_SW_Moter();
+
+    void INIT_Peristaltic_Moter();
 
     ////////////////////////////////////////////////////
     // For 不間斷監聽
@@ -88,25 +140,33 @@ class SMachine_Ctrl
 
     void Build_SwitchMotorScan();
 
+    void Build_PeristalticMotorScan();
 
     ////////////////////////////////////////////////////
     // For 互動相關
     ////////////////////////////////////////////////////
 
     DynamicJsonDocument GetDeviceInfos();
+
     String GetDeviceInfosString();
+
+    DynamicJsonDocument GetEventStatus();
 
     ////////////////////////////////////////////////////
     // For 基礎行為
     ////////////////////////////////////////////////////
 
+    void Set_SW_MotorStatus(std::vector<PWM_MOTOR_STATUS_SET_OBJ> motorStatusList);
 
     ////////////////////////////////////////////////////
     // For 組合行為
     ////////////////////////////////////////////////////
     
-    void PumpPoolWaterToTempTank();
-    void PreparePumpTempTankWater();
+    void SwitchPWMMotor__AND__RunPeristalticMotor(RUN_MOTOR_GROUP *setting);
+    
+    void RUN_EVENT(RUN_EVENT_GROUP *eventGroupSetting);
+
+    void RUN_NO2_Original_Value();
 
 
     ////////////////////////////////////////////////////
@@ -115,23 +175,26 @@ class SMachine_Ctrl
 
     void UpdateAllPoolsDataRandom();
 
+    void LoopTest();
 
     ////////////////////////////////////////////////////
     // 公用參數
     ////////////////////////////////////////////////////
 
     Motor_Ctrl motorCtrl;
+    C_Peristaltic_Motors_Ctrl peristalticMotorsCtrl;
     SPOOLS_Ctrl poolsCtrl;
     CWIFI_Ctrler BackendServer;
     SPIFFS_Ctrl spiffs;
     Machine_Info MachineInfo;
-
-
+    
+    DeviceStatus NowDeviceStatus;
+    
     ////////////////////////////////////////////////////
     // 捨棄使用，純紀錄
     ////////////////////////////////////////////////////
 
-    void ChangeMotorStatus(MOTOR_STATUS StatusCode, char* TaskName, char* NextTaskName="", bool waitForTigger=false);
+    // void ChangeMotorStatus(MOTOR_STATUS StatusCode, char* TaskName, char* NextTaskName="", bool waitForTigger=false);
 
 
   private:

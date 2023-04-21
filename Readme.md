@@ -78,14 +78,6 @@ Ex:  GetLatestInformation?pool=pool-1
   "vibrio": 787.34                         // 弧菌數
 }
 ```
-## "Set_Devno?name=<newName>"
-> 設定機器名稱 
-```
-Ex:  Set_Devno?name=testtest
-{
-  "Message":"Change Devno:testtest -> testtest"
-}
-```
 
 ## "Set_Parameter?NewTimeIntervals=<時間>&Devno=<newName>&Mode=<Master|Slave>"
 > 參數設定

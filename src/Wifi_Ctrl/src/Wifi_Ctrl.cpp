@@ -49,11 +49,12 @@ DynamicJsonDocument urlParamsToJSON(const std::string& urlParams) {
 // For WebSocketEvent
 ////////////////////////////////////////////////////
 
-DynamicJsonDocument GetBaseWSReturnData(String MessageString)
+DynamicJsonDocument CWIFI_Ctrler::GetBaseWSReturnData(String MessageString)
 {
   DynamicJsonDocument json_doc = Machine_Ctrl.MachineInfo.GetDeviceInfo();
   json_doc["cmd"].set(MessageString);
   json_doc["wifi"].set(Machine_Ctrl.BackendServer.GetWifiInfo());
+  json_doc["device_status"].set(Machine_Ctrl.GetEventStatus());
   return json_doc;
 } 
 
@@ -61,17 +62,15 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
   if (type == WS_EVT_CONNECT) {
     Serial.println("WebSocket client connected");
     Machine_Ctrl.UpdateAllPoolsDataRandom();
-    DynamicJsonDocument json_doc = Machine_Ctrl.MachineInfo.GetDeviceInfo();
-  
-    json_doc["messageType"] = "WS_EVT_CONNECT";
-    json_doc["CMDType"] = "AllData";
+    DynamicJsonDocument json_doc = Machine_Ctrl.BackendServer.GetBaseWSReturnData("WS_EVT_CONNECT");
+    json_doc["parameter"].set(Machine_Ctrl.poolsCtrl.GetAllPoolsBaseInfo());
+
     time_t nowTime = now();
     char datetimeChar[30];
     sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
       year(nowTime), month(nowTime), day(nowTime),
       hour(nowTime), minute(nowTime), second(nowTime)
     );
-
     json_doc["time"] = datetimeChar;
     String returnString;
     serializeJsonPretty(json_doc, returnString);
@@ -79,7 +78,6 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
   } else if (type == WS_EVT_DISCONNECT) {
     Serial.println("WebSocket client disconnected");
   } else if (type == WS_EVT_DATA) {
-
     AwsFrameInfo * info = (AwsFrameInfo*)arg;
     char* swData = ((char *)data);
     ESP_LOGD(LOG_TAG_WIFI, "Get message: %s", swData);
@@ -99,9 +97,16 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
     const std::string const_str(Message_Parameter.c_str());
     DynamicJsonDocument parameters = urlParamsToJSON(const_str);
 
-    DynamicJsonDocument json_doc = GetBaseWSReturnData(MessageString);
-
-    if (Message_CMD==String("GetLatestInformation")) {
+    DynamicJsonDocument json_doc = Machine_Ctrl.BackendServer.GetBaseWSReturnData(MessageString);
+    
+    if (Message_CMD==String("PING")) {
+      json_doc["parameter"]["Message"].set("PONG");
+      json_doc["message"].set("OK");
+      String returnString;
+      serializeJsonPretty(json_doc, returnString);
+      client->text(returnString);
+    }
+    else if (Message_CMD==String("GetLatestInformation")) {
       Machine_Ctrl.UpdateAllPoolsDataRandom();
       if (Message_Parameter == "") {
         // 新增參數
@@ -131,24 +136,6 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
           client->text(returnString);
         }
       }
-    }
-    else if (Message_CMD==String("Set_Devno")) {
-      String NewDeviceName = parameters["name"] | "";
-      // 新增參數&動作
-      if (NewDeviceName != "") {
-        json_doc["device_no"] = NewDeviceName;
-        json_doc["parameter"]["Message"].set("Change Devno:"+Machine_Ctrl.MachineInfo.MachineInfo.device_no+" -> "+NewDeviceName);
-        json_doc["message"].set("OK");
-        Machine_Ctrl.MachineInfo.MachineInfo.device_no = NewDeviceName;
-        Machine_Ctrl.spiffs.ReWriteMachineSettingFile(Machine_Ctrl.MachineInfo.MachineInfo);
-      } else {
-        json_doc["message"].set("FAIL");
-        json_doc["parameter"]["WaringMessage"].set("Change Devno Fail");
-      }
-      // 發出訊息 
-      String returnString;
-      serializeJsonPretty(json_doc, returnString);
-      ws.textAll(returnString);
     }
     else if (Message_CMD==String("Set_Parameter")) {
       String NewTimeIntervals = parameters["NewTimeIntervals"] | "";
@@ -180,7 +167,7 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
       
       Machine_Ctrl.spiffs.ReWriteMachineSettingFile(Machine_Ctrl.MachineInfo.MachineInfo);
       // 重新獲得參數設定
-      json_doc = GetBaseWSReturnData(MessageString);
+      json_doc = Machine_Ctrl.BackendServer.GetBaseWSReturnData(MessageString);
       // 新增參數
       json_doc["parameter"]["Message"] = changeMessageSave;
       json_doc["message"].set("OK");
@@ -287,11 +274,11 @@ String CWIFI_Ctrler::GetWifiInfoString()
 
 void CWIFI_Ctrler::UploadNewData()
 {
+  Serial.println("UploadNewData");
   Machine_Ctrl.UpdateAllPoolsDataRandom();
-  DynamicJsonDocument json_doc = Machine_Ctrl.MachineInfo.GetDeviceInfo();
+  DynamicJsonDocument json_doc = GetBaseWSReturnData("WS_EVT_CONNECT");
+  json_doc["parameter"].set(Machine_Ctrl.poolsCtrl.GetAllPoolsBaseInfo());
 
-  json_doc["messageType"] = "Loop";
-  json_doc["CMDType"] = "AllData";
   time_t nowTime = now();
   char datetimeChar[30];
   sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
@@ -299,9 +286,7 @@ void CWIFI_Ctrler::UploadNewData()
     hour(nowTime), minute(nowTime), second(nowTime)
   );
   json_doc["time"] = datetimeChar;
-  void* json_output = malloc(6000);
-  serializeJsonPretty(json_doc, json_output, 6000);
-  String returnString = String((char*)json_output);
+  String returnString;
+  serializeJsonPretty(json_doc, returnString);
   ws.textAll(returnString);
-  free(json_output);
 }
