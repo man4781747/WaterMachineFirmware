@@ -46,7 +46,9 @@ void setup() {
   Machine_Ctrl.Build_PeristalticMotorScan();
 
   Machine_Ctrl.INIT_UpdateEventGroupSetting();
+  Machine_Ctrl.INIT_UpdateStepGroupSetting();
   Machine_Ctrl.GetAllEventSetting();
+  Machine_Ctrl.GetAllStepSetting();
 }
 
 void loop() {

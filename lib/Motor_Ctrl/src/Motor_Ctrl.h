@@ -46,8 +46,6 @@ class Motor_Ctrl
 
     u_int32_t motorsStatusCode = 0;
     int active = MotorCtrlSteps::Idel;
-    Single_Motor motorsArray[64];
-
     std::unordered_map<std::string, Single_Motor> motorsDict;
 
   private:
@@ -81,8 +79,10 @@ class C_Peristaltic_Motors_Ctrl
     C_Peristaltic_Motors_Ctrl(void){};
     void INIT_Motors();
     void AddNewMotor(int channelIndex_, String motorID_="", String motorName_="", String descrption="");
-    void RunMotor(int channelIndex_, int type, int durationTime);
-    C_Single_Peristaltic_Motor motorsArray[32];
+    
+    void RunMotor(String motorID, int type, int durationTime);
+    
+    std::unordered_map<std::string, C_Single_Peristaltic_Motor> motorsDict;
   private:
 };
 

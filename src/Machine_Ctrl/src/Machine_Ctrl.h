@@ -13,6 +13,10 @@
 
 #include "../../Wifi_Ctrl/src/Wifi_Ctrl.h"
 
+////////////////////////////////////////////////////
+// 事件類別 - START
+////////////////////////////////////////////////////
+
 struct PWM_MOTOR_STATUS_SET_OBJ {
   String motorID;
   int motortStatus;
@@ -25,44 +29,14 @@ struct PERISTALTIC_STATUS_SET_OBJ {
   int activeTime;
 };
 
-enum PERISTALTIC_MOTOR_MAPPING : int
-{
-  M1, M2, M3, M4, M5, M6, M7
+struct WAIT_EVENT_OBJ {
+  int waitTime;
 };
 
-// /**
-//  * @brief 伺服馬達與蠕動馬達的控制組設定物件
-//  * 
-//  */
-// struct RUN_MOTOR_GROUP {
-//   String Title;
-//   String Description;
-//   std::vector<PWM_MOTOR_STATUS_SET_OBJ> pwmCtrlList;
-//   // PWM_MOTOR_STATUS_SET_OBJ* pwmCtrlList;
-//   // int pwmCtrlListLength;
-//   PERISTALTIC_STATUS_SET_OBJ perostalicMotorCtrl;
-// };
+////////////////////////////////////////////////////
+// 事件類別 - END
+////////////////////////////////////////////////////
 
-// /**
-//  * @brief 伺服馬達與蠕動馬達的控制組設定
-//  * 請至 Machine_Ctrl.cpp 中編輯細節內容
-//  */
-
-// extern RUN_MOTOR_GROUP Clear_MixRoom;
-// extern RUN_MOTOR_GROUP Mix_Liquid_In_MixRoom;
-
-// extern RUN_MOTOR_GROUP Push_RO_Liquid_To_MixRoom;
-// extern RUN_MOTOR_GROUP Push_Sample_Liquid_To_MixRoom;
-
-// extern RUN_MOTOR_GROUP Push_NO2_Liquid_To_MixRoom;
-// extern RUN_MOTOR_GROUP Push_NH3R1_Liquid_To_MixRoom;
-// extern RUN_MOTOR_GROUP Push_NH3R2_Liquid_To_MixRoom;
-
-// extern RUN_MOTOR_GROUP Push_MixRoom_To_NO2_SensorRoom;
-// extern RUN_MOTOR_GROUP Clear_NO2_SensorRoom_To_MixRoom;
-
-// extern RUN_MOTOR_GROUP Push_MixRoom_To_NH3_SensorRoom;
-// extern RUN_MOTOR_GROUP Clear_NH3_SensorRoom_To_MixRoom;
 
 /**
  * @brief 單一事件組的設定物件
@@ -71,17 +45,19 @@ enum PERISTALTIC_MOTOR_MAPPING : int
 class EVENT
 {
   public:
-    EVENT(PWM_MOTOR_STATUS_SET_OBJ *pwmMotorEvent_){
-      pwmMotorEvent = pwmMotorEvent_;
-      Type = "PWM_MOTOR_STATUS_SET_OBJ";
+    EVENT(std::vector<PERISTALTIC_STATUS_SET_OBJ> *peristalticMotorList_){
+      peristalticMotorList = peristalticMotorList_;
     };
-    EVENT(PERISTALTIC_STATUS_SET_OBJ *peristalticMotorEvent_){
-      peristalticMotorEvent = peristalticMotorEvent_;
-      Type = "PERISTALTIC_STATUS_SET_OBJ";
+    EVENT(std::vector<PWM_MOTOR_STATUS_SET_OBJ> *PWM_MotorList_){
+      PWM_MotorList = PWM_MotorList_;
+    };
+    EVENT(WAIT_EVENT_OBJ *waitTime_){
+      waitTime = waitTime_;
     };
     String Type = "";
-    PWM_MOTOR_STATUS_SET_OBJ *pwmMotorEvent = NULL;
-    PERISTALTIC_STATUS_SET_OBJ *peristalticMotorEvent = NULL;
+    std::vector<PWM_MOTOR_STATUS_SET_OBJ> *PWM_MotorList = NULL;
+    std::vector<PERISTALTIC_STATUS_SET_OBJ> *peristalticMotorList = NULL;
+    WAIT_EVENT_OBJ *waitTime = NULL;
 };
 
 /**
@@ -92,6 +68,16 @@ struct RUN_EVENT_GROUP {
   String Title;
   String Description;
   std::vector<EVENT> EventList;
+};
+
+/**
+ * @brief 步驟組合的設定物件
+ * 
+ */
+struct RUN_STEP_GROUP {
+  String Title;
+  String Description;
+  std::vector<String> EventGroupNameList;
 };
 
 enum DeviceStatusCode : int
@@ -128,6 +114,8 @@ class SMachine_Ctrl
 
     void INIT_UpdateEventGroupSetting();
 
+    void INIT_UpdateStepGroupSetting();
+
     ////////////////////////////////////////////////////
     // For 更新設定
     ////////////////////////////////////////////////////
@@ -138,11 +126,15 @@ class SMachine_Ctrl
 
     void UpdateEventGroupSetting(JsonObject EventListSetting);
 
+    void UpdateStepGroupSetting(JsonObject StepGroupSetting);
+
     ////////////////////////////////////////////////////
     // For 資訊獲得
     ////////////////////////////////////////////////////  
 
     void GetAllEventSetting();
+
+    void GetAllStepSetting();
 
     ////////////////////////////////////////////////////
     // For 不間斷監聽
@@ -166,7 +158,6 @@ class SMachine_Ctrl
     // For 基礎行為
     ////////////////////////////////////////////////////
 
-    void Set_SW_MotorStatus(std::vector<PWM_MOTOR_STATUS_SET_OBJ> motorStatusList);
 
     ////////////////////////////////////////////////////
     // For 組合行為
@@ -174,9 +165,12 @@ class SMachine_Ctrl
     
     // void SwitchPWMMotor__AND__RunPeristalticMotor(RUN_MOTOR_GROUP *setting);
     
-    void RUN_EVENT(RUN_EVENT_GROUP *eventGroupSetting);
 
-    void RUN_NO2_Original_Value();
+    void RUN_EventGroup(String EVENT_NAME);
+
+
+    void RUN_Step(String STEP_NAME);
+
 
 
     ////////////////////////////////////////////////////
@@ -201,6 +195,7 @@ class SMachine_Ctrl
     DeviceStatus NowDeviceStatus;
     
     std::unordered_map<std::string, RUN_EVENT_GROUP> D_eventGroupList;
+    std::unordered_map<std::string, RUN_STEP_GROUP> D_stepGroupList;
 
     ////////////////////////////////////////////////////
     // 捨棄使用，純紀錄

@@ -12,228 +12,6 @@
 TaskHandle_t TASK_SwitchMotorScan = NULL;
 TaskHandle_t TASK_PeristalticMotorScan = NULL;
 
-
-////////////////////////////////////////////////////
-// RUN_MOTOR_GROUP 設定
-////////////////////////////////////////////////////
-
-// /**
-//  * @brief 清空混合室
-//  * 
-//  */
-// RUN_MOTOR_GROUP Clear_MixRoom {
-//   "清空混合室", "清空混合室內所有液體，將其作為廢液排出。",
-//   {
-//     {PWM_POSITION_MAPPING::S_M8, MotorSwitchStatus::LeftCenter},
-//   },
-//   {PERISTALTIC_MOTOR_MAPPING::M7, PeristalticMotorStatus::FORWARD, 5}
-// };
-
-// /**
-//  * @brief 混合混合室的液體
-//  * 
-//  */
-// RUN_MOTOR_GROUP Mix_Liquid_In_MixRoom {
-//   "混合混合室的液體", "混合混合室的液體。",
-//   {
-//     {PWM_POSITION_MAPPING::S_M8, MotorSwitchStatus::LeftCenter},
-//   },
-//   {PERISTALTIC_MOTOR_MAPPING::M7, PeristalticMotorStatus::REVERSR, 5}
-// };
-
-// /**
-//  * @brief 抽取試劑水至混合室
-//  * 
-//  */
-// RUN_MOTOR_GROUP Push_RO_Liquid_To_MixRoom {
-//   "抽取試劑水至混合室", "抽取試劑水，並送至混合室",
-//   {
-//     {PWM_POSITION_MAPPING::S_M1, MotorSwitchStatus::LeftCenter},
-//     {PWM_POSITION_MAPPING::S_M2, MotorSwitchStatus::LeftRight},
-//     {PWM_POSITION_MAPPING::S_M3, MotorSwitchStatus::LeftRight},
-//     {PWM_POSITION_MAPPING::S_M4, MotorSwitchStatus::LeftRight},
-//     {PWM_POSITION_MAPPING::S_M5, MotorSwitchStatus::LeftRight},
-//     {PWM_POSITION_MAPPING::S_M6, MotorSwitchStatus::LeftRight},
-//     {PWM_POSITION_MAPPING::S_M7, MotorSwitchStatus::LeftRight},
-//   },
-//   {PERISTALTIC_MOTOR_MAPPING::M4, PeristalticMotorStatus::FORWARD, 5}
-// };
-
-// /**
-//  * @brief 抽取樣本水至混合室
-//  * 
-//  */
-// RUN_MOTOR_GROUP Push_Sample_Liquid_To_MixRoom {
-//   "抽取樣本水至混合室", "抽取樣本水，並送至混合室",
-//   {
-//     {PWM_POSITION_MAPPING::S_M0, MotorSwitchStatus::LeftRight},
-//     {PWM_POSITION_MAPPING::S_M1, MotorSwitchStatus::LeftRight},
-//     {PWM_POSITION_MAPPING::S_M2, MotorSwitchStatus::LeftRight},
-//     {PWM_POSITION_MAPPING::S_M3, MotorSwitchStatus::LeftRight},
-//     {PWM_POSITION_MAPPING::S_M4, MotorSwitchStatus::LeftRight},
-//     {PWM_POSITION_MAPPING::S_M5, MotorSwitchStatus::LeftRight},
-//     {PWM_POSITION_MAPPING::S_M6, MotorSwitchStatus::LeftRight},
-//     {PWM_POSITION_MAPPING::S_M7, MotorSwitchStatus::LeftRight},
-//   },
-//   {PERISTALTIC_MOTOR_MAPPING::M4, PeristalticMotorStatus::FORWARD, 5}
-// };
-
-
-// /**
-//  * @brief 抽取亞硝酸鹽至混合室
-//  * 
-//  */
-// RUN_MOTOR_GROUP Push_NO2_Liquid_To_MixRoom {
-//   "抽取亞硝酸鹽至混合室", "抽取亞硝酸鹽至混合室",
-//   {
-//     {PWM_POSITION_MAPPING::S_M4, MotorSwitchStatus::LeftCenter},
-//     {PWM_POSITION_MAPPING::S_M5, MotorSwitchStatus::LeftRight},
-//     {PWM_POSITION_MAPPING::S_M6, MotorSwitchStatus::LeftRight},
-//     {PWM_POSITION_MAPPING::S_M7, MotorSwitchStatus::LeftRight},
-//   },
-//   {PERISTALTIC_MOTOR_MAPPING::M4, PeristalticMotorStatus::FORWARD, 5}
-// };
-
-// /**
-//  * @brief 抽取氨氮R1至混合室
-//  * 
-//  */
-// RUN_MOTOR_GROUP Push_NH3R1_Liquid_To_MixRoom {
-//   "抽取氨氮R1至混合室", "抽取氨氮R1至混合室",
-//   {
-//     {PWM_POSITION_MAPPING::S_M6, MotorSwitchStatus::LeftCenter},
-//     {PWM_POSITION_MAPPING::S_M7, MotorSwitchStatus::LeftRight},
-//   },
-//   {PERISTALTIC_MOTOR_MAPPING::M4, PeristalticMotorStatus::FORWARD, 5}
-// };
-
-// /**
-//  * @brief 抽取氨氮R2至混合室
-//  * 
-//  */
-// RUN_MOTOR_GROUP Push_NH3R2_Liquid_To_MixRoom {
-//   "抽取氨氮R2至混合室", "抽取氨氮R2至混合室",
-//   {},
-//   {PERISTALTIC_MOTOR_MAPPING::M5, PeristalticMotorStatus::FORWARD, 5}
-// };
-
-
-
-// /**
-//  * @brief 抽取混合室溶液至亞硝酸鹽光度檢測室
-//  * 
-//  */
-// RUN_MOTOR_GROUP Push_MixRoom_To_NO2_SensorRoom {
-//   "抽取混合室溶液至亞硝酸鹽光度檢測室", "抽取混合室溶液，並送至亞硝酸鹽光度檢測室",
-//   {
-//     {PWM_POSITION_MAPPING::S_M8, MotorSwitchStatus::LeftRight},
-//     {PWM_POSITION_MAPPING::S_L1, MotorSwitchStatus::LeftRight},
-//     {PWM_POSITION_MAPPING::S_L2, MotorSwitchStatus::LeftCenter},
-//   },
-//   {PERISTALTIC_MOTOR_MAPPING::M7, PeristalticMotorStatus::FORWARD, 5}
-// };
-
-// /**
-//  * @brief 亞硝酸鹽光度檢測室溶液退回混合室
-//  * 
-//  */
-// RUN_MOTOR_GROUP Clear_NO2_SensorRoom_To_MixRoom {
-//   "亞硝酸鹽光度檢測室溶液退回混合室", "亞硝酸鹽光度檢測室溶液退回混合室",
-//   {
-//     {PWM_POSITION_MAPPING::S_M8, MotorSwitchStatus::LeftRight},
-//     {PWM_POSITION_MAPPING::S_L1, MotorSwitchStatus::LeftRight},
-//     {PWM_POSITION_MAPPING::S_L2, MotorSwitchStatus::LeftCenter},
-//   },
-//   {PERISTALTIC_MOTOR_MAPPING::M7, PeristalticMotorStatus::REVERSR, 5}
-// };
-
-
-
-/**
- * @brief 抽取混合室溶液至氮氧光度檢測室
- * 
- */
-// RUN_MOTOR_GROUP Push_MixRoom_To_NH3_SensorRoom {
-//   "抽取混合室溶液至氮氧光度檢測室", "抽取混合室溶液至氮氧光度檢測室",
-//   {
-//     {PWM_POSITION_MAPPING::S_M8, MotorSwitchStatus::LeftRight},
-//     {PWM_POSITION_MAPPING::S_L1, MotorSwitchStatus::LeftCenter},
-//   },
-//   {PERISTALTIC_MOTOR_MAPPING::M7, PeristalticMotorStatus::FORWARD, 5}
-// };
-
-// /**
-//  * @brief 亞硝酸鹽光度檢測室溶液退回混合室
-//  * 
-//  */
-// RUN_MOTOR_GROUP Clear_NH3_SensorRoom_To_MixRoom {
-//   "亞硝酸鹽光度檢測室溶液退回混合室", "亞硝酸鹽光度檢測室溶液退回混合室",
-//   {
-//     {PWM_POSITION_MAPPING::S_M8, MotorSwitchStatus::LeftRight},
-//     {PWM_POSITION_MAPPING::S_L1, MotorSwitchStatus::LeftCenter},
-//   },
-//   {
-//     PERISTALTIC_MOTOR_MAPPING::M7, PeristalticMotorStatus::REVERSR, 5
-//   }
-// };
-
-// ////////////////////////////////////////////////////
-// // For 事件組設定
-// ////////////////////////////////////////////////////
-
-// RUN_EVENT_GROUP RUN_NO2_Original_Value {
-//   "亞硝酸鹽原點檢測", "亞硝酸鹽原點檢測",
-//   {
-//     EVENT_GROUP(&Clear_MixRoom),
-//     EVENT_GROUP(&Push_RO_Liquid_To_MixRoom),
-//     EVENT_GROUP(&Push_MixRoom_To_NO2_SensorRoom),
-//     EVENT_GROUP(&Clear_NO2_SensorRoom_To_MixRoom),
-//     EVENT_GROUP(&Clear_MixRoom),
-//   }
-// };
-
-// RUN_EVENT_GROUP RUN_NO2_Test_Solution_Value {
-//   "亞硝酸鹽待測液檢測", "亞硝酸鹽待測液檢測",
-//   {
-//     EVENT_GROUP(&Clear_MixRoom),
-//     EVENT_GROUP(&Push_RO_Liquid_To_MixRoom),
-//     EVENT_GROUP(&Push_Sample_Liquid_To_MixRoom),
-//     EVENT_GROUP(&Mix_Liquid_In_MixRoom),
-//     EVENT_GROUP(&Push_NO2_Liquid_To_MixRoom),
-//     EVENT_GROUP(&Mix_Liquid_In_MixRoom),
-//     EVENT_GROUP(&Push_MixRoom_To_NO2_SensorRoom),
-//     EVENT_GROUP(&Clear_NO2_SensorRoom_To_MixRoom),
-//     EVENT_GROUP(&Clear_MixRoom),
-//   }
-// };
-
-// RUN_EVENT_GROUP RUN_NH3_Original_Value {
-//   "氨氮原點檢測", "氨氮原點檢測",
-//   {
-//     EVENT_GROUP(&Clear_MixRoom),
-//     EVENT_GROUP(&Push_Sample_Liquid_To_MixRoom),
-//     EVENT_GROUP(&Push_MixRoom_To_NH3_SensorRoom),
-//     EVENT_GROUP(&Clear_NH3_SensorRoom_To_MixRoom),
-//     EVENT_GROUP(&Clear_MixRoom),
-//   }
-// };
-
-// RUN_EVENT_GROUP RUN_NH3_Test_Solution_Value {
-//   "氨氮試劑檢測", "氨氮試劑檢測",
-//   {
-//     EVENT_GROUP(&Clear_MixRoom),
-//     EVENT_GROUP(&Push_Sample_Liquid_To_MixRoom),
-//     EVENT_GROUP(&Push_NH3R1_Liquid_To_MixRoom),
-//     EVENT_GROUP(&Clear_MixRoom),
-//     EVENT_GROUP(&Push_NH3R2_Liquid_To_MixRoom),
-//     EVENT_GROUP(&Clear_MixRoom),
-//     EVENT_GROUP(&Push_MixRoom_To_NH3_SensorRoom),
-//     EVENT_GROUP(&Clear_NH3_SensorRoom_To_MixRoom),
-//     EVENT_GROUP(&Clear_MixRoom),
-//   }
-// };
-
-
 ////////////////////////////////////////////////////
 // For 初始化
 ////////////////////////////////////////////////////
@@ -242,18 +20,7 @@ void SMachine_Ctrl::INIT_SPIFFS_config()
 {
   spiffs.INIT_SPIFFS();
   MachineInfo = spiffs.LoadMachineSetting();
-  // DynamicJsonDocument DeviceSetting_ = spiffs.GetDeviceSetting();
   spiffs.GetDeviceSetting();
-
-  // JsonObject obj = DeviceSetting->as<JsonObject>();
-  // obj = obj["pwm_motor"];
-
-
-  // UpdatePWMMotorSetting(obj);
-
-  // for (JsonObject::iterator it = obj.begin(); it != obj.end(); ++it) {
-  //   Serial.println(it->key().c_str());
-  // }
 }
 
 void SMachine_Ctrl::INIT_SW_Moter()
@@ -275,6 +42,13 @@ void SMachine_Ctrl::INIT_UpdateEventGroupSetting()
   D_eventGroupList.clear();
   JsonObject obj = spiffs.DeviceSetting->as<JsonObject>();
   UpdateEventGroupSetting(obj["event_group"]);
+}
+
+void SMachine_Ctrl::INIT_UpdateStepGroupSetting()
+{
+  D_stepGroupList.clear();
+  JsonObject obj = spiffs.DeviceSetting->as<JsonObject>();
+  UpdateStepGroupSetting(obj["steps_group"]);
 }
 
 ////////////////////////////////////////////////////
@@ -312,29 +86,54 @@ void SMachine_Ctrl::UpdateEventGroupSetting(JsonObject EventListSetting)
     for (JsonVariant event_chose : event_list) {
       if (event_chose["pwm_motor_list"]) {
         JsonArray pwm_motor_list = event_chose["pwm_motor_list"];
+        std::vector<PWM_MOTOR_STATUS_SET_OBJ> *PWM_motorList = new std::vector<PWM_MOTOR_STATUS_SET_OBJ>;
         for (JsonVariant pwm_motor_chose : pwm_motor_list) {
-          PWM_MOTOR_STATUS_SET_OBJ *newPwmMotorItem = new PWM_MOTOR_STATUS_SET_OBJ {
-            pwm_motor_chose["pwm_motor_id"], 
-            pwm_motor_chose["status"]
-          };
-          EVENT newEvent(newPwmMotorItem);
-          EventList.push_back(newEvent);
+          PWM_motorList->push_back(
+            {pwm_motor_chose["pwm_motor_id"], pwm_motor_chose["status"]}
+          );
         }
+        EVENT newEvent(PWM_motorList);
+        EventList.push_back(newEvent);
       } else if (event_chose["peristaltic_motor_list"]) {
         JsonArray peristaltic_motor_list = event_chose["peristaltic_motor_list"];
+        std::vector<PERISTALTIC_STATUS_SET_OBJ> *peristalticMotorList = new std::vector<PERISTALTIC_STATUS_SET_OBJ>;
         for (JsonVariant peristaltic_motor_chose : peristaltic_motor_list) {
-          PERISTALTIC_STATUS_SET_OBJ *newPeristalticMotorItem = new PERISTALTIC_STATUS_SET_OBJ {
-            peristaltic_motor_chose["peristaltic_motor_id"], 
-            peristaltic_motor_chose["status"], 
-            peristaltic_motor_chose["time"]
-          };
-          EVENT newEvent(newPeristalticMotorItem);
+          peristalticMotorList->push_back(
+            {
+              peristaltic_motor_chose["peristaltic_motor_id"], 
+              peristaltic_motor_chose["status"], 
+              peristaltic_motor_chose["time"]
+            }
+          );
+          EVENT newEvent(peristalticMotorList);
           EventList.push_back(newEvent);
         }
+      } else if (event_chose["wait"]) {
+        WAIT_EVENT_OBJ *waitObj = new WAIT_EVENT_OBJ;
+        waitObj->waitTime = event_chose["wait"];
+        EVENT newEvent(waitObj);
+        EventList.push_back(newEvent);
       }
     }
     D_eventGroupList[it->key().c_str()] = {
       Title, Description, EventList
+    };
+  }
+}
+
+void SMachine_Ctrl::UpdateStepGroupSetting(JsonObject StepGroupSetting)
+{
+  D_stepGroupList.clear();
+  for (JsonObject::iterator it = StepGroupSetting.begin(); it != StepGroupSetting.end(); ++it) {
+    String Title = StepGroupSetting[it->key().c_str()]["title"];
+    String Description = StepGroupSetting[it->key().c_str()]["description"];
+    JsonArray step_list = StepGroupSetting[it->key().c_str()]["steps"];
+    std::vector<String> EventGroupNameList;
+    for (JsonVariant step_chose : step_list) {
+      EventGroupNameList.push_back(step_chose);
+    }
+    D_stepGroupList[it->key().c_str()] = {
+      Title, Description, EventGroupNameList
     };
   }
 }
@@ -350,12 +149,34 @@ void SMachine_Ctrl::GetAllEventSetting()
     Serial.println("Key:\t"+String(it->first.c_str()));
     Serial.println("Title:\t"+D_eventGroupList[it->first].Title);
     Serial.println("Desp:\t"+D_eventGroupList[it->first].Description);
-    for (const auto& eventChose : D_eventGroupList[it->first].EventList) {
-      if (eventChose.Type == "PWM_MOTOR_STATUS_SET_OBJ") {
-        Serial.println("PWM_MOTOR_STATUS_SET_OBJ\t: "+eventChose.pwmMotorEvent->motorID+"\tto\t"+String(eventChose.pwmMotorEvent->motortStatus));
-      } else if (eventChose.Type == "PERISTALTIC_STATUS_SET_OBJ") {
-        Serial.println("PERISTALTIC_STATUS_SET_OBJ\t: "+eventChose.peristalticMotorEvent->motorID+"\tto\t"+String(eventChose.peristalticMotorEvent->motortStatus)+" in "+String(eventChose.peristalticMotorEvent->activeTime) + " s");
+    int eventCount = 1;
+    for (auto& eventChose : D_eventGroupList[it->first].EventList) {
+      Serial.printf("EVENT - %d :\r\n", eventCount);
+      eventCount++;
+      if (eventChose.PWM_MotorList) {
+        for (auto it = eventChose.PWM_MotorList->begin(); it != eventChose.PWM_MotorList->end(); ++it) {
+          Serial.println("PWM_MOTOR_STATUS_SET_OBJ\t: "+it->motorID+"\tto\t"+String(it->motortStatus));
+        }
+      } else if (eventChose.peristalticMotorList) {
+        for (auto it = eventChose.peristalticMotorList->begin(); it != eventChose.peristalticMotorList->end(); ++it) {
+          Serial.println("PERISTALTIC_STATUS_SET_OBJ\t: "+it->motorID+"\tto\t"+String(it->motortStatus)+" in "+String(it->activeTime) + " s");
+        }
+      } else if (eventChose.waitTime) {
+        // vTaskDelay(eventChose.waitTime->waitTime);
       }
+    }
+  }
+}
+
+void SMachine_Ctrl::GetAllStepSetting()
+{
+  for (auto it = D_stepGroupList.begin(); it != D_stepGroupList.end(); ++it) {
+    Serial.println("====================================================");
+    Serial.println("Key:\t"+String(it->first.c_str()));
+    Serial.println("Title:\t"+D_stepGroupList[it->first].Title);
+    Serial.println("Desp:\t"+D_stepGroupList[it->first].Description);
+    for (const auto& stepChose : D_stepGroupList[it->first].EventGroupNameList) {
+      Serial.println("STEP\t: "+stepChose);
     }
   }
 }
@@ -403,28 +224,23 @@ void Task_PeristalticMotorScan(void * parameter)
 {
   ESP_LOGI("SMachine_Ctrl","Task_PeristalticMotorScan Run");
   for (;;) {
-    for (int motorChose=0;motorChose<16;motorChose++) {
+    for (auto it = Machine_Ctrl.peristalticMotorsCtrl.motorsDict.begin(); it != Machine_Ctrl.peristalticMotorsCtrl.motorsDict.end(); ++it) {
       time_t nowTime = now();
-      if (nowTime < Machine_Ctrl.peristalticMotorsCtrl.motorsArray[motorChose].motorEndTime) {
-        if (
-          Machine_Ctrl.peristalticMotorsCtrl.motorsArray[motorChose].motorNowStatus != Machine_Ctrl.peristalticMotorsCtrl.motorsArray[motorChose].motorNextStatus
-        ) {
-          ESP_LOGI("Task_PeristalticMotorScan","Peristaltic Motors %d change status: %d -> %d",
-            motorChose, Machine_Ctrl.peristalticMotorsCtrl.motorsArray[motorChose].motorNowStatus,
-            Machine_Ctrl.peristalticMotorsCtrl.motorsArray[motorChose].motorNextStatus
+      if (nowTime < it->second.motorEndTime) {
+        if (it->second.motorNowStatus != it->second.motorNextStatus) {
+          ESP_LOGI("Task_PeristalticMotorScan","Peristaltic Motors %s change status: %d -> %d",
+            it->second.motorID.c_str(), it->second.motorNowStatus, it->second.motorNextStatus
           );
-          Machine_Ctrl.peristalticMotorsCtrl.motorsArray[motorChose].motorNowStatus = Machine_Ctrl.peristalticMotorsCtrl.motorsArray[motorChose].motorNextStatus;
+          it->second.motorNowStatus = it->second.motorNextStatus;
         }
       } else {
-        if (
-          Machine_Ctrl.peristalticMotorsCtrl.motorsArray[motorChose].motorNowStatus != MotorCtrlSteps::Idel
-        ) {
-          ESP_LOGI("Task_PeristalticMotorScan","Peristaltic Motors %d stop", motorChose);
-          Machine_Ctrl.peristalticMotorsCtrl.motorsArray[motorChose].motorNowStatus = MotorCtrlSteps::Idel;
-          Machine_Ctrl.peristalticMotorsCtrl.motorsArray[motorChose].motorNextStatus = MotorCtrlSteps::Idel;
+        if (it->second.motorNowStatus != MotorCtrlSteps::Idel) {
+          ESP_LOGI("Task_PeristalticMotorScan","Peristaltic Motors %s stop", it->second.motorID.c_str());
+          it->second.motorNowStatus  = MotorCtrlSteps::Idel;
+          it->second.motorNextStatus = MotorCtrlSteps::Idel;
         }
       }
-    }
+    } 
     vTaskDelay(10);
   }
 }
@@ -490,91 +306,58 @@ DynamicJsonDocument SMachine_Ctrl::GetEventStatus()
 // For 基礎行為
 ////////////////////////////////////////////////////
 
-void SMachine_Ctrl::Set_SW_MotorStatus(std::vector<PWM_MOTOR_STATUS_SET_OBJ> motorStatusList)
-{
-  ESP_LOGI("Machine_Ctrl","Set SW_Motor status with PWM_MOTOR_STATUS_SET_OBJ");
-  for (auto& motorStatus : motorStatusList) {
-    motorCtrl.SetMotorTo(motorStatus.motorID, motorStatus.motortStatus);
-  }
-  // int motorStatusListLen = sizeof(motorStatusList) / sizeof(PWM_MOTOR_STATUS_SET_OBJ);
-  // int maxMotorLen = sizeof(motorCtrl.motorsArray) / sizeof(motorCtrl.motorsArray[0]);
-  // ESP_LOGI("Machine_Ctrl","motorStatusListLen: %02d, maxMotorLen: %02d");
-  // for (int motorDataChose=0;motorDataChose<len ;motorDataChose++){
-  //   motorCtrl.SetMotorTo(motorStatusList[motorDataChose].motortIndex, motorStatusList[motorDataChose].motortStatus);
-  // }
-}
 ////////////////////////////////////////////////////
 // For 組合行為
 ////////////////////////////////////////////////////
 
-// void SMachine_Ctrl::SwitchPWMMotor__AND__RunPeristalticMotor(RUN_MOTOR_GROUP *setting)
-// {
-//   ESP_LOGI("Machine_Ctrl","執行馬達控制設定組: %s", setting->Title.c_str());
-//   ESP_LOGI("Machine_Ctrl","%s", setting->Description.c_str());
-//   Machine_Ctrl.Set_SW_MotorStatus(setting->pwmCtrlList);
-//   motorCtrl.active = MotorCtrlSteps::Active;
-//   while(motorCtrl.active != MotorCtrlSteps::Idel){
-//     delay(1);
-//   }
-//   // setting->perostalicMotorCtrl.motortIndex
-//   peristalticMotorsCtrl.RunMotor(
-//     setting->perostalicMotorCtrl.motortIndex, 
-//     setting->perostalicMotorCtrl.motortStatus, 
-//     setting->perostalicMotorCtrl.activeTime
-//   );
-//   delay(setting->perostalicMotorCtrl.activeTime*1000+100);
-//   ESP_LOGI("Machine_Ctrl","執行馬達控制設定組: %s 完成!", setting->Title.c_str());
-// }
+void SMachine_Ctrl::RUN_EventGroup(String EVENT_GROUP_NAME)
+{
+  ESP_LOGI("RUN_EVENT_GROUP","執行事件:\t%s", EVENT_GROUP_NAME.c_str());
+  if (D_eventGroupList.count(std::string(EVENT_GROUP_NAME.c_str())) > 0){
+    std::string eventGroupName = std::string(EVENT_GROUP_NAME.c_str());
+    ESP_LOGI("RUN_EVENT_GROUP","事件說明:\t%s", D_eventGroupList[eventGroupName].Description.c_str());
+    int eventCount = 1;
+    for (auto& eventItem : D_eventGroupList[eventGroupName].EventList) {
+      ESP_LOGI("RUN_EVENT_GROUP","EVENT:\t%d", eventCount);
+      eventCount++;
+      if (eventItem.PWM_MotorList) {
+        for (auto it = eventItem.PWM_MotorList->begin(); it != eventItem.PWM_MotorList->end(); ++it) {
+          Machine_Ctrl.motorCtrl.SetMotorTo(it->motorID, it->motortStatus);
+        }
+        Machine_Ctrl.motorCtrl.active = MotorCtrlSteps::Active;
+        while (Machine_Ctrl.motorCtrl.active != MotorCtrlSteps::Idel) {
+          vTaskDelay(10);
+        }
+      }
+      else if (eventItem.peristalticMotorList) {
+        for (auto it = eventItem.peristalticMotorList->begin(); it != eventItem.peristalticMotorList->end(); ++it) {
+          Machine_Ctrl.peristalticMotorsCtrl.RunMotor(it->motorID, it->motortStatus, it->activeTime);
+          vTaskDelay(it->activeTime*1000+500);
+        }
+      } else if (eventItem.waitTime) {
+        vTaskDelay(eventItem.waitTime->waitTime);
+      }
+    }
 
-void SMachine_Ctrl::RUN_EVENT(RUN_EVENT_GROUP *eventGroupSetting){
-  ESP_LOGI("RUN_EVENT","執行流程: %s", eventGroupSetting->Title.c_str());
-  ESP_LOGI("RUN_EVENT","%s", eventGroupSetting->Description.c_str());
-  int StepCount = 0;
-  NowDeviceStatus.deviceStatusCode = DeviceStatusCode::device_busy;
-  NowDeviceStatus.NowRunningEvent = eventGroupSetting;
-  time_t nowTime = now();
-  char datetimeChar[30];
-  sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
-    year(nowTime), month(nowTime), day(nowTime),
-    hour(nowTime), minute(nowTime), second(nowTime)
-  );
-  NowDeviceStatus.StartTime = String(nowTime);
-  // for (auto& eventGroup : eventGroupSetting->eventGroup) {
-  //   DynamicJsonDocument json_doc = BackendServer.GetBaseWSReturnData("event_update");
-  //   json_doc["parameter"]["Message"] = "event update";
-  //   json_doc["message"].set("OK");
-  //   // 發出訊息 
-  //   String returnString;
-  //   serializeJsonPretty(json_doc, returnString);
-  //   BackendServer.ws_->textAll(returnString);
+    ESP_LOGI("RUN_EVENT_GROUP","事件:\t%s\t執行完畢",eventGroupName.c_str());
+  } else {
+    ESP_LOGE("RUN_EVENT_GROUP","事件:\t%s\t不存在", EVENT_GROUP_NAME.c_str());
+  }
+}
 
-  //   ESP_LOGI("RUN_EVENT","%s - 步驟 %d", eventGroupSetting->Description.c_str(), StepCount+1);
-  //   NowDeviceStatus.NowStep = StepCount;
-  //   StepCount++;
-  //   if (eventGroup.motorGroupEvent != NULL) {
-  //     // SwitchPWMMotor__AND__RunPeristalticMotor(eventGroup.motorGroupEvent);
-  //   } else {
-
-  //   }
-  // }
-  ESP_LOGI("Machine_Ctrl","流程: %s 執行完畢", eventGroupSetting->Title.c_str());
-  NowDeviceStatus.deviceStatusCode = DeviceStatusCode::device_idel;
-  NowDeviceStatus.NowRunningEvent = NULL;
+void SMachine_Ctrl::RUN_Step(String STEP_NAME){
+  std::string stepName = std::string(STEP_NAME.c_str());
+  ESP_LOGI("RUN_STEP","執行流程:\t%s", stepName.c_str());
+  if (D_stepGroupList.count(stepName) > 0){
+    ESP_LOGI("RUN_STEP","流程說明:\t%s", D_stepGroupList[stepName].Description.c_str());
+    for (auto& eventGroupName : D_stepGroupList[stepName].EventGroupNameList) {
+      RUN_EventGroup(eventGroupName);
+    }
+    ESP_LOGI("RUN_STEP","流程:\t%s\t執行完畢",stepName.c_str());
+  } else {
+    ESP_LOGE("RUN_STEP","流程:\t%s\t不存在", stepName.c_str());
+  }
 };
-
-
-// void SMachine_Ctrl::RUN_NO2_Original_Value(){
-//   ESP_LOGI("Machine_Ctrl","亞硝酸鹽原點數值檢測流程開始");
-//   SwitchPWMMotor__AND__RunPeristalticMotor(&Clear_MixRoom);
-//   SwitchPWMMotor__AND__RunPeristalticMotor(&Push_RO_Liquid_To_MixRoom);
-//   SwitchPWMMotor__AND__RunPeristalticMotor(&Push_MixRoom_To_NO2_SensorRoom);
-//   ESP_LOGI("Machine_Ctrl","亞硝酸鹽原點數值檢測測試，目前還沒寫code");
-//   delay(3000);
-//   SwitchPWMMotor__AND__RunPeristalticMotor(&Clear_NO2_SensorRoom_To_MixRoom);
-//   SwitchPWMMotor__AND__RunPeristalticMotor(&Clear_MixRoom);
-
-//   ESP_LOGI("Machine_Ctrl","亞硝酸鹽原點數值檢測流程完畢");
-// };
 
 ////////////////////////////////////////////////////
 // For 測試

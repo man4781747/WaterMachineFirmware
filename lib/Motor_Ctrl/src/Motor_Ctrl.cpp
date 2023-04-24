@@ -63,24 +63,8 @@ void Motor_Ctrl::INIT_Motors()
 void Motor_Ctrl::AddNewMotor(int channelIndex_, String motorID_, String motorName_, String descrption)
 {
   ESP_LOGI("Motor_Ctrl","AddNewMotor: %02d, %s, %s", channelIndex_, motorName_.c_str(), descrption.c_str());
-  // motorsArray[channelIndex_] = Single_Motor();
-  // motorsArray[channelIndex_].ActiveMotor(channelIndex_, motorID_, motorName_, descrption);
-
-  // Single_Motor newMotor;
   motorsDict[std::string(motorID_.c_str())] = Single_Motor();
   motorsDict[std::string(motorID_.c_str())].ActiveMotor(channelIndex_, motorID_, motorName_, descrption);
-}
-
-/**
- * @brief 設定指定PWM馬達角度
- * 
- * @param channelIndex_ 
- * @param angle 
- */
-void Motor_Ctrl::SetMotorTo(int channelIndex_, int angle)
-{
-  ESP_LOGI("Motor","Motor %02d set: %03d", channelIndex_, angle);
-  motorsArray[channelIndex_].motorStatus = angle;
 }
 
 /**
@@ -99,24 +83,6 @@ void Motor_Ctrl::SetMotorTo(String motorID, int angle)
   }
 }
 
-
-/**
- * @brief 馬達狀態正式變更
- * 
- * @param channelIndex_ 
- */
-void Motor_Ctrl::MotorStatusChange(int channelIndex_)
-{
-  ESP_LOGI("Motor","Motor %02d change to: %03d", channelIndex_, motorsArray[channelIndex_].motorStatus);
-  int pulse_wide = map(motorsArray[channelIndex_].motorStatus, 0, 180, 600, 2400);
-  int pulse_width = int((float)pulse_wide / 1000000.*50.*4096.);
-  if (channelIndex_/16 == 1) {
-    pwm_2.setPWM(channelIndex_%16, 0, pulse_width);
-  } else {
-    pwm_1.setPWM(channelIndex_%16, 0, pulse_width);
-  }
-}
-
 /**
  * @brief 馬達狀態正式變更
  * 
@@ -125,8 +91,8 @@ void Motor_Ctrl::MotorStatusChange(int channelIndex_)
 void Motor_Ctrl::MotorStatusChange(String motorID)
 {
   int channelIndex_ = motorsDict[std::string(motorID.c_str())].channelIndex;
-  ESP_LOGI("Motor","Motor %s change to: %03d", motorID.c_str(), motorsArray[channelIndex_].motorStatus);
-  int pulse_wide = map(motorsArray[channelIndex_].motorStatus, 0, 180, 600, 2400);
+  ESP_LOGI("Motor","Motor %s change to: %03d", motorID.c_str(), motorsDict[std::string(motorID.c_str())].motorStatus);
+  int pulse_wide = map(motorsDict[std::string(motorID.c_str())].motorStatus, 0, 180, 600, 2400);
   int pulse_width = int((float)pulse_wide / 1000000.*50.*4096.);
   if (channelIndex_/16 == 1) {
     pwm_2.setPWM(channelIndex_%16, 0, pulse_width);
@@ -169,15 +135,16 @@ void C_Peristaltic_Motors_Ctrl::INIT_Motors()
 void C_Peristaltic_Motors_Ctrl::AddNewMotor(int channelIndex_, String motorID, String motorName_, String descrption)
 {
   ESP_LOGI("Peristaltic_Motors_Ctrl","AddNewPeristalticMotor: %02d, %s, %s", channelIndex_, motorName_.c_str(), descrption.c_str());
-  motorsArray[channelIndex_] = C_Single_Peristaltic_Motor();
-  motorsArray[channelIndex_].ActiveMotor(channelIndex_, motorID, motorName_, descrption );
+  motorsDict[std::string(motorID.c_str())] = C_Single_Peristaltic_Motor();
+  motorsDict[std::string(motorID.c_str())].ActiveMotor(channelIndex_, motorID, motorName_, descrption );
+
 }
 
-void C_Peristaltic_Motors_Ctrl::RunMotor(int channelIndex_, int type, int durationTime)
+void C_Peristaltic_Motors_Ctrl::RunMotor(String motorID, int type, int durationTime)
 {
-  ESP_LOGI("Peristaltic_Motors_Ctrl","Peristaltic motor %02d set: %d in %d second", channelIndex_, type, durationTime);
-  motorsArray[channelIndex_].motorNextStatus = type;
+  ESP_LOGI("Peristaltic_Motors_Ctrl","Peristaltic motor %s set: %d in %d second", motorID.c_str(), type, durationTime);
+  motorsDict[std::string(motorID.c_str())].motorNextStatus = type;
   time_t nowTime = now();
-  motorsArray[channelIndex_].motorEndTime = time_t(nowTime + durationTime);
+  motorsDict[std::string(motorID.c_str())].motorEndTime = time_t(nowTime + durationTime);
 }
 
