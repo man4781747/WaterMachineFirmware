@@ -37,8 +37,13 @@ class Motor_Ctrl
     Motor_Ctrl(void);
     void INIT_Motors();
     void AddNewMotor(int channelIndex_, String motorID="", String motorName="", String descrption="");
+    
     void SetMotorTo(int channelIndex_, int angle);
+    void SetMotorTo(String motorID, int angle);
+    
     void MotorStatusChange(int channelIndex_);
+    void MotorStatusChange(String motorID);
+
     u_int32_t motorsStatusCode = 0;
     int active = MotorCtrlSteps::Idel;
     Single_Motor motorsArray[64];

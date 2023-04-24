@@ -45,56 +45,11 @@ void setup() {
   Machine_Ctrl.INIT_Peristaltic_Moter();
   Machine_Ctrl.Build_PeristalticMotorScan();
 
-
-  // Machine_Ctrl.RUN_NO2_Original_Value();
-  Machine_Ctrl.RUN_EVENT(
-    &RUN_NO2_Original_Value
-  );
+  Machine_Ctrl.INIT_UpdateEventGroupSetting();
+  Machine_Ctrl.GetAllEventSetting();
 }
 
 void loop() {
-  Machine_Ctrl.BackendServer.UploadNewData();
-  // Machine_Ctrl.LoopTest();
-  // RUN_MOTOR_GROUP PWM_TEST {
-  //   "測試", "測試",
-  //   new PWM_MOTOR_STATUS_SET_OBJ[17] {
-  //     {PWM_POSITION_MAPPING::S_M0, test},
-  //     {PWM_POSITION_MAPPING::S_M1, test},
-  //     {PWM_POSITION_MAPPING::S_M2, test},
-  //     {PWM_POSITION_MAPPING::S_M3, test},
-  //     {PWM_POSITION_MAPPING::S_M4, test},
-  //     {PWM_POSITION_MAPPING::S_M5, test},
-  //     {PWM_POSITION_MAPPING::S_M6, test},
-  //     {PWM_POSITION_MAPPING::S_M7, test},
-  //     {PWM_POSITION_MAPPING::S_M8, test},
-  //     {PWM_POSITION_MAPPING::S_PH1, test},
-  //     {PWM_POSITION_MAPPING::S_PH2, test},
-  //     {PWM_POSITION_MAPPING::S_L1, test},
-  //     {PWM_POSITION_MAPPING::S_L2, test},
-  //     {PWM_POSITION_MAPPING::S_B1, test},
-  //     {PWM_POSITION_MAPPING::S_B2, test},
-  //     {PWM_POSITION_MAPPING::S_B3, test},
-  //     {PWM_POSITION_MAPPING::S_B4, test},
-  //   }, 17,
-  //   {PERISTALTIC_MOTOR_MAPPING::M4, PeristalticMotorStatus::FORWARD, 0}
-  // };
-  // Machine_Ctrl.SwitchPWMMotor__AND__RunPeristalticMotor(&PWM_TEST);
-  // if (test == 90) {
-  //   test = 180;
-  // } else if (test == 180) {
-  //   test = 0;
-  // } else {
-  //   test = 90;
-  // }
-
-
-
-
-  // https://www.rapidtables.com/convert/number/binary-to-hex.html
-  // Machine_Ctrl.spiffs.ReWriteMachineSettingFile(
-  //   Machine_Ctrl.MachineInfo.MachineInfo
-  // );
-  // Machine_Ctrl.PumpPoolWaterToTempTank();
   delay(60000);
 }
 

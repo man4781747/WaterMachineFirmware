@@ -84,6 +84,23 @@ void Motor_Ctrl::SetMotorTo(int channelIndex_, int angle)
 }
 
 /**
+ * @brief 設定指定PWM馬達角度
+ * 
+ * @param motorID 
+ * @param angle 
+ */
+void Motor_Ctrl::SetMotorTo(String motorID, int angle)
+{
+  ESP_LOGI("Motor","Motor %s set: %03d", motorID.c_str(), angle);
+  if (motorsDict.count(std::string(motorID.c_str()))) {
+    motorsDict[std::string(motorID.c_str())].motorStatus = angle;
+  } else {
+    ESP_LOGE("Motor","Can't find motor: %s setting", motorID.c_str());
+  }
+}
+
+
+/**
  * @brief 馬達狀態正式變更
  * 
  * @param channelIndex_ 
@@ -91,6 +108,24 @@ void Motor_Ctrl::SetMotorTo(int channelIndex_, int angle)
 void Motor_Ctrl::MotorStatusChange(int channelIndex_)
 {
   ESP_LOGI("Motor","Motor %02d change to: %03d", channelIndex_, motorsArray[channelIndex_].motorStatus);
+  int pulse_wide = map(motorsArray[channelIndex_].motorStatus, 0, 180, 600, 2400);
+  int pulse_width = int((float)pulse_wide / 1000000.*50.*4096.);
+  if (channelIndex_/16 == 1) {
+    pwm_2.setPWM(channelIndex_%16, 0, pulse_width);
+  } else {
+    pwm_1.setPWM(channelIndex_%16, 0, pulse_width);
+  }
+}
+
+/**
+ * @brief 馬達狀態正式變更
+ * 
+ * @param motorID 
+ */
+void Motor_Ctrl::MotorStatusChange(String motorID)
+{
+  int channelIndex_ = motorsDict[std::string(motorID.c_str())].channelIndex;
+  ESP_LOGI("Motor","Motor %s change to: %03d", motorID.c_str(), motorsArray[channelIndex_].motorStatus);
   int pulse_wide = map(motorsArray[channelIndex_].motorStatus, 0, 180, 600, 2400);
   int pulse_width = int((float)pulse_wide / 1000000.*50.*4096.);
   if (channelIndex_/16 == 1) {

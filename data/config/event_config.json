@@ -122,5 +122,162 @@
             "title": "test",
             "description": "description"
         }
+    },
+    "event_group": {
+        "Clear_MixRoom" : {
+            "title": "清空混合室",
+            "description": "清空混合室內所有液體，將其作為廢液排出。",
+            "event": [
+                {"pwm_motor_list": [
+                    {"pwm_motor_id": "S_M8","status": 0}
+                ]},
+                {"peristaltic_motor_list": [
+                    {"peristaltic_motor_id": "M7","status": 1,"time": 5}
+                ]}
+            ]
+        },
+        "Mix_Liquid_In_MixRoom" : {
+            "title": "混合混合室的液體",
+            "description": "混合混合室的液體。",
+            "event": [
+                {"pwm_motor_list": [
+                    {"pwm_motor_id": "S_M8","status": 180}
+                ]},
+                {"peristaltic_motor_list": [
+                    {"peristaltic_motor_id": "M7","status": -1,"time": 5}
+                ]}
+            ]
+        },
+        "Push_RO_Liquid_To_MixRoom" : {
+            "title": "抽取試劑水至混合室",
+            "description": "抽取試劑水，並送至混合室",
+            "event": [
+                {"pwm_motor_list": [
+                    {"pwm_motor_id": "S_M1","status": 180},
+                    {"pwm_motor_id": "S_M2","status": 90},
+                    {"pwm_motor_id": "S_M3","status": 90},
+                    {"pwm_motor_id": "S_M4","status": 90},
+                    {"pwm_motor_id": "S_M5","status": 90},
+                    {"pwm_motor_id": "S_M6","status": 90},
+                    {"pwm_motor_id": "S_M7","status": 90}
+                ]},
+                {"peristaltic_motor_list": [
+                    {"peristaltic_motor_id": "M4","status": 1,"time": 5}
+                ]}
+            ]
+        },
+        "Push_Sample_Liquid_To_MixRoom" : {
+            "title": "抽取樣本水至混合室",
+            "description": "抽取樣本水，並送至混合室",
+            "event": [
+                {"pwm_motor_list": [
+                    {"pwm_motor_id": "S_M0","status": 180},
+                    {"pwm_motor_id": "S_M1","status": 90},
+                    {"pwm_motor_id": "S_M2","status": 90},
+                    {"pwm_motor_id": "S_M3","status": 90},
+                    {"pwm_motor_id": "S_M4","status": 90},
+                    {"pwm_motor_id": "S_M5","status": 90},
+                    {"pwm_motor_id": "S_M6","status": 90},
+                    {"pwm_motor_id": "S_M7","status": 90}
+                ]},
+                {"peristaltic_motor_list": [
+                    {"peristaltic_motor_id": "M4","status": 1,"time": 5}
+                ]}
+            ]
+        },
+        "Push_NO2_Liquid_To_MixRoom" : {
+            "title": "抽取亞硝酸鹽至混合室",
+            "description": "抽取亞硝酸鹽至混合室",
+            "event": [
+                {"pwm_motor_list": [
+                    {"pwm_motor_id": "S_M4","status": 180},
+                    {"pwm_motor_id": "S_M5","status": 90},
+                    {"pwm_motor_id": "S_M6","status": 90},
+                    {"pwm_motor_id": "S_M7","status": 90}
+                ]},
+                {"peristaltic_motor_list": [
+                    {"peristaltic_motor_id": "M4","status": 1,"time": 5}
+                ]}
+            ]
+        },
+        "Push_NH3R1_Liquid_To_MixRoom" : {
+            "title": "抽取氨氮R1至混合室",
+            "description": "抽取氨氮R1至混合室",
+            "event": [
+                {"pwm_motor_list": [
+                    {"pwm_motor_id": "S_M6","status": 180},
+                    {"pwm_motor_id": "S_M7","status": 90}
+                ]},
+                {"peristaltic_motor_list": [
+                    {"peristaltic_motor_id": "M4","status": 1,"time": 5}
+                ]}
+            ]
+        },
+        "Push_NH3R2_Liquid_To_MixRoom" : {
+            "title": "抽取氨氮R1至混合室",
+            "description": "抽取氨氮R1至混合室",
+            "event": [
+                {"peristaltic_motor_list": [
+                    {"peristaltic_motor_id": "M5","status": 1,"time": 5}
+                ]}
+            ]
+        },
+        "Push_MixRoom_To_NO2_SensorRoom" : {
+            "title": "抽取混合室溶液至亞硝酸鹽光度檢測室",
+            "description": "抽取混合室溶液至亞硝酸鹽光度檢測室",
+            "event": [
+                {"pwm_motor_list": [
+                    {"pwm_motor_id": "S_M8","status": 90},
+                    {"pwm_motor_id": "S_L1","status": 180},
+                    {"pwm_motor_id": "S_L2","status": 0}
+                ]},
+                {"peristaltic_motor_list": [
+                    {"peristaltic_motor_id": "M7","status": 1,"time": 5}
+                ]}
+            ]
+        },
+        "Clear_NO2_SensorRoom_To_MixRoom" : {
+            "title": "亞硝酸鹽光度檢測室溶液退回混合室",
+            "description": "亞硝酸鹽光度檢測室溶液退回混合室",
+            "event": [
+                {"pwm_motor_list": [
+                    {"pwm_motor_id": "S_M8","status": 90},
+                    {"pwm_motor_id": "S_L1","status": 180},
+                    {"pwm_motor_id": "S_L2","status": 0}
+                ]},
+                {"peristaltic_motor_list": [
+                    {"peristaltic_motor_id": "M7","status": -1,"time": 5}
+                ]}
+            ]
+        },
+        "Push_MixRoom_To_NH3_SensorRoom" : {
+            "title": "抽取混合室溶液至氮氧光度檢測室",
+            "description": "抽取混合室溶液至氮氧光度檢測室",
+            "event": [
+                {"pwm_motor_list": [
+                    {"pwm_motor_id": "S_M8","status": 90},
+                    {"pwm_motor_id": "S_L1","status": 0}
+                ]},
+                {"peristaltic_motor_list": [
+                    {"peristaltic_motor_id": "M7","status": 1,"time": 5}
+                ]}
+            ]
+        },
+        "Clear_NH3_SensorRoom_To_MixRoom" : {
+            "title": "亞硝酸鹽光度檢測室溶液退回混合室",
+            "description": "亞硝酸鹽光度檢測室溶液退回混合室",
+            "event": [
+                {"pwm_motor_list": [
+                    {"pwm_motor_id": "S_M8","status": 90},
+                    {"pwm_motor_id": "S_L1","status": 0}
+                ]},
+                {"peristaltic_motor_list": [
+                    {"peristaltic_motor_id": "M7","status": -1,"time": 5}
+                ]}
+            ]
+        }
+    },
+    "steps_group": {
+
     }
 }
