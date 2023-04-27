@@ -21,7 +21,7 @@ class SPIFFS_Ctrl
 
     DynamicJsonDocument* GetDeviceSetting();
 
-    DynamicJsonDocument *DeviceSetting = new DynamicJsonDocument(10000);
+    DynamicJsonDocument *DeviceSetting = new DynamicJsonDocument(50000);
 
     // String GetMotorSetting();
   private:

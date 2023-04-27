@@ -3,6 +3,8 @@
 #include <ArduinoJson.h>
 #include <ESP32Servo.h>
 
+#include <TimeLib.h>   
+
 #include <Pools_Ctrl.h>
 #include <Machine_Base_info.h>
 #include <Motor_Ctrl.h>
@@ -16,6 +18,11 @@ TaskHandle_t TASK_PeristalticMotorScan = NULL;
 // For 初始化
 ////////////////////////////////////////////////////
 
+/**
+ * @brief SPIFFS 初始化
+ * 同時會讀取基礎資訊&參數設定檔
+ * 
+ */
 void SMachine_Ctrl::INIT_SPIFFS_config()
 {
   spiffs.INIT_SPIFFS();
@@ -23,6 +30,11 @@ void SMachine_Ctrl::INIT_SPIFFS_config()
   spiffs.GetDeviceSetting();
 }
 
+/**
+ * @brief 初始化伺服馬達控制物件
+ * 同時依spiffs內的參數設定檔來建立伺服馬達物件
+ * 
+ */
 void SMachine_Ctrl::INIT_SW_Moter()
 {
   motorCtrl.INIT_Motors();
@@ -30,6 +42,11 @@ void SMachine_Ctrl::INIT_SW_Moter()
   UpdatePWMMotorSetting(obj["pwm_motor"]);
 }
 
+/**
+ * @brief 初始化蠕動馬達控制物件
+ * 同時依spiffs內的參數設定檔來建立蠕動馬達物件
+ * 
+ */
 void SMachine_Ctrl::INIT_Peristaltic_Moter()
 {
   peristalticMotorsCtrl.INIT_Motors();
@@ -37,6 +54,10 @@ void SMachine_Ctrl::INIT_Peristaltic_Moter()
   UpdatePeristalticMotorSetting(obj["peristaltic_motor"]);
 }
 
+/**
+ * @brief 初始化事件組合
+ * 
+ */
 void SMachine_Ctrl::INIT_UpdateEventGroupSetting()
 {
   D_eventGroupList.clear();
@@ -44,6 +65,10 @@ void SMachine_Ctrl::INIT_UpdateEventGroupSetting()
   UpdateEventGroupSetting(obj["event_group"]);
 }
 
+/**
+ * @brief 初始化流程組合
+ * 
+ */
 void SMachine_Ctrl::INIT_UpdateStepGroupSetting()
 {
   D_stepGroupList.clear();
@@ -55,8 +80,21 @@ void SMachine_Ctrl::INIT_UpdateStepGroupSetting()
 // For 更新設定
 ////////////////////////////////////////////////////
 
+/**
+ * @brief 依輸入內容重設伺服馬達設定
+ * 
+ * @param PWMMotorSetting JSON物件
+ * {
+ *  "馬達ID": {
+ *    "index": pwm index,
+ *    "title": 馬達名稱
+ *    "description": 說明
+ *  }, ...
+ * }
+ */
 void SMachine_Ctrl::UpdatePWMMotorSetting(JsonObject PWMMotorSetting)
 {
+  motorCtrl.motorsDict.clear();
   for (JsonObject::iterator it = PWMMotorSetting.begin(); it != PWMMotorSetting.end(); ++it) {
     motorCtrl.AddNewMotor(
       PWMMotorSetting[it->key().c_str()]["index"], String(it->key().c_str()), 
@@ -65,8 +103,21 @@ void SMachine_Ctrl::UpdatePWMMotorSetting(JsonObject PWMMotorSetting)
   }
 }
 
+/**
+ * @brief 依輸入內容重設蠕動馬達設定
+ * 
+ * @param PeristalticMotorSetting JSON物件
+ * {
+ *  "馬達ID": {
+ *    "index": index,
+ *    "title": 馬達名稱
+ *    "description": 說明
+ *  }, ...
+ * }
+ */
 void SMachine_Ctrl::UpdatePeristalticMotorSetting(JsonObject PeristalticMotorSetting)
 {
+  peristalticMotorsCtrl.motorsDict.clear();
   for (JsonObject::iterator it = PeristalticMotorSetting.begin(); it != PeristalticMotorSetting.end(); ++it) {
     peristalticMotorsCtrl.AddNewMotor(
       PeristalticMotorSetting[it->key().c_str()]["index"], String(it->key().c_str()),
@@ -75,6 +126,36 @@ void SMachine_Ctrl::UpdatePeristalticMotorSetting(JsonObject PeristalticMotorSet
   }
 }
 
+/**
+ * @brief 依輸入內容重設事件組
+ * 
+ * @param EventListSetting JSON物件
+ * {
+ *  "事件組ID": {
+ *    "title": 事件組名稱
+ *    "description": 說明,
+ *    "event": [  // 清單形式，順序即為執行順率
+ *      {
+ *        "pwm_motor_list": [
+ *          {
+ *            "pwm_motor_id": <馬達ID>,"status": <0, 90 ,180 馬達角度>
+ *          }, ...
+ *        ]
+ *      },
+ *      {
+ *        "peristaltic_motor_list": [
+ *          {
+ *            "peristaltic_motor_id": <蠕動馬達ID>,"status": <1 or -1>,"time": int <秒數>
+ *          }, ...
+ *        ]
+ *      },
+ *      {
+ *        "wait": int <秒數>
+ *      }
+ *    ]
+ *  }, ...
+ * }
+ */
 void SMachine_Ctrl::UpdateEventGroupSetting(JsonObject EventListSetting)
 {
   D_eventGroupList.clear();
@@ -121,6 +202,18 @@ void SMachine_Ctrl::UpdateEventGroupSetting(JsonObject EventListSetting)
   }
 }
 
+/**
+ * @brief 依輸入內容重設流程設定
+ * 
+ * @param StepGroupSetting JSON物件
+ * {
+ *  "流程ID": {
+ *    "title": 流程名稱
+ *    "description": 說明,
+ *    "steps": [<事件ID>,...]
+ *  }, ...
+ * }
+ */
 void SMachine_Ctrl::UpdateStepGroupSetting(JsonObject StepGroupSetting)
 {
   D_stepGroupList.clear();
@@ -181,10 +274,31 @@ void SMachine_Ctrl::GetAllStepSetting()
   }
 }
 
+String SMachine_Ctrl::GetRunHistoryDetailString()
+{
+  String returnString;
+  serializeJsonPretty(*RunHistoryItem, returnString);
+  return returnString;
+}
+
+////////////////////////////////////////////////////
+// For 事件執行
+////////////////////////////////////////////////////
+
+EVENT_RESULT SMachine_Ctrl::RUN__PWMMotorEvent()
+{
+
+}
+
 ////////////////////////////////////////////////////
 // For 不間斷監聽
 ////////////////////////////////////////////////////
 
+/**
+ * @brief 伺服馬達控制監聽迴圈
+ * 
+ * @param parameter 
+ */
 void Task_SwitchMotorScan(void * parameter)
 {
   ESP_LOGI("SMachine_Ctrl","Task_SwitchMotorScan Run");
@@ -220,6 +334,11 @@ void SMachine_Ctrl::Build_SwitchMotorScan()
   } 
 }
 
+/**
+ * @brief 蠕動馬達控制迴圈
+ * 
+ * @param parameter 
+ */
 void Task_PeristalticMotorScan(void * parameter)
 {
   ESP_LOGI("SMachine_Ctrl","Task_PeristalticMotorScan Run");
@@ -273,6 +392,11 @@ DynamicJsonDocument SMachine_Ctrl::GetDeviceInfos()
   return MachineInfo.GetDeviceInfo();
 };
 
+/**
+ * @brief 獲得儀器基本資訊
+ * 
+ * @return String 
+ */
 String SMachine_Ctrl::GetDeviceInfosString()
 {
   void* json_output = malloc(10000);
@@ -283,6 +407,7 @@ String SMachine_Ctrl::GetDeviceInfosString()
   json_doc.clear();
   return returnString;
 };
+
 
 DynamicJsonDocument SMachine_Ctrl::GetEventStatus()
 {
@@ -305,6 +430,68 @@ DynamicJsonDocument SMachine_Ctrl::GetEventStatus()
 ////////////////////////////////////////////////////
 // For 基礎行為
 ////////////////////////////////////////////////////
+
+void SMachine_Ctrl::LoadNewSettings(String StepID, String TrigerBy)
+{
+  std::string stdStepID = std::string(StepID.c_str());
+  if (D_stepGroupList.count(stdStepID) > 0) {
+    RunHistoryItem->clear();
+    JsonObject RunHistoryItem_ = RunHistoryItem->to<JsonObject>();
+    RunHistoryItem_["step_id"] = StepID;
+    RunHistoryItem_["triger_by"] = TrigerBy;
+    time_t NOW = now();
+    RunHistoryItem_["create_time"] = NOW;
+    JsonArray enent_group_list = RunHistoryItem_.createNestedArray("enent_group_list");
+    for (
+      auto eventGroupName = D_stepGroupList[stdStepID].EventGroupNameList.begin(); 
+      eventGroupName != D_stepGroupList[stdStepID].EventGroupNameList.end(); 
+      ++eventGroupName  // 依 Event Name 跑迴圈
+    ) {
+      DynamicJsonDocument eventGroupItem(10000);
+      std::string stdEventName = std::string(eventGroupName->c_str());
+      eventGroupItem["event_group_id"] = String(stdEventName.c_str());
+      eventGroupItem["active_time"] = -1;
+      eventGroupItem["end_time"] = -1;
+
+      JsonArray enent_list = eventGroupItem.createNestedArray("enent_list");
+      for (auto& eventChose : D_eventGroupList[stdEventName].EventList) {
+        DynamicJsonDocument eventItem(4000);
+        eventItem["active_time"] = -1;
+        eventItem["end_time"] = -1;
+        if (eventChose.PWM_MotorList) {
+          eventItem["event"] = "pwn_motor";
+          JsonArray pwn_motor_list = eventItem.createNestedArray("pwn_motor_list");
+          for (auto pwnMotorChose = eventChose.PWM_MotorList->begin(); pwnMotorChose != eventChose.PWM_MotorList->end(); ++pwnMotorChose) {
+            DynamicJsonDocument pwnMotorItem(100);
+            pwnMotorItem["pwm_motor_id"] = pwnMotorChose->motorID;
+            pwnMotorItem["status"] = pwnMotorChose->motortStatus;
+            pwn_motor_list.add(pwnMotorItem);
+          }
+        }
+        else if (eventChose.peristalticMotorList) {
+          eventItem["event"] = "peristaltic_motor";
+          JsonArray peristaltic_motor_list = eventItem.createNestedArray("peristaltic_motor_list");
+          for (auto peristalticMotorChose = eventChose.peristalticMotorList->begin(); peristalticMotorChose != eventChose.peristalticMotorList->end(); ++peristalticMotorChose) {
+            DynamicJsonDocument peristalticMotorItem(100);
+            peristalticMotorItem["pwm_motor_id"] = peristalticMotorChose->motorID;
+            peristalticMotorItem["status"] = peristalticMotorChose->motortStatus;
+            peristalticMotorItem["time"] = peristalticMotorChose->activeTime;
+            peristaltic_motor_list.add(peristalticMotorItem);
+          }
+        }
+        else if (eventChose.waitTime) {
+          eventItem["event"] = "wait";
+          eventItem["wait"] = eventChose.waitTime->waitTime;
+        }
+        enent_list.add(eventItem);
+      }
+
+     
+      enent_group_list.add(eventGroupItem);
+    }
+  }
+}
+
 
 ////////////////////////////////////////////////////
 // For 組合行為

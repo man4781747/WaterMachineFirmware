@@ -40,15 +40,17 @@ void setup() {
   Machine_Ctrl.poolsCtrl.addNewPool("pool-4");
 
   Machine_Ctrl.INIT_SW_Moter();
-  Machine_Ctrl.Build_SwitchMotorScan();
-
   Machine_Ctrl.INIT_Peristaltic_Moter();
-  Machine_Ctrl.Build_PeristalticMotorScan();
-
   Machine_Ctrl.INIT_UpdateEventGroupSetting();
   Machine_Ctrl.INIT_UpdateStepGroupSetting();
-  Machine_Ctrl.GetAllEventSetting();
-  Machine_Ctrl.GetAllStepSetting();
+
+  Machine_Ctrl.LoadNewSettings("TEST", "ME");
+  Serial.println(
+    Machine_Ctrl.GetRunHistoryDetailString()
+  );
+
+  // Machine_Ctrl.Build_SwitchMotorScan();
+  // Machine_Ctrl.Build_PeristalticMotorScan();
 }
 
 void loop() {

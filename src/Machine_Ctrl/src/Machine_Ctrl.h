@@ -11,24 +11,54 @@
 #include <SPIFFS_Ctrl.h>
 #include <Machine_Base_info.h>
 
-#include "../../Wifi_Ctrl/src/Wifi_Ctrl.h"
+#include <TimeLib.h>   
+
+#include "Wifi_Ctrl/src/Wifi_Ctrl.h"
 
 ////////////////////////////////////////////////////
 // 事件類別 - START
 ////////////////////////////////////////////////////
 
+enum RUN_EVENT_RESULT : int
+{
+  OK, BUSY
+};
+
+struct EVENT_RESULT {
+  RUN_EVENT_RESULT status = RUN_EVENT_RESULT::BUSY;
+  String message = "";
+}
+
+/**
+ * @brief 伺服馬達控制事件
+ * 內含2參數
+ * 1. motorID: 待控制的馬達ID
+ * 2. motortStatus: 待控制的馬達目標角度
+ * 
+ */
 struct PWM_MOTOR_STATUS_SET_OBJ {
   String motorID;
   int motortStatus;
 };
 
-
+/**
+ * @brief 蠕動馬達控制事件
+ * 1. motorID: 待控制的馬達ID
+ * 2. motortStatus: 1(正轉)、2(反轉)
+ * 3. activeTime: 運轉時長
+ * 
+ */
 struct PERISTALTIC_STATUS_SET_OBJ {
   String motorID;
   int motortStatus;
   int activeTime;
 };
 
+
+/**
+ * @brief 等待事件
+ * 
+ */
 struct WAIT_EVENT_OBJ {
   int waitTime;
 };
@@ -40,6 +70,8 @@ struct WAIT_EVENT_OBJ {
 
 /**
  * @brief 單一事件組的設定物件
+ * 主要是給 RUN_EVENT_GROUP 使用
+ * 依初始化時輸入的參數類型決定內容
  * 
  */
 class EVENT
@@ -61,7 +93,10 @@ class EVENT
 };
 
 /**
- * @brief 事件組組合的設定物件
+ * @brief 事件組合的設定物件
+ * 1. 事件名稱
+ * 2. 事件說明
+ * 3. 事件清單 []
  * 
  */
 struct RUN_EVENT_GROUP {
@@ -71,7 +106,10 @@ struct RUN_EVENT_GROUP {
 };
 
 /**
- * @brief 步驟組合的設定物件
+ * @brief 流程組合的設定物件
+ * 1. 流程名稱
+ * 2. 流程說明
+ * 3. 事件組清單 []
  * 
  */
 struct RUN_STEP_GROUP {
@@ -80,19 +118,24 @@ struct RUN_STEP_GROUP {
   std::vector<String> EventGroupNameList;
 };
 
+
 enum DeviceStatusCode : int
 {
   device_idel, device_busy
 };
 
+
+/**
+ * @brief 當前儀器狀態
+ * 
+ */
 struct DeviceStatus {
   DeviceStatusCode deviceStatusCode = DeviceStatusCode::device_idel;
   String StartTime = "";
   int NowStep = 0;
+  RUN_STEP_GROUP *NowRunningSteps = NULL;
   RUN_EVENT_GROUP *NowRunningEvent = NULL;
 };
-
-
 
 /**
  * 儀器控制主體
@@ -136,6 +179,16 @@ class SMachine_Ctrl
 
     void GetAllStepSetting();
 
+    String GetRunHistoryDetailString();
+
+    ////////////////////////////////////////////////////
+    // For 事件執行
+    ////////////////////////////////////////////////////
+
+    EVENT_RESULT RUN__PWMMotorEvent();
+
+
+
     ////////////////////////////////////////////////////
     // For 不間斷監聽
     ////////////////////////////////////////////////////
@@ -158,20 +211,15 @@ class SMachine_Ctrl
     // For 基礎行為
     ////////////////////////////////////////////////////
 
+    void LoadNewSettings(String StepID, String TrigerBy);
 
     ////////////////////////////////////////////////////
     // For 組合行為
     ////////////////////////////////////////////////////
-    
-    // void SwitchPWMMotor__AND__RunPeristalticMotor(RUN_MOTOR_GROUP *setting);
-    
 
     void RUN_EventGroup(String EVENT_NAME);
 
-
     void RUN_Step(String STEP_NAME);
-
-
 
     ////////////////////////////////////////////////////
     // For 測試
@@ -193,10 +241,15 @@ class SMachine_Ctrl
     Machine_Info MachineInfo;
     
     DeviceStatus NowDeviceStatus;
+
+
+
+    
+    DynamicJsonDocument *RunHistoryItem = new DynamicJsonDocument(50000);
     
     std::unordered_map<std::string, RUN_EVENT_GROUP> D_eventGroupList;
     std::unordered_map<std::string, RUN_STEP_GROUP> D_stepGroupList;
-
+    
     ////////////////////////////////////////////////////
     // 捨棄使用，純紀錄
     ////////////////////////////////////////////////////

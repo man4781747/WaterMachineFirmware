@@ -11,7 +11,7 @@
 
 DynamicJsonDocument Machine_Info::GetDeviceInfo()
 {
-  DynamicJsonDocument json_doc(10000);
+  DynamicJsonDocument json_doc(100000);
   json_doc["device_no"].set(MachineInfo.device_no);
   json_doc["FIRMWARE_VERSION"].set(MachineInfo.FIRMWARE_VERSION);
   json_doc["mode"].set(MachineInfo.mode);

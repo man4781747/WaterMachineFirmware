@@ -176,6 +176,13 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
       serializeJsonPretty(json_doc, returnString);
       ws.textAll(returnString);
     }
+    else if (Message_CMD==String("Get_StepSetting")) {
+      json_doc["parameter"].set(*(Machine_Ctrl.spiffs.DeviceSetting));
+      json_doc["message"].set("OK");
+      String returnString;
+      serializeJsonPretty(json_doc, returnString);
+      client->text(returnString);
+    }
     json_doc.clear();
   }
 }
@@ -218,7 +225,17 @@ void CWIFI_Ctrler::UpdateMachineTimerByNTP()
   while(!timeClient.update()) {
     timeClient.forceUpdate();
   }
-  setTime(timeClient.getEpochTime());
+  // time_t now = time(nullptr);
+  // char datetime[23];
+  // sprintf(datetime, "%04d-%02d-%02dT%02d:%02d:%02d+08", year(now), month(now), day(now), hour(now), minute(now), second(now));
+  // Serial.println(datetime);
+  configTime(28800, 0, "pool.ntp.org");
+  setTime((time_t)timeClient.getEpochTime());
+
+  // now = time(nullptr);
+  // sprintf(datetime, "%04d-%02d-%02dT%02d:%02d:%02d+08", year(now), month(now), day(now), hour(now), minute(now), second(now));
+  // Serial.println(datetime);
+  // now()
   ESP_LOGI(LOG_TAG_WIFI, "Time: %s", timeClient.getFormattedTime().c_str());
 }
 
