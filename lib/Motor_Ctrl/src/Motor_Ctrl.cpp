@@ -67,6 +67,18 @@ void Motor_Ctrl::AddNewMotor(int channelIndex_, String motorID_, String motorNam
   motorsDict[std::string(motorID_.c_str())].ActiveMotor(channelIndex_, motorID_, motorName_, descrption);
 }
 
+void Motor_Ctrl::SetMotorTo(int channelIndex_, int angle)
+{
+  ESP_LOGI("Motor","Motor %02d change to: %03d", channelIndex_, angle);
+  int pulse_wide = map(angle, 0, 180, 600, 2400);
+  int pulse_width = int((float)pulse_wide / 1000000.*50.*4096.);
+  if (channelIndex_/16 == 1) {
+    pwm_2.setPWM(channelIndex_%16, 0, pulse_width);
+  } else {
+    pwm_1.setPWM(channelIndex_%16, 0, pulse_width);
+  }
+}
+
 /**
  * @brief 設定指定PWM馬達角度
  * 
@@ -75,12 +87,23 @@ void Motor_Ctrl::AddNewMotor(int channelIndex_, String motorID_, String motorNam
  */
 void Motor_Ctrl::SetMotorTo(String motorID, int angle)
 {
-  ESP_LOGI("Motor","Motor %s set: %03d", motorID.c_str(), angle);
-  if (motorsDict.count(std::string(motorID.c_str()))) {
-    motorsDict[std::string(motorID.c_str())].motorStatus = angle;
-  } else {
-    ESP_LOGE("Motor","Can't find motor: %s setting", motorID.c_str());
-  }
+  // int channelIndex_
+  // ESP_LOGI("Motor","Motor %02d change to: %03d", channelIndex_, angle);
+  // int pulse_wide = map(angle, 0, 180, 600, 2400);
+  // int pulse_width = int((float)pulse_wide / 1000000.*50.*4096.);
+  // if (channelIndex_/16 == 1) {
+  //   pwm_2.setPWM(channelIndex_%16, 0, pulse_width);
+  // } else {
+  //   pwm_1.setPWM(channelIndex_%16, 0, pulse_width);
+  // }
+
+  // ESP_LOGI("Motor","Motor %s set: %03d", motorID.c_str(), angle);
+  
+  // if (motorsDict.count(std::string(motorID.c_str()))) {
+  //   motorsDict[std::string(motorID.c_str())].motorStatus = angle;
+  // } else {
+  //   ESP_LOGE("Motor","Can't find motor: %s setting", motorID.c_str());
+  // }
 }
 
 /**
@@ -140,11 +163,7 @@ void C_Peristaltic_Motors_Ctrl::AddNewMotor(int channelIndex_, String motorID, S
 
 }
 
-void C_Peristaltic_Motors_Ctrl::RunMotor(String motorID, int type, int durationTime)
+void C_Peristaltic_Motors_Ctrl::RunMotor(int motorIndex, int type)
 {
-  ESP_LOGI("Peristaltic_Motors_Ctrl","Peristaltic motor %s set: %d in %d second", motorID.c_str(), type, durationTime);
-  motorsDict[std::string(motorID.c_str())].motorNextStatus = type;
-  time_t nowTime = now();
-  motorsDict[std::string(motorID.c_str())].motorEndTime = time_t(nowTime + durationTime);
+  // ESP_LOGI("Peristaltic_Motors_Ctrl","Peristaltic motor %d set: %d", motorIndex, type);
 }
-

@@ -152,13 +152,38 @@ DynamicJsonDocument* SPIFFS_Ctrl::GetDeviceSetting()
     File file = SPIFFS.open("/config/event_config.json", FILE_READ);
     String FileContent = file.readString();
     file.close();
-    DeserializationError error = deserializeJson(*DeviceSetting, FileContent);
-    if (error) {
-      Serial.print("deserializeJson() failed: ");
-      Serial.println(error.f_str());
+    // Serial.printf("file length: %d\r\n", FileContent.length());
+    // Serial.printf("file content: %s\r\n", FileContent.c_str());
+    if (FileContent.length() != 0) {
+      DeserializationError error = deserializeJson(*DeviceSetting, FileContent);
+      if (error) {
+        Serial.print("deserializeJson() failed: ");
+        Serial.println(error.f_str());
+      }
+    } else {
+      File fileTemp = SPIFFS.open("/config/config_temp.json", FILE_READ);
+      String tempFileContent = fileTemp.readString();
+      fileTemp.close();
+      // Serial.printf("temp file length: %d\r\n", tempFileContent.length());
+      // Serial.printf("temp file content: %s\r\n", tempFileContent.c_str());
+      deserializeJson(*DeviceSetting, tempFileContent);
     }
+
   }
   return DeviceSetting;
 }
 
+
+void SPIFFS_Ctrl::ReWriteDeviceSetting()
+{
+  String fileString;
+  serializeJsonPretty(*DeviceSetting, fileString);
+  File fileTemp = SPIFFS.open("/config/config_temp.json", FILE_WRITE);
+  fileTemp.print(fileString);
+  fileTemp.close();
+
+  File file = SPIFFS.open("/config/event_config.json", FILE_WRITE);
+  file.print(fileString);
+  file.close();
+}
 

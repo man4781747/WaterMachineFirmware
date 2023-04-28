@@ -55,6 +55,13 @@ DynamicJsonDocument CWIFI_Ctrler::GetBaseWSReturnData(String MessageString)
   json_doc["cmd"].set(MessageString);
   json_doc["wifi"].set(Machine_Ctrl.BackendServer.GetWifiInfo());
   json_doc["device_status"].set(Machine_Ctrl.GetEventStatus());
+  time_t nowTime = now();
+  char datetimeChar[30];
+  sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
+    year(nowTime), month(nowTime), day(nowTime),
+    hour(nowTime), minute(nowTime), second(nowTime)
+  );
+  json_doc["time"] = datetimeChar;
   return json_doc;
 } 
 
@@ -182,6 +189,28 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
       String returnString;
       serializeJsonPretty(json_doc, returnString);
       client->text(returnString);
+    } else if (Message_CMD==String("Action")) {
+      String action = parameters["action"] | "";
+      if (action == "loadStep") {
+        String stepName = parameters["stepName"] | "";
+        Machine_Ctrl.LoadStepToRunHistoryItem(stepName,"Web");
+        json_doc["message"].set("OK");
+      }
+      else if (action == "runStep") {
+        Machine_Ctrl.RUN__History();
+        json_doc["message"].set("OK");
+      }
+      else if (action == "stopAllTask") {
+        Machine_Ctrl.STOP_AllTask();
+        json_doc["message"].set("OK");
+      }
+      else if (action == "resumeAllTask") {
+        Machine_Ctrl.RESUME_AllTask();
+        json_doc["message"].set("OK");
+      }
+      String returnString;
+      serializeJsonPretty(json_doc, returnString);
+      ws.textAll(returnString);
     }
     json_doc.clear();
   }

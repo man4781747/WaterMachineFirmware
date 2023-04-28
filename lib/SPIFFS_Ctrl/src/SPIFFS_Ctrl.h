@@ -20,10 +20,9 @@ class SPIFFS_Ctrl
     void ReWriteMachineSettingFile(MachineInfo_t MachineInfo_);
 
     DynamicJsonDocument* GetDeviceSetting();
+    void ReWriteDeviceSetting();
+    DynamicJsonDocument *DeviceSetting = new DynamicJsonDocument(100000);
 
-    DynamicJsonDocument *DeviceSetting = new DynamicJsonDocument(50000);
-
-    // String GetMotorSetting();
   private:
 };
 

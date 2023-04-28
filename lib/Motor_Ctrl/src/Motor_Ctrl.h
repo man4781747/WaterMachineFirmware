@@ -47,10 +47,9 @@ class Motor_Ctrl
     u_int32_t motorsStatusCode = 0;
     int active = MotorCtrlSteps::Idel;
     std::unordered_map<std::string, Single_Motor> motorsDict;
-
-  private:
     Adafruit_PWMServoDriver pwm_1;
     Adafruit_PWMServoDriver pwm_2;
+  private:
 };
 
 enum PeristalticMotorStatus : int {
@@ -80,7 +79,8 @@ class C_Peristaltic_Motors_Ctrl
     void INIT_Motors();
     void AddNewMotor(int channelIndex_, String motorID_="", String motorName_="", String descrption="");
     
-    void RunMotor(String motorID, int type, int durationTime);
+    // void RunMotor(String motorID, int type, int durationTime);
+    void RunMotor(int motorIndex, int type);
     
     std::unordered_map<std::string, C_Single_Peristaltic_Motor> motorsDict;
   private:

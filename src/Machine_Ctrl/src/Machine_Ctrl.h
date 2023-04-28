@@ -19,15 +19,11 @@
 // 事件類別 - START
 ////////////////////////////////////////////////////
 
-enum RUN_EVENT_RESULT : int
-{
-  OK, BUSY
-};
 
 struct EVENT_RESULT {
-  RUN_EVENT_RESULT status = RUN_EVENT_RESULT::BUSY;
+  int status = 99;
   String message = "";
-}
+};
 
 /**
  * @brief 伺服馬達控制事件
@@ -121,7 +117,7 @@ struct RUN_STEP_GROUP {
 
 enum DeviceStatusCode : int
 {
-  device_idel, device_busy
+  device_idel, device_busy, device_stop
 };
 
 
@@ -175,19 +171,38 @@ class SMachine_Ctrl
     // For 資訊獲得
     ////////////////////////////////////////////////////  
 
-    void GetAllEventSetting();
+    void PrintAllPWNMotorSetting();
 
-    void GetAllStepSetting();
+    void PrintAllPeristalticMotorSetting();
 
-    String GetRunHistoryDetailString();
+    void PrintAllEventSetting();
+
+    void PrintAllStepSetting();
+
+
+    ////////////////////////////////////////////////////
+    // For 數值轉換
+    ////////////////////////////////////////////////////  
+
+    int pwmMotorIDToMotorIndex(String motorID);
+
+    int PeristalticMotorIDToMotorIndex(String motorID);
 
     ////////////////////////////////////////////////////
     // For 事件執行
     ////////////////////////////////////////////////////
 
-    EVENT_RESULT RUN__PWMMotorEvent();
+    EVENT_RESULT RUN__PWMMotorEvent(JsonArray PWMMotorEventList);
 
+    EVENT_RESULT RUN__PeristalticMotorEvent(JsonArray PeristalticMotorEventList);
 
+    EVENT_RESULT RUN__History();
+
+    void STOP_AllTask();
+
+    void RESUME_AllTask();
+
+    void Stop_AllPeristalticMotor();
 
     ////////////////////////////////////////////////////
     // For 不間斷監聽
@@ -211,7 +226,7 @@ class SMachine_Ctrl
     // For 基礎行為
     ////////////////////////////////////////////////////
 
-    void LoadNewSettings(String StepID, String TrigerBy);
+    void LoadStepToRunHistoryItem(String StepID, String TrigerBy);
 
     ////////////////////////////////////////////////////
     // For 組合行為
@@ -233,6 +248,13 @@ class SMachine_Ctrl
     // 公用參數
     ////////////////////////////////////////////////////
 
+    TaskHandle_t TASK__PWM_MOTOR;
+    TaskHandle_t TASK__Peristaltic_MOTOR;
+    TaskHandle_t TASK__History;
+    
+    TickType_t LastSuspendTick;
+    unsigned long TaskSuspendTimeSum = 0;
+
     Motor_Ctrl motorCtrl;
     C_Peristaltic_Motors_Ctrl peristalticMotorsCtrl;
     SPOOLS_Ctrl poolsCtrl;
@@ -242,11 +264,6 @@ class SMachine_Ctrl
     
     DeviceStatus NowDeviceStatus;
 
-
-
-    
-    DynamicJsonDocument *RunHistoryItem = new DynamicJsonDocument(50000);
-    
     std::unordered_map<std::string, RUN_EVENT_GROUP> D_eventGroupList;
     std::unordered_map<std::string, RUN_STEP_GROUP> D_stepGroupList;
     
