@@ -29,14 +29,28 @@ class CWIFI_Ctrler
     // For 初始化
     ////////////////////////////////////////////////////
 
-    void ConnectToWifi(const char* ssidAP,const char* passwordAP);
+    void ConnectToWifi();
+    bool CreateSoftAP();
+    void ConnectOtherWiFiAP(String SSID, String PW="");
     void UpdateMachineTimerByNTP();
     void ServerStart();
 
+    ////////////////////////////////////////////////////
+    // For WIFI Manager相關
+    ////////////////////////////////////////////////////
+
+    TaskHandle_t TASK__SSIDScan;
+    DynamicJsonDocument* SSIDList = new DynamicJsonDocument(3000);
+    DynamicJsonDocument* SSIDList_Temp = new DynamicJsonDocument(3000);
+    bool WifiModeOpen = true;
+    void StartSTAConnectCheck();
 
     ////////////////////////////////////////////////////
     // For 互動相關
     ////////////////////////////////////////////////////
+
+    DynamicJsonDocument GetSSIDList();
+    void StartWiFiConnecter();
 
     DynamicJsonDocument GetWifiInfo();
     String GetWifiInfoString();
@@ -44,15 +58,11 @@ class CWIFI_Ctrler
 
     void UploadNewData();
 
-    ////////////////////////////////////////////////////
-    // For 互動相關
-    ////////////////////////////////////////////////////
-
-
-
   private:
     void setStaticAPIs();
+    void setAPIs();
     void createWebServer();
+
 };
 
 #endif

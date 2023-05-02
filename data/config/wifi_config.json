@@ -1,0 +1,11 @@
+{
+
+  "AP_IP": "192.168.0.4",
+  "AP_gateway": "192.168.0.1",
+  "AP_subnet_mask": "255.255.255.0",
+  "AP_Name": "AkiraTest",
+  "AP_Password": "12345678",
+  "remote_IP": "127.0.0.1",
+  "remote_Name": "IDWATER",
+  "remote_Password": "56651588"
+}

@@ -34,6 +34,7 @@ void SMachine_Ctrl::INIT_SPIFFS_config()
   spiffs.INIT_SPIFFS();
   MachineInfo = spiffs.LoadMachineSetting();
   spiffs.GetDeviceSetting();
+  spiffs.LoadWiFiConfig();
 }
 
 /**

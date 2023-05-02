@@ -7,6 +7,7 @@
 
 #include <Machine_Base_info.h>
 
+
 class SPIFFS_Ctrl
 {
   public:
@@ -18,6 +19,11 @@ class SPIFFS_Ctrl
 
     Machine_Info LoadMachineSetting();
     void ReWriteMachineSettingFile(MachineInfo_t MachineInfo_);
+    
+    DynamicJsonDocument* LoadWiFiConfig();
+    void ReWriteWiFiConfig();
+    DynamicJsonDocument *WifiConfig = new DynamicJsonDocument(10000);
+    String WiFiConfigFilePath = "/config/wifi_config.json";
 
     DynamicJsonDocument* GetDeviceSetting();
     void ReWriteDeviceSetting();

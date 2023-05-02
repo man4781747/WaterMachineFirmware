@@ -138,6 +138,53 @@ void SPIFFS_Ctrl::ReWriteMachineSettingFile(MachineInfo_t MachineInfo_)
   file.close();
 }
 
+
+DynamicJsonDocument* SPIFFS_Ctrl::LoadWiFiConfig()
+{
+  if (!SPIFFS.exists(WiFiConfigFilePath)) {
+    CreateFile(WiFiConfigFilePath);
+    ESP_LOGW(LOG_TAG_SPIFFS, "Can't open %s in SPIFFS ! Rebuild it !", WiFiConfigFilePath.c_str());
+    JsonObject WifiConfigJSON = WifiConfig->as<JsonObject>();
+    WifiConfigJSON["AP_IP"].set("127.0.0.1");
+    WifiConfigJSON["AP_gateway"].set("127.0.0.1");
+    WifiConfigJSON["AP_subnet_mask"].set("255.255.255.0");
+
+    WifiConfigJSON["AP_Name"].set("AkiraTest");
+    WifiConfigJSON["AP_Password"].set("12345678");
+
+    WifiConfigJSON["remote_IP"].set("127.0.0.1");
+    WifiConfigJSON["remote_Name"].set("xxxxx");
+    WifiConfigJSON["remote_Password"].set("12345678");
+    String fileString;
+    serializeJsonPretty(*WifiConfig, fileString);
+    File file = SPIFFS.open(WiFiConfigFilePath, FILE_WRITE);
+    file.print(fileString);
+    file.close();
+  } else {
+    File file = SPIFFS.open(WiFiConfigFilePath, FILE_READ);
+    String FileContent = file.readString();
+    file.close();
+    Serial.println(FileContent);
+    if (FileContent.length() != 0) {
+      DeserializationError error = deserializeJson(*WifiConfig, FileContent);
+      if (error) {
+        Serial.print("deserializeJson() failed: ");
+        Serial.println(error.f_str());
+      }
+    }
+  }
+  return WifiConfig;
+}
+
+void SPIFFS_Ctrl::ReWriteWiFiConfig()
+{
+  String WiFiConfigString;
+  serializeJsonPretty(*WifiConfig, WiFiConfigString);
+  File file = SPIFFS.open(WiFiConfigFilePath, FILE_WRITE);
+  file.print(WiFiConfigString);
+  file.close();
+}
+
 DynamicJsonDocument* SPIFFS_Ctrl::GetDeviceSetting()
 {
   if (!SPIFFS.exists("/config/event_config.json")) {
@@ -172,7 +219,6 @@ DynamicJsonDocument* SPIFFS_Ctrl::GetDeviceSetting()
   }
   return DeviceSetting;
 }
-
 
 void SPIFFS_Ctrl::ReWriteDeviceSetting()
 {
