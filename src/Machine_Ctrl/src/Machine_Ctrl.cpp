@@ -9,7 +9,6 @@
 #include <TimeLib.h>   
 
 #include <Pools_Ctrl.h>
-#include <Machine_Base_info.h>
 #include <Motor_Ctrl.h>
 #include <vector>
 #include <variant>
@@ -32,7 +31,7 @@ TaskHandle_t TASK_PeristalticMotorScan = NULL;
 void SMachine_Ctrl::INIT_SPIFFS_config()
 {
   spiffs.INIT_SPIFFS();
-  MachineInfo = spiffs.LoadMachineSetting();
+  spiffs.LoadDeviceBaseInfo();
   spiffs.GetDeviceSetting();
   spiffs.LoadWiFiConfig();
 }
@@ -777,33 +776,6 @@ void SMachine_Ctrl::Build_PeristalticMotorScan()
 ////////////////////////////////////////////////////
 // For 互動相關
 ////////////////////////////////////////////////////
-
-/**
- * @brief 獲得儀器基本資訊
- * 
- * @return DynamicJsonDocument 
- */
-DynamicJsonDocument SMachine_Ctrl::GetDeviceInfos()
-{
-  return MachineInfo.GetDeviceInfo();
-};
-
-/**
- * @brief 獲得儀器基本資訊
- * 
- * @return String 
- */
-String SMachine_Ctrl::GetDeviceInfosString()
-{
-  void* json_output = malloc(10000);
-  DynamicJsonDocument json_doc = MachineInfo.GetDeviceInfo();
-  serializeJsonPretty(json_doc, json_output, 10000);
-  String returnString = String((char*)json_output);
-  free(json_output);
-  json_doc.clear();
-  return returnString;
-};
-
 
 DynamicJsonDocument SMachine_Ctrl::GetEventStatus()
 {

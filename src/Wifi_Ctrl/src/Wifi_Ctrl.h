@@ -5,9 +5,24 @@
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 #include "AsyncTCP.h"
+#include <unordered_map>
+#include <map>
 
 extern AsyncWebServer asyncServer;
 extern AsyncWebSocket ws;
+
+class C_WebsocketAPI
+{
+  public:
+    String APIPath, METHOD;
+    void (*func)(AsyncWebSocket*, AsyncWebSocketClient*, DynamicJsonDocument*, DynamicJsonDocument*, std::map<int, String>*);
+    C_WebsocketAPI(String APIPath_, String METHOD_, void (*func_)(AsyncWebSocket*, AsyncWebSocketClient*, DynamicJsonDocument*, DynamicJsonDocument*, std::map<int, String>*)) {
+      APIPath = APIPath_;
+      METHOD = METHOD_;
+      func = func_;
+    };
+  private:
+};
 
 /**
  * @brief 儀器WIFI設定
@@ -57,6 +72,12 @@ class CWIFI_Ctrler
     DynamicJsonDocument GetBaseWSReturnData(String MessageString);
 
     void UploadNewData();
+    
+
+
+    void AddWebsocketAPI(String APIPath, String METHOD, void (*func)(AsyncWebSocket*, AsyncWebSocketClient*, DynamicJsonDocument*, DynamicJsonDocument*, std::map<int, String>*));
+    // std::unordered_map<std::string, C_WebsocketAPI*> websocketApiSetting;
+    std::map<std::string, std::unordered_map<std::string, C_WebsocketAPI*>> websocketApiSetting;
 
   private:
     void setStaticAPIs();
@@ -64,5 +85,4 @@ class CWIFI_Ctrler
     void createWebServer();
 
 };
-
 #endif

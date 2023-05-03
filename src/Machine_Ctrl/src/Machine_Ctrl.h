@@ -9,7 +9,6 @@
 #include <Pools_Ctrl.h>
 #include <Motor_Ctrl.h>
 #include <SPIFFS_Ctrl.h>
-#include <Machine_Base_info.h>
 
 #include <TimeLib.h>   
 
@@ -260,7 +259,6 @@ class SMachine_Ctrl
     SPOOLS_Ctrl poolsCtrl;
     CWIFI_Ctrler BackendServer;
     SPIFFS_Ctrl spiffs;
-    Machine_Info MachineInfo;
     
     DeviceStatus NowDeviceStatus;
 

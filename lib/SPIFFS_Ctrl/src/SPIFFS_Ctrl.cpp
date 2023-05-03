@@ -4,10 +4,6 @@
 #include <ArduinoJson.h>
 #include <SPIFFS.h>
 
-#include <Machine_Base_info.h>
-
-extern Machine_Info MachineInfo;
-
 const char* LOG_TAG_SPIFFS = "SPIFFS";
 
 void SPIFFS_Ctrl::INIT_SPIFFS()
@@ -18,40 +14,6 @@ void SPIFFS_Ctrl::INIT_SPIFFS()
       delay(5000);
     }
   }
-}
-
-/**
- * @brief 獲得儀器設定
- * 
- * @return Machine_Info 
- */
-Machine_Info SPIFFS_Ctrl::LoadMachineSetting()
-{
-  Machine_Info MachineInfo;
-
-  if (!SPIFFS.exists("/config/base_config.json")) {
-    CreateFile("/config/base_config.json");
-    ESP_LOGW(LOG_TAG_SPIFFS, "Can't open /config/base_config.json in SPIFFS ! Rebuild it !");
-    MachineInfo.MachineInfo.device_no = "Wxxxxx";
-    File file = SPIFFS.open("/config/base_config.json", FILE_WRITE);
-    file.print(MachineInfo.GetDeviceInfoString());
-    file.close();
-  } else {
-    File file = SPIFFS.open("/config/base_config.json", FILE_READ);
-    String FileContent = file.readString();
-    file.close();
-    ESP_LOGE(LOG_TAG_SPIFFS, "config: %s",FileContent.c_str());
-    DynamicJsonDocument json_doc(10000);
-    DeserializationError error = deserializeJson(json_doc, FileContent);
-    if (error) {
-      Serial.print("deserializeJson() failed: ");
-      Serial.println(error.f_str());
-    }
-    MachineInfo.LoadInfoByJSONItem(json_doc);
-
-    json_doc.clear();
-  }
-  return MachineInfo;
 }
 
 /**
@@ -119,22 +81,47 @@ void SPIFFS_Ctrl::CreateFolder(String FolderPath){
 }
 
 
-void SPIFFS_Ctrl::ReWriteMachineSettingFile(MachineInfo_t MachineInfo_)
+/**
+ * @brief 獲得儀器設定
+ * 
+ * @return Machine_Info 
+ */
+DynamicJsonDocument* SPIFFS_Ctrl::LoadDeviceBaseInfo()
 {
-  DynamicJsonDocument json_doc(10000);
-  json_doc["device_no"].set(MachineInfo_.device_no);
-  json_doc["FIRMWARE_VERSION"].set(MachineInfo_.FIRMWARE_VERSION);
-  json_doc["mode"].set(MachineInfo_.mode);
-  json_doc["time_interval"].set(*MachineInfo_.time_interval);
-  void* json_output = malloc(10000);
-  serializeJsonPretty(json_doc, json_output, 6000);
-  String returnString = String((char*)json_output);
-  json_doc.clear();
-  free(json_output);
-  ESP_LOGD(LOG_TAG_SPIFFS, "New config content: %s", returnString.c_str());
-  CreateFile("/config/base_config.json");
-  File file = SPIFFS.open("/config/base_config.json", FILE_WRITE);
-  file.print(returnString);
+  if (!SPIFFS.exists(DeviceBaseInfoFilePath)) {
+    CreateFile(DeviceBaseInfoFilePath);
+    ESP_LOGW(LOG_TAG_SPIFFS, "Can't open %s in SPIFFS ! Rebuild it !", DeviceBaseInfoFilePath.c_str());
+    JsonObject DeviceBaseInfoJSON = DeviceBaseInfo->as<JsonObject>();
+    DeviceBaseInfoJSON["device_no"].set("xxxxxx");
+    DeviceBaseInfoJSON["mode"].set("Mode_Slave");
+    String fileString;
+    serializeJsonPretty(DeviceBaseInfoJSON, fileString);
+    File file = SPIFFS.open(DeviceBaseInfoFilePath, FILE_WRITE);
+    file.print(fileString);
+    file.close();
+  } else {
+    File file = SPIFFS.open(DeviceBaseInfoFilePath, FILE_READ);
+    String FileContent = file.readString();
+    Serial.println(FileContent);
+    file.close();
+    if (FileContent.length() != 0) {
+      DeserializationError error = deserializeJson(*DeviceBaseInfo, FileContent);
+      if (error) {
+        Serial.print("deserializeJson() failed: ");
+        Serial.println(error.f_str());
+      }
+    }
+  }
+  return DeviceBaseInfo;
+}
+
+
+void SPIFFS_Ctrl::ReWriteDeviceBaseInfo()
+{
+  String DeviceBaseInfoString;
+  serializeJsonPretty(*DeviceBaseInfo, DeviceBaseInfoString);
+  File file = SPIFFS.open(DeviceBaseInfoFilePath, FILE_WRITE);
+  file.print(DeviceBaseInfoString);
   file.close();
 }
 

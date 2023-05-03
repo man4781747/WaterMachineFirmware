@@ -5,9 +5,6 @@
 
 #include <ArduinoJson.h>
 
-#include <Machine_Base_info.h>
-
-
 class SPIFFS_Ctrl
 {
   public:
@@ -17,8 +14,10 @@ class SPIFFS_Ctrl
     void CreateFile(String FilePath);
     void CreateFolder(String FolderPath);
 
-    Machine_Info LoadMachineSetting();
-    void ReWriteMachineSettingFile(MachineInfo_t MachineInfo_);
+    DynamicJsonDocument* LoadDeviceBaseInfo();
+    void ReWriteDeviceBaseInfo();
+    DynamicJsonDocument *DeviceBaseInfo = new DynamicJsonDocument(500);
+    String DeviceBaseInfoFilePath = "/config/device_base_config.json";
     
     DynamicJsonDocument* LoadWiFiConfig();
     void ReWriteWiFiConfig();
