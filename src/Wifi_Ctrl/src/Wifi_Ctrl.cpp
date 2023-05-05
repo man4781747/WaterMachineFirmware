@@ -1,12 +1,18 @@
 #include "Wifi_Ctrl.h"
+#include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include "AsyncTCP.h"
+#include <ArduinoOTA.h> 
 #include <SPIFFS.h>
 #include <esp_log.h>
 #include <TimeLib.h>   
 #include <ArduinoJson.h>
 #include <ESP32Servo.h>
 #include <NTPClient.h>
+#include <esp_system.h>
+
+#include <Update.h>
+#include <HTTPClient.h>
 
 #include <sstream>
 #include <iostream>
@@ -72,7 +78,7 @@ DynamicJsonDocument CWIFI_Ctrler::GetBaseWSReturnData(String MessageString)
   // JsonObject json_doc = Machine_Ctrl.spiffs.DeviceBaseInfo->as<JsonObject>();
   BaseWSReturnData["cmd"].set(MessageString);
   BaseWSReturnData["wifi"].set(Machine_Ctrl.BackendServer.GetWifiInfo());
-  BaseWSReturnData["device_status"].set(Machine_Ctrl.GetEventStatus());
+  // BaseWSReturnData["device_status"].set(Machine_Ctrl.GetEventStatus());
   time_t nowTime = now();
   char datetimeChar[30];
   sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
@@ -110,6 +116,18 @@ void ws_LocalWiFiConfigChange(AsyncWebSocket *server, AsyncWebSocketClient *clie
   ws.textAll(returnString);
 
 }
+
+void ws_GetWiFiConfig(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_data, std::map<int, String>* UrlParaMap){
+  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
+  JsonObject WifiConfigJSON = Machine_Ctrl.spiffs.WifiConfig->as<JsonObject>();
+  D_baseInfoJSON["parameter"].set(*(Machine_Ctrl.spiffs.WifiConfig));
+  D_baseInfoJSON["message"].set("OK");
+  D_baseInfoJSON["action"].set("UpdateWiFiConfig");
+  String returnString;
+  serializeJsonPretty(D_baseInfoJSON, returnString);
+  client->text(returnString);
+}
+
 
 void ws_GetDeviceBaseInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_data, std::map<int, String>* UrlParaMap)
 {
@@ -263,6 +281,93 @@ void ws_GetPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dy
   client->text(returnString);
 }
 
+void ws_PatchPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_data, std::map<int, String>* UrlParaMap)
+{
+  String TargetName = String((*UrlParaMap)[1].c_str());
+  ESP_LOGD(LOG_TAG_WIFI, "GetPeristaltic Motor Name: %s", (*UrlParaMap)[1].c_str());
+  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
+  JsonObject D_steps_group = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pwm_motor"];
+  if (D_steps_group.containsKey(TargetName)) {
+    JsonObject D_newConfig = D_data->as<JsonObject>();
+    JsonObject D_oldConfig = D_steps_group[TargetName];
+    for (JsonPair newConfigItem : D_newConfig) {
+      if (D_oldConfig[newConfigItem.key()].as<String>() != newConfigItem.value().as<String>()) {
+        D_oldConfig[newConfigItem.key()].set(newConfigItem.value().as<String>());
+      }
+    }
+    D_baseInfoJSON["parameter"][TargetName].set(D_oldConfig);
+    D_baseInfoJSON["message"].set("OK");
+    D_baseInfoJSON["action"].set("UpdateOnePwmMotor");
+  } else {
+    D_baseInfoJSON["message"].set("FAIL");
+    D_baseInfoJSON["parameter"]["message"] = "找不到伺服馬達: " + TargetName;
+  }
+  String returnString;
+  serializeJsonPretty(D_baseInfoJSON, returnString);
+  ws.textAll(returnString);
+}
+
+void ws_DeletePwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_data, std::map<int, String>* UrlParaMap)
+{
+  String TargetName = String((*UrlParaMap)[1].c_str());
+  ESP_LOGD(LOG_TAG_WIFI, "GetPeristaltic Motor Name: %s", (*UrlParaMap)[1].c_str());
+  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
+  JsonObject D_steps_group = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pwm_motor"];
+  if (D_steps_group.containsKey(TargetName)) {
+    D_steps_group.remove(TargetName);
+    D_baseInfoJSON["message"].set("OK");
+    D_baseInfoJSON["parameter"]["delete_id"] = TargetName;
+    D_baseInfoJSON["action"].set("DeleteOnePwmMotor");
+  } else {
+    D_baseInfoJSON["message"].set("FAIL");
+    D_baseInfoJSON["parameter"]["message"] = "找不到伺服馬達: " + TargetName;
+  }
+  String returnString;
+  serializeJsonPretty(D_baseInfoJSON, returnString);
+  ws.textAll(returnString);
+}
+
+void ws_AddNewPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_data, std::map<int, String>* UrlParaMap)
+{
+  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
+  JsonObject D_newConfig = D_data->as<JsonObject>();
+  if (!D_newConfig.containsKey("index") | !D_newConfig.containsKey("title")) {
+    D_baseInfoJSON["message"].set("FAIL");
+    D_baseInfoJSON["parameter"]["message"] = "index 與 title 參數為必要項目";
+    String returnString;
+    serializeJsonPretty(D_baseInfoJSON, returnString);
+    client->text(returnString);
+  } else {
+    int newIndex = D_newConfig["index"].as<int>();
+    if (newIndex<0 | newIndex>32) {
+      D_baseInfoJSON["message"].set("FAIL");
+      D_baseInfoJSON["parameter"]["message"] = "index需介於0~31(含)";
+      String returnString;
+      serializeJsonPretty(D_baseInfoJSON, returnString);
+      client->text(returnString);
+    } else {
+      char random_name[16];
+      uint8_t random_bytes[8];
+      esp_fill_random(random_bytes, sizeof(random_bytes));
+      for (int i = 0; i < sizeof(random_bytes); i++) {
+        sprintf(&random_name[i*2], "%02x", random_bytes[i]);
+      }
+
+      JsonObject D_pwm_motor = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pwm_motor"];
+      D_pwm_motor[String(random_name)]["index"].set(newIndex);
+      D_pwm_motor[String(random_name)]["title"].set(D_newConfig["title"].as<String>());
+      D_pwm_motor[String(random_name)]["description"].set(D_newConfig["description"].as<String>());
+      D_baseInfoJSON["message"].set("OK");
+      D_baseInfoJSON["action"].set("UpdateOnePwmMotor");
+      D_baseInfoJSON["parameter"][String(random_name)].set(D_pwm_motor[String(random_name)]);
+      String returnString;
+      serializeJsonPretty(D_baseInfoJSON, returnString);
+      ws.textAll(returnString);
+    }
+  }
+}
+
+
 void ws_GetAllPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_data, std::map<int, String>* UrlParaMap)
 {
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
@@ -275,6 +380,66 @@ void ws_GetAllPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
   client->text(returnString);
 }
 
+void ws_GetWiFiStatusInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_data, std::map<int, String>* UrlParaMap)
+{
+  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
+  D_baseInfoJSON["parameter"].set(Machine_Ctrl.BackendServer.GetWifiInfo());
+  D_baseInfoJSON["message"].set("OK");
+  D_baseInfoJSON["action"].set("UpdateWifiInfo");
+  String returnString;
+  serializeJsonPretty(D_baseInfoJSON, returnString);
+  client->text(returnString);
+}
+
+void ws_OTAByURL(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_data, std::map<int, String>* UrlParaMap)
+{
+  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
+  JsonObject D_newConfig = D_data->as<JsonObject>();
+  if (D_newConfig.containsKey("URL")) {
+    HTTPClient http;
+    http.begin(D_newConfig["URL"].as<String>());
+    int http_code = http.GET();
+    if (http_code == HTTP_CODE_OK) {
+      size_t size = http.getSize();
+      Serial.println(size);
+      Update.begin();
+      // Stream dataStream = http.getStream();
+      File file = SPIFFS.open("/test.bin", FILE_WRITE);
+      http.writeToStream(&file);
+      size_t written =  Update.writeStream(file);
+      Serial.printf("written: %d\n", written);
+      if (written == size) {
+        if (Update.end()) {
+          Serial.println("OTA success!");
+        } else {
+          D_baseInfoJSON["parameter"]["Message"].set("更新失敗，請檢查後重試");
+          D_baseInfoJSON["message"].set("FAIL");
+          String returnString;
+          serializeJsonPretty(D_baseInfoJSON, returnString);
+          client->text(returnString);
+        }
+      } else {
+        D_baseInfoJSON["parameter"]["Message"].set("檔案下載不完全，請檢查後重試");
+        D_baseInfoJSON["message"].set("FAIL");
+        String returnString;
+        serializeJsonPretty(D_baseInfoJSON, returnString);
+        client->text(returnString);
+      }
+    } else {
+      D_baseInfoJSON["parameter"]["Message"].set("URL: "+D_newConfig["URL"].as<String>()+" 不存在");
+      D_baseInfoJSON["message"].set("FAIL");
+      String returnString;
+      serializeJsonPretty(D_baseInfoJSON, returnString);
+      client->text(returnString);
+    }
+  } else {
+    D_baseInfoJSON["parameter"]["Message"].set("缺少參數: URL");
+    D_baseInfoJSON["message"].set("FAIL");
+    String returnString;
+    serializeJsonPretty(D_baseInfoJSON, returnString);
+    client->text(returnString);
+  }
+}
 
 
 void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
@@ -569,6 +734,37 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
 // For 初始化
 ////////////////////////////////////////////////////
 
+void OTAServiceTask(void* parameter) {
+  ArduinoOTA.setPort(3232);
+  ArduinoOTA.onStart([]() {
+    Serial.println("OTA starting...");
+  });
+  ArduinoOTA.onEnd([]() {
+    Serial.println("\nOTA end!");
+  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("OTA progress: %u%%\r", (progress / (total / 100)));
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("OTA error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) {
+      Serial.println("OTA auth failed");
+    } else if (error == OTA_BEGIN_ERROR) {
+      Serial.println("OTA begin failed");
+    } else if (error == OTA_CONNECT_ERROR) {
+      Serial.println("OTA connect failed");
+    } else if (error == OTA_RECEIVE_ERROR) {
+      Serial.println("OTA receive failed");
+    } else if (error == OTA_END_ERROR) {
+      Serial.println("OTA end failed");
+    }
+  });
+  ArduinoOTA.begin();
+  for(;;){
+    ArduinoOTA.handle();
+  }
+}
+
 /**
  * @brief 與Wifi連線
  * 
@@ -584,6 +780,10 @@ void CWIFI_Ctrler::ConnectToWifi()
     WifiConfigJSON["Remote"]["remote_Name"].as<String>(),
     WifiConfigJSON["Remote"]["remote_Password"].as<String>()
   );
+  xTaskCreate(
+    OTAServiceTask, "TASK__OTAService",
+    10000, NULL, 1, NULL
+  );
 }
 
 bool CWIFI_Ctrler::CreateSoftAP()
@@ -593,12 +793,12 @@ bool CWIFI_Ctrler::CreateSoftAP()
   IPAddress AP_IP = IPAddress();
   IPAddress AP_gateway = IPAddress();
   IPAddress AP_subnet_mask = IPAddress();
-  AP_IP.fromString(WifiConfigJSON["AP_IP"].as<String>());
-  AP_gateway.fromString(WifiConfigJSON["AP_gateway"].as<String>());
-  AP_subnet_mask.fromString(WifiConfigJSON["AP_subnet_mask"].as<String>());
+  AP_IP.fromString(WifiConfigJSON["AP"]["AP_IP"].as<String>());
+  AP_gateway.fromString(WifiConfigJSON["AP"]["AP_gateway"].as<String>());
+  AP_subnet_mask.fromString(WifiConfigJSON["AP"]["AP_subnet_mask"].as<String>());
   WiFi.softAPdisconnect();
   WiFi.softAPConfig(AP_IP, AP_gateway, AP_subnet_mask);
-  bool ISsuccess = WiFi.softAP(WifiConfigJSON["AP_Name"].as<String>(),WifiConfigJSON["AP_Password"].as<String>());
+  bool ISsuccess = WiFi.softAP(WifiConfigJSON["AP"]["AP_Name"].as<String>(),WifiConfigJSON["AP"]["AP_Password"].as<String>());
 
   ESP_LOGI(LOG_TAG_WIFI,"AP IP:\t%s", WiFi.softAPIP().toString().c_str());
   ESP_LOGI(LOG_TAG_WIFI,"AP MAC:\t%s", WiFi.softAPmacAddress().c_str());
@@ -684,9 +884,17 @@ void CWIFI_Ctrler::setAPIs()
   AddWebsocketAPI("/api/PeristalticMotor", "GET", &ws_GetAllPeristalticMotorInfo);
 
   AddWebsocketAPI("/api/pwmMotor/(.*)", "GET", &ws_GetPwmMotorInfo);
+  AddWebsocketAPI("/api/pwmMotor/(.*)", "PATCH", &ws_PatchPwmMotorInfo);
+  AddWebsocketAPI("/api/pwmMotor/(.*)", "DELETE", &ws_DeletePwmMotorInfo);
   AddWebsocketAPI("/api/pwmMotor", "GET", &ws_GetAllPwmMotorInfo);
+  AddWebsocketAPI("/api/pwmMotor", "POST", &ws_AddNewPwmMotorInfo);
+  
 
+  AddWebsocketAPI("/api/WiFi", "GET", &ws_GetWiFiStatusInfo);
+  AddWebsocketAPI("/api/WiFi/Config", "GET", &ws_GetWiFiConfig);
   AddWebsocketAPI("/api/WiFi/Local", "PATCH", &ws_LocalWiFiConfigChange);
+
+  AddWebsocketAPI("/api/System", "PUT", &ws_OTAByURL);
   
   
   asyncServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -797,10 +1005,12 @@ DynamicJsonDocument CWIFI_Ctrler::GetWifiInfo()
   JsonObject WifiConfigJSON = Machine_Ctrl.spiffs.WifiConfig->as<JsonObject>();
   DynamicJsonDocument json_doc(3000);
   JsonVariant json_obj = json_doc.to<JsonVariant>();
-  json_doc["Local"]["name"] = WifiConfigJSON["AP_Name"].as<String>();
-  json_doc["Local"]["ip"] = WifiConfigJSON["AP_IP"].as<String>();
-  json_doc["Local"]["gateway"] = WifiConfigJSON["AP_gateway"].as<String>();
-  json_doc["Local"]["subnet_mask"] = WifiConfigJSON["AP_subnet_mask"].as<String>();
+  WiFi.softAPgetHostname();
+  
+  json_doc["Local"]["name"] = WifiConfigJSON["AP"]["AP_Name"].as<String>();
+  json_doc["Local"]["ip"] = WifiConfigJSON["AP"]["AP_IP"].as<String>();
+  json_doc["Local"]["gateway"] = WifiConfigJSON["AP"]["AP_gateway"].as<String>();
+  json_doc["Local"]["subnet_mask"] = WifiConfigJSON["AP"]["AP_subnet_mask"].as<String>();
 
   json_doc["Remote"]["ip"].set(IP);
   json_doc["Remote"]["rssi"].set(rssi);
