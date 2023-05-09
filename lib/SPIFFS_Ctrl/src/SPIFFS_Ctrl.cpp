@@ -14,6 +14,7 @@ void SPIFFS_Ctrl::INIT_SPIFFS()
       delay(5000);
     }
   }
+  SPIFFS.remove("/otaTempFile.bin");
 }
 
 /**

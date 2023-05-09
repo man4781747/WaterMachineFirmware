@@ -20,9 +20,12 @@
 #include <iomanip>
 #include <regex>
 #include <map>
+#include "esp_task_wdt.h"
+
 
 #include "../../Machine_Ctrl/src/Machine_Ctrl.h"
 
+extern const char* FIRMWARE_VERSION;
 extern SMachine_Ctrl Machine_Ctrl;
 
 AsyncWebServer asyncServer(80);
@@ -33,8 +36,16 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", gmtOffset_sec, daylightOffset_sec);
 const char* LOG_TAG_WIFI = "WIFI";
 
+uint8_t *oteUpdateFileBuffer;
+size_t oteUpdateFileBufferLen;
 
-
+enum OTAByFileStatus {
+  OTAByFileStatusNO,
+  OTAByFileStatusING,
+  OTAByFileStatusSUCCESS,
+  OTAByFileStatusFAIL
+};
+OTAByFileStatus nowOTAByFileStatus = OTAByFileStatus::OTAByFileStatusNO;
 
 ////////////////////////////////////////////////////
 // For 處理資料
@@ -76,6 +87,7 @@ DynamicJsonDocument CWIFI_Ctrler::GetBaseWSReturnData(String MessageString)
   DynamicJsonDocument BaseWSReturnData(500000);
   BaseWSReturnData.set(*(Machine_Ctrl.spiffs.DeviceBaseInfo));
   // JsonObject json_doc = Machine_Ctrl.spiffs.DeviceBaseInfo->as<JsonObject>();
+  BaseWSReturnData["FIRMWARE_VERSION"].set(FIRMWARE_VERSION);
   BaseWSReturnData["cmd"].set(MessageString);
   BaseWSReturnData["wifi"].set(Machine_Ctrl.BackendServer.GetWifiInfo());
   // BaseWSReturnData["device_status"].set(Machine_Ctrl.GetEventStatus());
@@ -391,47 +403,98 @@ void ws_GetWiFiStatusInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, 
   client->text(returnString);
 }
 
+//
+
+void UpdateByFileTask(void* parameter)
+{
+  for (;;) {
+    // File OTAtemp = SPIFFS.open("/OTAtemp.bin", FILE_READ);
+    ESP_LOGI("UpdateByFileTask", "更新韌體測試: %d", oteUpdateFileBufferLen);
+    esp_task_wdt_init(30,0);
+    Update.begin(oteUpdateFileBufferLen);
+
+    size_t written = Update.write(oteUpdateFileBuffer, oteUpdateFileBufferLen);
+    ESP_LOGI("UpdateByFileTask", "寫入完成");
+    if (Update.end()) {
+      nowOTAByFileStatus = OTAByFileStatus::OTAByFileStatusSUCCESS;
+      ESP_LOGI("UpdateByFileTask", "更新韌體成功");
+    } else {
+      ESP_LOGI("UpdateByFileTask", "更新韌體失敗");
+      nowOTAByFileStatus = OTAByFileStatus::OTAByFileStatusFAIL;
+    }
+    esp_task_wdt_init(5,0);
+    vTaskDelay(1000);
+    vTaskDelete(NULL);
+  }
+}
+
+
+void UpdateTask(void* parameter)
+{
+  for (;;) {
+    char* URL = (char*) parameter;
+    DynamicJsonDocument D_baseInfo = Machine_Ctrl.BackendServer.GetBaseWSReturnData("[PATCH]OAT Update");
+    JsonObject D_baseInfoJSON = D_baseInfo.as<JsonObject>();
+    HTTPClient http;
+    http.begin(String(URL));
+    int http_code = http.GET();
+    ESP_LOGI("OTAUpdateTask", "http_code: %d", http_code);
+    if (http_code == HTTP_CODE_OK) {
+      size_t size = http.getSize();
+      Stream *dataStream = http.getStreamPtr();
+
+      ESP_LOGI("OTAUpdateTask", "MALLOC");
+      uint8_t* binData = (uint8_t*)malloc(size);
+      ESP_LOGI("OTAUpdateTask", "readBytes");
+      dataStream->readBytes(binData, size);
+      ESP_LOGI("OTAUpdateTask", "Update being");
+      Update.begin(size);
+      ESP_LOGI("OTAUpdateTask", "Update.write");
+      size_t written = Update.write(binData, size);
+      ESP_LOGI("OTAUpdateTask", "Free");
+      free(binData);
+
+      Serial.printf("written: %d\n", written);
+      if (written == size) {
+        if (Update.end()) {
+          Serial.println("OTA success!");
+          D_baseInfoJSON["parameter"]["Message"].set("OTA更新成功，機器即將重啟");
+          D_baseInfoJSON["message"].set("OK");
+          String returnString;
+          serializeJsonPretty(D_baseInfoJSON, returnString);
+          ws.textAll(returnString);
+          delay(1000);
+          ESP.restart();
+        } else {
+          Update.printError(Serial);
+          D_baseInfoJSON["parameter"]["Message"].set("OTA更新失敗: "+String(Update.errorString()));
+          D_baseInfoJSON["message"].set("FAIL");
+          String returnString;
+          serializeJsonPretty(D_baseInfoJSON, returnString);
+          ws.textAll(returnString);
+        }
+      } else {
+        D_baseInfoJSON["parameter"]["Message"].set("OTA更新失敗:檔案下載不完全");
+        D_baseInfoJSON["message"].set("FAIL");
+        String returnString;
+        serializeJsonPretty(D_baseInfoJSON, returnString);
+        ws.textAll(returnString);
+      }
+    }
+    vTaskDelay(1000);
+    vTaskDelete(NULL);
+  }
+}
+
 void ws_OTAByURL(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_data, std::map<int, String>* UrlParaMap)
 {
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
   JsonObject D_newConfig = D_data->as<JsonObject>();
   if (D_newConfig.containsKey("URL")) {
-    HTTPClient http;
-    http.begin(D_newConfig["URL"].as<String>());
-    int http_code = http.GET();
-    if (http_code == HTTP_CODE_OK) {
-      size_t size = http.getSize();
-      Serial.println(size);
-      Update.begin();
-      // Stream dataStream = http.getStream();
-      File file = SPIFFS.open("/test.bin", FILE_WRITE);
-      http.writeToStream(&file);
-      size_t written =  Update.writeStream(file);
-      Serial.printf("written: %d\n", written);
-      if (written == size) {
-        if (Update.end()) {
-          Serial.println("OTA success!");
-        } else {
-          D_baseInfoJSON["parameter"]["Message"].set("更新失敗，請檢查後重試");
-          D_baseInfoJSON["message"].set("FAIL");
-          String returnString;
-          serializeJsonPretty(D_baseInfoJSON, returnString);
-          client->text(returnString);
-        }
-      } else {
-        D_baseInfoJSON["parameter"]["Message"].set("檔案下載不完全，請檢查後重試");
-        D_baseInfoJSON["message"].set("FAIL");
-        String returnString;
-        serializeJsonPretty(D_baseInfoJSON, returnString);
-        client->text(returnString);
-      }
-    } else {
-      D_baseInfoJSON["parameter"]["Message"].set("URL: "+D_newConfig["URL"].as<String>()+" 不存在");
-      D_baseInfoJSON["message"].set("FAIL");
-      String returnString;
-      serializeJsonPretty(D_baseInfoJSON, returnString);
-      client->text(returnString);
-    }
+    xTaskCreate(
+      UpdateTask, "UpdateTask",
+      10000, (void *)(D_newConfig["URL"].as<String>()).c_str(), 1, NULL
+    );
   } else {
     D_baseInfoJSON["parameter"]["Message"].set("缺少參數: URL");
     D_baseInfoJSON["message"].set("FAIL");
@@ -462,23 +525,24 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
   } else if (type == WS_EVT_DISCONNECT) {
     Serial.println("WebSocket client disconnected");
   } else if (type == WS_EVT_DATA) {
+    ESP_LOGD(LOG_TAG_WIFI, "WS_EVT_DATA");
     String MessageString = String(((char *)data));
-    std::string str(MessageString.c_str());
-    std::regex pattern("^\\[(\\w+)\\](.*)\\?(.*)$");
-    std::smatch matches;
-    std::string Message_CMD_std, METHOD_std, Data_std;
-    while (std::regex_search(str, matches, pattern)) {
-      for (auto match : matches) {
-        Message_CMD_std = matches[2].str();
-        METHOD_std = matches[1].str();
-        Data_std = matches[3].str();
-        break;
-      }
-      break;
-    }
-    ESP_LOGD(LOG_TAG_WIFI, "Message_API: %s", Message_CMD_std.c_str());
-    ESP_LOGD(LOG_TAG_WIFI, "Message_METHOD: %s", METHOD_std.c_str());
-    ESP_LOGD(LOG_TAG_WIFI, "Message_Data: %s", Data_std.c_str());
+    ESP_LOGD(LOG_TAG_WIFI, "Get Message String");
+    
+    int commaIndex = MessageString.indexOf("]");
+    String METHOD = MessageString.substring(1, commaIndex);
+    MessageString = MessageString.substring(commaIndex + 1);
+    
+    commaIndex = MessageString.indexOf("?");
+    String Message_CMD = MessageString.substring(0, commaIndex);
+    String Data = MessageString.substring(commaIndex + 1);
+
+    std::string Message_CMD_std = std::string(Message_CMD.c_str());
+    std::string METHOD_std = std::string(METHOD.c_str());
+    std::string Data_std = std::string(Data.c_str());
+    ESP_LOGD(LOG_TAG_WIFI, "Message_API: %s", Message_CMD.c_str());
+    ESP_LOGD(LOG_TAG_WIFI, "Message_METHOD: %s", METHOD.c_str());
+    ESP_LOGD(LOG_TAG_WIFI, "Message_Data: %s", Data.c_str());
 
     DynamicJsonDocument D_baseInfo = Machine_Ctrl.BackendServer.GetBaseWSReturnData("["+String(METHOD_std.c_str())+"]"+String(Message_CMD_std.c_str()));
     
@@ -519,212 +583,6 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
       ESP_LOGE(LOG_TAG_WIFI, "找不到API: %s", Message_CMD_std.c_str());
       D_baseInfo["parameter"]["message"] = "Cnat find: "+String(Message_CMD_std.c_str());
     }
-
-    // for (auto api = Machine_Ctrl.BackendServer.websocketApiSetting.begin(); api != Machine_Ctrl.BackendServer.websocketApiSetting.end(); ++api) {
-    //   Serial.println(api->first.c_str());
-    //   for (auto method = api->second.begin(); method != api->second.end(); ++method) {
-    //     Serial.println(method->first.c_str());
-    //     method->second->func(server, client, Message_Parameter);
-    //   }
-    // }
-
-
-
-    // if (Message_CMD==String("PING")) {
-    //   json_doc["parameter"]["Message"].set("PONG");
-    //   json_doc["message"].set("OK");
-    //   String returnString;
-    //   serializeJsonPretty(json_doc, returnString);
-    //   client->text(returnString);
-    // }
-    // else if (Message_CMD==String("GetLatestInformation")) {
-    //   Machine_Ctrl.UpdateAllPoolsDataRandom();
-    //   if (Message_Parameter == "") {
-    //     // 新增參數
-    //     json_doc["parameter"].set(Machine_Ctrl.poolsCtrl.GetAllPoolsBaseInfo());
-    //     json_doc["message"].set("OK");
-    //     // 發出訊息
-    //     String returnString;
-    //     serializeJsonPretty(json_doc, returnString);
-    //     client->text(returnString);
-    //   } else {
-    //     String poolChose = parameters["pool"] | "";
-    //     if (poolChose.length() != 0) {
-    //       // 新增參數
-    //       json_doc["parameter"].set(Machine_Ctrl.poolsCtrl.GetPoolInfo(poolChose));
-    //       json_doc["message"].set("OK");
-    //       // 發出訊息 
-    //       String returnString;
-    //       serializeJsonPretty(json_doc, returnString);
-    //       client->text(returnString);
-    //     } else {
-    //       // 新增參數
-    //       json_doc["parameter"]["WaringMessage"].set("Wrong parameter");
-    //       json_doc["message"].set("FAIL");
-    //       // 發出訊息 
-    //       String returnString;
-    //       serializeJsonPretty(json_doc, returnString);
-    //       client->text(returnString);
-    //     }
-    //   }
-    // }
-    // else if (Message_CMD==String("Set_Parameter")) {
-    //   String NewTimeIntervals = parameters["NewTimeIntervals"] | "";
-    //   // 排程時間設定
-    //   String changeMessageSave = "";
-    //   if (NewTimeIntervals != "") {
-    //     std::string str(NewTimeIntervals.c_str());
-    //     std::regex pattern("\\d\\d:\\d\\d");
-    //     std::smatch matches;
-    //     changeMessageSave += "Change TimeIntervals: "+NewTimeIntervals+"\r\n";
-    //     Machine_Ctrl.MachineInfo.MachineInfo.time_interval->clear();
-    //     while (std::regex_search(str, matches, pattern)) {
-    //       for (auto match : matches) {
-    //         Machine_Ctrl.MachineInfo.MachineInfo.time_interval->createNestedObject(String(match.str().c_str()));
-    //       }
-    //       str = matches.suffix().str();
-    //     }
-    //   }
-    //   String NewDevno = parameters["Devno"] | "";
-    //   if (NewDevno != "") {
-    //     changeMessageSave += "Change Devno:"+Machine_Ctrl.MachineInfo.MachineInfo.device_no+" -> "+NewDevno+"\r\n";
-    //     Machine_Ctrl.MachineInfo.MachineInfo.device_no = NewDevno;
-    //   }
-    //   String Mode = parameters["Mode"] | "";
-    //   if ( Mode == "Mode_Master" | Mode == "Mode_Slave" ) {
-    //     changeMessageSave += "Change Mode:"+Machine_Ctrl.MachineInfo.MachineInfo.mode+" -> "+Mode+"\r\n";
-    //     Machine_Ctrl.MachineInfo.MachineInfo.mode = Mode;
-    //   }
-      
-    //   Machine_Ctrl.spiffs.ReWriteMachineSettingFile(Machine_Ctrl.MachineInfo.MachineInfo);
-    //   // 重新獲得參數設定
-    //   json_doc = Machine_Ctrl.BackendServer.GetBaseWSReturnData(MessageString);
-    //   // 新增參數
-    //   json_doc["parameter"]["Message"] = changeMessageSave;
-    //   json_doc["message"].set("OK");
-    //   // 發出訊息 
-    //   String returnString;
-    //   serializeJsonPretty(json_doc, returnString);
-    //   ws.textAll(returnString);
-    // }
-    // else if (Message_CMD==String("Get_StepSetting")) {
-    //   json_doc["parameter"].set(*(Machine_Ctrl.spiffs.DeviceSetting));
-    //   json_doc["message"].set("OK");
-    //   String returnString;
-    //   serializeJsonPretty(json_doc, returnString);
-    //   client->text(returnString);
-    // } 
-    // else if (Message_CMD==String("Action")) {
-    //   String action = parameters["action"] | "";
-    //   if (action == "loadStep") {
-    //     String stepName = parameters["stepName"] | "";
-    //     Machine_Ctrl.LoadStepToRunHistoryItem(stepName,"Web");
-    //     json_doc["message"].set("OK");
-    //   }
-    //   else if (action == "runStep") {
-    //     Machine_Ctrl.RUN__History();
-    //     json_doc["message"].set("OK");
-    //   }
-    //   else if (action == "stopAllTask") {
-    //     Machine_Ctrl.STOP_AllTask();
-    //     json_doc["message"].set("OK");
-    //   }
-    //   else if (action == "resumeAllTask") {
-    //     Machine_Ctrl.RESUME_AllTask();
-    //     json_doc["message"].set("OK");
-    //   }
-    //   String returnString;
-    //   serializeJsonPretty(json_doc, returnString);
-    //   ws.textAll(returnString);
-    // }
-    // else if (Message_CMD==String("WiFi")) {
-    //   String METHOD = parameters["METHOD"] | "";
-    //   ESP_LOGD(LOG_TAG_WIFI, "METHOD: %s", METHOD.c_str());
-    //   if (METHOD == "connect") {
-    //     String SSID = parameters["SSID"] | "";
-    //     String Password = parameters["Password"] | "";
-    //     ESP_LOGI(LOG_TAG_WIFI, "WIFI disconnect");
-    //     WiFi.disconnect();
-    //     ESP_LOGI(LOG_TAG_WIFI, "New Connect: %s, PW: %s", SSID.c_str(), Password.c_str());
-    //     WiFi.begin(SSID.c_str(), Password.c_str());
-    //     while (!WiFi.isConnected()) {
-    //       delay(500);
-    //       Serial.print(".");
-    //     }
-    //   } 
-    //   else if (METHOD == "GET") {
-    //     String Type = parameters["Type"] | "";
-    //     if (Type=="Local") {
-    //       JsonObject WifiConfigJSON = Machine_Ctrl.spiffs.WifiConfig->as<JsonObject>();
-    //       json_doc["parameter"].set(WifiConfigJSON);
-    //       String returnString;
-    //       serializeJsonPretty(json_doc, returnString);
-    //       ws.textAll(returnString);
-    //       client->text(returnString);
-    //     }
-    //   }
-    //   else if (METHOD == "PATCH") {
-    //     String Data = parameters["Data"] | "{}";
-    //     DynamicJsonDocument patchData(10000);
-    //     DeserializationError error = deserializeJson(patchData, Data);
-    //     if (error) {
-    //       ESP_LOGI(LOG_TAG_WIFI, "解析錯誤: %s", error.f_str());
-    //       json_doc["message"].set("ERROR");
-    //       json_doc["parameter"]["message"] = error.f_str();
-    //       String returnString;
-    //       serializeJsonPretty(json_doc, returnString);
-    //       client->text(returnString);
-    //     } else {
-    //       ESP_LOGI(LOG_TAG_WIFI, "參數變更");
-    //       JsonObject patchDataObj = patchData.as<JsonObject>();
-    //       JsonObject WifiConfigJSON = Machine_Ctrl.spiffs.WifiConfig->as<JsonObject>();
-    //       for (JsonPair patchDataItem : patchDataObj) {
-    //         if (WifiConfigJSON[patchDataItem.key()]) {
-    //           ESP_LOGI(LOG_TAG_WIFI, "參數: %s 變更 %s -> %s", patchDataItem.key().c_str(), WifiConfigJSON[patchDataItem.key()].as<String>().c_str(), patchDataItem.value().as<String>().c_str());
-    //           WifiConfigJSON[patchDataItem.key()] = patchDataItem.value().as<String>();
-    //         } else {
-    //           ESP_LOGI(LOG_TAG_WIFI, "找不到對應的參數: %s", patchDataItem.key().c_str());
-    //         }
-    //       }
-    //     }
-
-
-
-
-    //     // String Type = parameters["Type"] | "";
-    //     // if (Type=="Local") {
-    //     //   JsonObject WifiConfigJSON = Machine_Ctrl.spiffs.WifiConfig->as<JsonObject>();
-    //     //   WifiConfigJSON["AP_IP"] = parameters["AP_IP"] | WifiConfigJSON["AP_IP"];
-    //     //   WifiConfigJSON["AP_gateway"] = parameters["AP_gateway"] | WifiConfigJSON["AP_gateway"];
-    //     //   WifiConfigJSON["AP_subnet_mask"] = parameters["AP_subnet_mask"] | WifiConfigJSON["AP_subnet_mask"];
-    //     //   WifiConfigJSON["AP_Name"] = parameters["AP_Name"] | WifiConfigJSON["AP_Name"];
-    //     //   WifiConfigJSON["AP_Password"] = parameters["AP_Password"] | WifiConfigJSON["AP_Password"];
-    //     //   if (Machine_Ctrl.BackendServer.CreateSoftAP()) {
-    //     //     Machine_Ctrl.spiffs.ReWriteWiFiConfig();
-    //     //     json_doc["message"].set("OK");
-    //     //     json_doc["parameter"]["message"].set("AP setting change");
-    //     //     json_doc["parameter"]["newSetting"]["AP_IP"] = WifiConfigJSON["AP_IP"];
-    //     //     json_doc["parameter"]["newSetting"]["AP_gateway"] = WifiConfigJSON["AP_gateway"];
-    //     //     json_doc["parameter"]["newSetting"]["AP_subnet_mask"] = WifiConfigJSON["AP_subnet_mask"];
-    //     //     json_doc["parameter"]["newSetting"]["AP_Name"] = WifiConfigJSON["AP_Name"];
-    //     //     json_doc["parameter"]["newSetting"]["AP_Password"] = WifiConfigJSON["AP_Password"];
-    //     //     String returnString;
-    //     //     serializeJsonPretty(json_doc, returnString);
-    //     //     ws.textAll(returnString);
-    //     //   } else {
-    //     //     Machine_Ctrl.spiffs.LoadWiFiConfig();
-    //     //     Machine_Ctrl.BackendServer.CreateSoftAP();
-    //     //     json_doc["message"].set("Restore");
-    //     //     json_doc["parameter"]["message"].set("AP設定變更失敗，回復至原本的設定");
-    //     //     json_doc["parameter"]["newSetting"]["AP_IP"] = WifiConfigJSON["AP_IP"];
-    //     //     json_doc["parameter"]["newSetting"]["AP_gateway"] = WifiConfigJSON["AP_gateway"];
-    //     //     json_doc["parameter"]["newSetting"]["AP_subnet_mask"] = WifiConfigJSON["AP_subnet_mask"];
-    //     //     json_doc["parameter"]["newSetting"]["AP_Name"] = WifiConfigJSON["AP_Name"];
-    //     //     json_doc["parameter"]["newSetting"]["AP_Password"] = WifiConfigJSON["AP_Password"];
-    //     //   }
-    //     // }
-    //   }
-    // }
     D_baseInfo.clear();
   }
 }
@@ -762,6 +620,7 @@ void OTAServiceTask(void* parameter) {
   ArduinoOTA.begin();
   for(;;){
     ArduinoOTA.handle();
+    vTaskDelay(1);
   }
 }
 
@@ -912,6 +771,49 @@ void CWIFI_Ctrler::setAPIs()
     AsyncWebServerResponse* response = request->beginResponse(200, "application/json", returnString);
     SendHTTPesponse(request, response);
   });
+  
+  asyncServer.on("/api/System/OTA", HTTP_POST, 
+    [&](AsyncWebServerRequest *request)
+    {
+      nowOTAByFileStatus = OTAByFileStatus::OTAByFileStatusING;
+      ESP_LOGI("POST", "TESTTEST");
+      xTaskCreatePinnedToCore(
+        UpdateByFileTask, "UpdateByFile",
+        10000, NULL, 2, NULL, 1
+      );
+      while (nowOTAByFileStatus == OTAByFileStatus::OTAByFileStatusING) {
+        vTaskDelay(100);
+      }
+      free(oteUpdateFileBuffer);
+      if (nowOTAByFileStatus == OTAByFileStatus::OTAByFileStatusSUCCESS) {
+        AsyncWebServerResponse* response = request->beginResponse(200, "application/json", "OK");
+        SendHTTPesponse(request, response);
+        delay(1000);
+        ESP.restart();
+      } else {
+        AsyncWebServerResponse* response = request->beginResponse(200, "application/json", "FAIL");
+        SendHTTPesponse(request, response);
+      }
+    },
+    [&](AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+    {
+      File otaTempFile;
+      if (index == 0) {
+        oteUpdateFileBuffer = (uint8_t *)malloc(request->contentLength());
+      }
+      memcpy(oteUpdateFileBuffer + index, data, len);
+      if (final) {
+        Serial.printf("檔案 %s 接收完成， len: %d ，共 %d/%d bytes\n", filename.c_str(), len ,index + len, request->contentLength());
+        oteUpdateFileBufferLen = index + len;
+        // File OTAtemp = SPIFFS.open("/OTAtemp.bin", FILE_WRITE);
+        // OTAtemp.write(oteUpdateFileBuffer ,index + len);
+        // OTAtemp.close();
+      } 
+      else {
+        Serial.printf("檔案 %s 正在傳輸， len: %d ，目前已接收 %d/%d bytes\n", filename.c_str(), len, index + len, request->contentLength());
+      }
+    }
+  );
 
 }
 
