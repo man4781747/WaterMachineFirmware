@@ -87,4 +87,5 @@ class CWIFI_Ctrler
     void createWebServer();
 
 };
+extern CWIFI_Ctrler WIFI_Ctrler;
 #endif

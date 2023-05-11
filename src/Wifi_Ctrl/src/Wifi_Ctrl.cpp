@@ -24,6 +24,8 @@
 
 
 #include "../../Machine_Ctrl/src/Machine_Ctrl.h"
+#include "models.h"
+#include "urls.h"
 
 extern const char* FIRMWARE_VERSION;
 extern SMachine_Ctrl Machine_Ctrl;
@@ -238,155 +240,6 @@ void ws_GetAllEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dy
   D_baseInfoJSON["message"].set("OK");
   D_baseInfoJSON["action"].set("UpdateAllEvent");
   D_baseInfoJSON["parameter"].set(D_event_group);
-  String returnString;
-  serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
-}
-
-void ws_GetPeristalticMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_data, std::map<int, String>* UrlParaMap)
-{
-  String TargetName = String((*UrlParaMap)[1].c_str());
-  ESP_LOGD(LOG_TAG_WIFI, "GetPeristaltic Motor Name: %s", (*UrlParaMap)[1].c_str());
-  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
-  JsonObject D_steps_group = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["peristaltic_motor"];
-  if (D_steps_group.containsKey(TargetName)) {
-    D_baseInfoJSON["message"].set("OK");
-    D_baseInfoJSON["action"].set("UpdateOnePeristalticMotor");
-    D_baseInfoJSON["parameter"][TargetName].set(D_steps_group[TargetName]);
-  } else {
-    D_baseInfoJSON["message"].set("FAIL");
-    D_baseInfoJSON["parameter"]["message"] = "找不到蠕動馬達: " + TargetName;
-  }
-  String returnString;
-  serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
-}
-
-void ws_GetAllPeristalticMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_data, std::map<int, String>* UrlParaMap)
-{
-  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
-  JsonObject D_peristaltic_motor = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["peristaltic_motor"];
-  D_baseInfoJSON["message"].set("OK");
-  D_baseInfoJSON["action"].set("UpdateAllPeristalticMotor");
-  D_baseInfoJSON["parameter"].set(D_peristaltic_motor);
-  String returnString;
-  serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
-}
-
-void ws_GetPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_data, std::map<int, String>* UrlParaMap)
-{
-  String TargetName = String((*UrlParaMap)[1].c_str());
-  ESP_LOGD(LOG_TAG_WIFI, "GetPeristaltic Motor Name: %s", (*UrlParaMap)[1].c_str());
-  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
-  JsonObject D_steps_group = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pwm_motor"];
-  if (D_steps_group.containsKey(TargetName)) {
-    D_baseInfoJSON["message"].set("OK");
-    D_baseInfoJSON["action"].set("UpdateOnePwmMotor");
-    D_baseInfoJSON["parameter"][TargetName].set(D_steps_group[TargetName]);
-  } else {
-    D_baseInfoJSON["message"].set("FAIL");
-    D_baseInfoJSON["parameter"]["message"] = "找不到伺服馬達: " + TargetName;
-  }
-  String returnString;
-  serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
-}
-
-void ws_PatchPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_data, std::map<int, String>* UrlParaMap)
-{
-  String TargetName = String((*UrlParaMap)[1].c_str());
-  ESP_LOGD(LOG_TAG_WIFI, "GetPeristaltic Motor Name: %s", (*UrlParaMap)[1].c_str());
-  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
-  JsonObject D_steps_group = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pwm_motor"];
-  if (D_steps_group.containsKey(TargetName)) {
-    JsonObject D_newConfig = D_data->as<JsonObject>();
-    JsonObject D_oldConfig = D_steps_group[TargetName];
-    for (JsonPair newConfigItem : D_newConfig) {
-      if (D_oldConfig[newConfigItem.key()].as<String>() != newConfigItem.value().as<String>()) {
-        D_oldConfig[newConfigItem.key()].set(newConfigItem.value().as<String>());
-      }
-    }
-    D_baseInfoJSON["parameter"][TargetName].set(D_oldConfig);
-    D_baseInfoJSON["message"].set("OK");
-    D_baseInfoJSON["action"].set("UpdateOnePwmMotor");
-  } else {
-    D_baseInfoJSON["message"].set("FAIL");
-    D_baseInfoJSON["parameter"]["message"] = "找不到伺服馬達: " + TargetName;
-  }
-  String returnString;
-  serializeJsonPretty(D_baseInfoJSON, returnString);
-  ws.textAll(returnString);
-}
-
-void ws_DeletePwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_data, std::map<int, String>* UrlParaMap)
-{
-  String TargetName = String((*UrlParaMap)[1].c_str());
-  ESP_LOGD(LOG_TAG_WIFI, "GetPeristaltic Motor Name: %s", (*UrlParaMap)[1].c_str());
-  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
-  JsonObject D_steps_group = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pwm_motor"];
-  if (D_steps_group.containsKey(TargetName)) {
-    D_steps_group.remove(TargetName);
-    D_baseInfoJSON["message"].set("OK");
-    D_baseInfoJSON["parameter"]["delete_id"] = TargetName;
-    D_baseInfoJSON["action"].set("DeleteOnePwmMotor");
-  } else {
-    D_baseInfoJSON["message"].set("FAIL");
-    D_baseInfoJSON["parameter"]["message"] = "找不到伺服馬達: " + TargetName;
-  }
-  String returnString;
-  serializeJsonPretty(D_baseInfoJSON, returnString);
-  ws.textAll(returnString);
-}
-
-void ws_AddNewPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_data, std::map<int, String>* UrlParaMap)
-{
-  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
-  JsonObject D_newConfig = D_data->as<JsonObject>();
-  if (!D_newConfig.containsKey("index") | !D_newConfig.containsKey("title")) {
-    D_baseInfoJSON["message"].set("FAIL");
-    D_baseInfoJSON["parameter"]["message"] = "index 與 title 參數為必要項目";
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
-  } else {
-    int newIndex = D_newConfig["index"].as<int>();
-    if (newIndex<0 | newIndex>32) {
-      D_baseInfoJSON["message"].set("FAIL");
-      D_baseInfoJSON["parameter"]["message"] = "index需介於0~31(含)";
-      String returnString;
-      serializeJsonPretty(D_baseInfoJSON, returnString);
-      client->text(returnString);
-    } else {
-      char random_name[16];
-      uint8_t random_bytes[8];
-      esp_fill_random(random_bytes, sizeof(random_bytes));
-      for (int i = 0; i < sizeof(random_bytes); i++) {
-        sprintf(&random_name[i*2], "%02x", random_bytes[i]);
-      }
-
-      JsonObject D_pwm_motor = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pwm_motor"];
-      D_pwm_motor[String(random_name)]["index"].set(newIndex);
-      D_pwm_motor[String(random_name)]["title"].set(D_newConfig["title"].as<String>());
-      D_pwm_motor[String(random_name)]["description"].set(D_newConfig["description"].as<String>());
-      D_baseInfoJSON["message"].set("OK");
-      D_baseInfoJSON["action"].set("UpdateOnePwmMotor");
-      D_baseInfoJSON["parameter"][String(random_name)].set(D_pwm_motor[String(random_name)]);
-      String returnString;
-      serializeJsonPretty(D_baseInfoJSON, returnString);
-      ws.textAll(returnString);
-    }
-  }
-}
-
-
-void ws_GetAllPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_data, std::map<int, String>* UrlParaMap)
-{
-  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
-  JsonObject D_pwm_motor = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pwm_motor"];
-  D_baseInfoJSON["message"].set("OK");
-  D_baseInfoJSON["action"].set("UpdateAllPwmMotor");
-  D_baseInfoJSON["parameter"].set(D_pwm_motor);
   String returnString;
   serializeJsonPretty(D_baseInfoJSON, returnString);
   client->text(returnString);
@@ -729,6 +582,8 @@ void CWIFI_Ctrler::setStaticAPIs()
 
 void CWIFI_Ctrler::setAPIs()
 {
+  CWIFI_Ctrler *This = this;
+  setAPI(*This);
 
   AddWebsocketAPI("/api/BaseInfo", "GET", &ws_GetDeviceBaseInfo);
   AddWebsocketAPI("/api/BaseInfo", "PATCH", &ws_UpdateDeviceBaseInfo);
@@ -738,16 +593,6 @@ void CWIFI_Ctrler::setAPIs()
 
   AddWebsocketAPI("/api/Event/(.*)", "GET", &ws_GetEventInfo);
   AddWebsocketAPI("/api/Event", "GET", &ws_GetAllEventInfo);
-
-  AddWebsocketAPI("/api/PeristalticMotor/(.*)", "GET", &ws_GetPeristalticMotorInfo);
-  AddWebsocketAPI("/api/PeristalticMotor", "GET", &ws_GetAllPeristalticMotorInfo);
-
-  AddWebsocketAPI("/api/pwmMotor/(.*)", "GET", &ws_GetPwmMotorInfo);
-  AddWebsocketAPI("/api/pwmMotor/(.*)", "PATCH", &ws_PatchPwmMotorInfo);
-  AddWebsocketAPI("/api/pwmMotor/(.*)", "DELETE", &ws_DeletePwmMotorInfo);
-  AddWebsocketAPI("/api/pwmMotor", "GET", &ws_GetAllPwmMotorInfo);
-  AddWebsocketAPI("/api/pwmMotor", "POST", &ws_AddNewPwmMotorInfo);
-  
 
   AddWebsocketAPI("/api/WiFi", "GET", &ws_GetWiFiStatusInfo);
   AddWebsocketAPI("/api/WiFi/Config", "GET", &ws_GetWiFiConfig);

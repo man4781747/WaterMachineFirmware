@@ -150,8 +150,8 @@ class SMachine_Ctrl
     SPIFFS_Ctrl spiffs;
 
     TwoWire WireOne = TwoWire(0);
-    int WireOne_SDA = 6;
-    int WireOne_SCL = 7;
+    int WireOne_SDA = 5;
+    int WireOne_SCL = 6;
     CLTR_329ALS_01 LTR_329ALS_01_Ctrler = CLTR_329ALS_01(&WireOne);
 
     ////////////////////////////////////////////////////
