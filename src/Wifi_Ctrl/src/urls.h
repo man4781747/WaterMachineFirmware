@@ -6,6 +6,9 @@
 
 void setAPI(CWIFI_Ctrler &WIFI_Ctrler)
 {
+  WIFI_Ctrler.AddWebsocketAPI("/api/DeiveConfig", "GET", &ws_GetDeiveConfig);
+  WIFI_Ctrler.AddWebsocketAPI("/api/DeiveConfig", "PATCH", &ws_PatchDeiveConfig);
+
   WIFI_Ctrler.AddWebsocketAPI("/api/PeristalticMotor/(<name>.*)", "DELETE", &ws_DeletePeristalticMotorInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/PeristalticMotor/(<name>.*)", "GET", &ws_GetPeristalticMotorInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/PeristalticMotor/(<name>.*)", "PATCH", &ws_PatchPeristalticMotorInfo);
@@ -23,6 +26,9 @@ void setAPI(CWIFI_Ctrler &WIFI_Ctrler)
   WIFI_Ctrler.AddWebsocketAPI("/api/Event/(<name>.*)", "DELETE", &ws_DeleteEventInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/Event", "GET", &ws_GetAllEventInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/Event", "POST", &ws_AddNewEventInfo);
+
+  WIFI_Ctrler.AddWebsocketAPI("/api/Step", "GET", &ws_GetAllStepInfo);
+
 
 }
 

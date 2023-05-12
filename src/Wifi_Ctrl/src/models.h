@@ -10,6 +10,39 @@
 #include "Machine_Ctrl/src/Machine_Ctrl.h"
 extern SMachine_Ctrl Machine_Ctrl;
 
+void ws_GetDeiveConfig(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
+{
+  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
+
+
+  D_baseInfoJSON["status"].set("OK");
+  D_baseInfoJSON["action"]["target"].set("DeiveConfig");
+  D_baseInfoJSON["action"]["method"].set("Update");
+  D_baseInfoJSON["parameter"].set(Machine_Ctrl.spiffs.DeviceBaseInfo->as<JsonObject>());
+  String returnString;
+  serializeJsonPretty(D_baseInfoJSON, returnString);
+  client->text(returnString);
+}
+
+void ws_PatchDeiveConfig(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
+{
+  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
+  JsonObject D_oldConfig = Machine_Ctrl.spiffs.DeviceBaseInfo->as<JsonObject>();
+  JsonObject D_newConfig = D_FormData->as<JsonObject>();
+  for (JsonPair newConfigItem : D_newConfig) {
+    if (D_oldConfig[newConfigItem.key()].as<String>() != newConfigItem.value().as<String>()) {
+      D_oldConfig[newConfigItem.key()].set(newConfigItem.value().as<String>());
+    }
+  }
+  D_baseInfoJSON["status"].set("OK");
+  D_baseInfoJSON["action"]["target"].set("DeiveConfig");
+  D_baseInfoJSON["action"]["method"].set("Update");
+  D_baseInfoJSON["parameter"].set(D_oldConfig);
+  String returnString;
+  serializeJsonPretty(D_baseInfoJSON, returnString);
+  client->text(returnString);
+}
+
 void ws_GetPeristalticMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
 {
   String TargetName = D_PathParameter->as<JsonObject>()["name"];
@@ -379,6 +412,20 @@ void ws_AddNewEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dy
     serializeJsonPretty(D_baseInfoJSON, returnString);
     ws.textAll(returnString);
   }
+}
+
+
+void ws_GetAllStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
+{
+  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
+  JsonObject D_event_group = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["steps_group"];
+  D_baseInfoJSON["status"].set("OK");
+  D_baseInfoJSON["action"]["target"].set("Step");
+  D_baseInfoJSON["action"]["method"].set("Update");
+  D_baseInfoJSON["parameter"].set(D_event_group);
+  String returnString;
+  serializeJsonPretty(D_baseInfoJSON, returnString);
+  client->text(returnString);
 }
 
 

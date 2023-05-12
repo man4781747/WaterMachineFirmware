@@ -58,7 +58,7 @@ class C_WebsocketAPI
         token = strtok(NULL, "/");
       }
       APIPath = String(reMix_APIPath.c_str());
-      ESP_LOGI("WS_API Setting", "註冊 API: %s, METHOD: %s, PathURL長度: %d", reMix_APIPath.c_str(), METHOD.c_str(), pathParameterKeyMapList.size());
+      ESP_LOGI("WS_API Setting", "註冊 API: [%s]%s", METHOD.c_str(), reMix_APIPath.c_str());
             
     };
   private:
@@ -111,12 +111,8 @@ class CWIFI_Ctrler
     String GetWifiInfoString();
     DynamicJsonDocument GetBaseWSReturnData(String MessageString);
 
-    void UploadNewData();
-    
-
 
     void AddWebsocketAPI(String APIPath, String METHOD, void (*func)(AsyncWebSocket*, AsyncWebSocketClient*, DynamicJsonDocument*, DynamicJsonDocument*, DynamicJsonDocument*, DynamicJsonDocument*));
-    // std::unordered_map<std::string, C_WebsocketAPI*> websocketApiSetting;
     std::map<std::string, std::unordered_map<std::string, C_WebsocketAPI*>> websocketApiSetting;
 
   private:
