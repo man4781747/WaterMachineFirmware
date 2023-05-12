@@ -9,6 +9,8 @@
 #include "AsyncTCP.h"
 #include <unordered_map>
 #include <map>
+#include <vector>
+#include <regex>
 
 extern AsyncWebServer asyncServer;
 extern AsyncWebSocket ws;
@@ -17,11 +19,47 @@ class C_WebsocketAPI
 {
   public:
     String APIPath, METHOD;
-    void (*func)(AsyncWebSocket*, AsyncWebSocketClient*, DynamicJsonDocument*, DynamicJsonDocument*, std::map<int, String>*);
-    C_WebsocketAPI(String APIPath_, String METHOD_, void (*func_)(AsyncWebSocket*, AsyncWebSocketClient*, DynamicJsonDocument*, DynamicJsonDocument*, std::map<int, String>*)) {
-      APIPath = APIPath_;
+    std::vector<String> pathParameterKeyMapList;
+    /**
+     * @brief 
+     * ws, client, returnInfoJSON, PathParameterJSON, QueryParameterJSON, FormDataJSON
+     * 
+     */
+    void (*func)(
+      AsyncWebSocket*, AsyncWebSocketClient*, 
+      DynamicJsonDocument*, DynamicJsonDocument*, DynamicJsonDocument*, DynamicJsonDocument*
+    );
+    C_WebsocketAPI(
+      String APIPath_, String METHOD_, 
+      void (*func_)(
+        AsyncWebSocket*, AsyncWebSocketClient*, 
+        DynamicJsonDocument*, DynamicJsonDocument*, DynamicJsonDocument*, DynamicJsonDocument*
+      )
+    ) {
       METHOD = METHOD_;
       func = func_;
+      std::regex ms_PathParameterKeyRegex(".*\\(\\<([a-zA-Z0-9_]*)\\>.*\\).*");
+      std::regex ms_PathParameterReplace("\\<.*\\>");  
+      std::smatch matches;
+      char *token;
+      char newAPIPathChar[APIPath_.length()+1];
+      strcpy(newAPIPathChar, APIPath_.c_str());
+      token = strtok(newAPIPathChar, "/");
+      std::string reMix_APIPath = "";
+      while( token != NULL ) {
+        std::string newMSstring = std::string(token);
+        if (std::regex_search(newMSstring, matches, ms_PathParameterKeyRegex)) {
+          pathParameterKeyMapList.push_back(String(matches[1].str().c_str()));
+          newMSstring = std::regex_replace(matches[0].str().c_str(), ms_PathParameterReplace, "");
+        }
+        if (newMSstring.length() != 0) {
+          reMix_APIPath += "/" + newMSstring;
+        }
+        token = strtok(NULL, "/");
+      }
+      APIPath = String(reMix_APIPath.c_str());
+      ESP_LOGI("WS_API Setting", "註冊 API: %s, METHOD: %s, PathURL長度: %d", reMix_APIPath.c_str(), METHOD.c_str(), pathParameterKeyMapList.size());
+            
     };
   private:
 };
@@ -77,7 +115,7 @@ class CWIFI_Ctrler
     
 
 
-    void AddWebsocketAPI(String APIPath, String METHOD, void (*func)(AsyncWebSocket*, AsyncWebSocketClient*, DynamicJsonDocument*, DynamicJsonDocument*, std::map<int, String>*));
+    void AddWebsocketAPI(String APIPath, String METHOD, void (*func)(AsyncWebSocket*, AsyncWebSocketClient*, DynamicJsonDocument*, DynamicJsonDocument*, DynamicJsonDocument*, DynamicJsonDocument*));
     // std::unordered_map<std::string, C_WebsocketAPI*> websocketApiSetting;
     std::map<std::string, std::unordered_map<std::string, C_WebsocketAPI*>> websocketApiSetting;
 

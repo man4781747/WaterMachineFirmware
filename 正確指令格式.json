@@ -1,0 +1,65 @@
+// 所有KEY值必為全小寫
+
+{
+  "device_no": "Test",                  // 儀器編號、名稱
+  "mode": "Mode_Master",                // 儀器模式(主、從)
+  "firmware_version": "V2.23.52.0",     // 韌體版本號
+  "cmd": "[GET]/api/PeristalticMotor",  // 指令復誦
+  "internet": {                         // 指令復誦
+    "remote": {                            // wifi連線 (若有的話)
+      "ip": "192.168.20.45",
+      "rssi": -40,
+      "mac_address": "7C:DF:A1:E1:18:18"
+    },
+    "net": {                               // 有線網路連線 (若有的話)
+      "ip": "192.168.20.45",
+      "mac_address": "7C:DF:A1:E1:18:18"
+    }
+  },
+  "time": "2023-05-12 10:51:49",        // 發送時間
+  "utc": "+8",                          // 時區
+  "status": "OK",                       // 指令正確與否 (OK or FAIL)
+  "action": {                           // 儀器指令行為
+    "target": "PeristalticMotor",          // 行為目標
+    "method": "Update"                     // 行為動作
+  },
+  "parameter": {                        // 行為詳細參數
+    "M1": {
+      "index": 0,
+      "title": "蝦池抽水",
+      "description": "蝦池抽水馬達"
+    },
+    "M2": {
+      "index": 1,
+      "title": "RO水抽水",
+      "description": "RO水抽水馬達"
+    },
+    "M3": {
+      "index": 2,
+      "title": "PH測試馬達",
+      "description": "PH測試馬達"
+    },
+    "M4": {
+      "index": 3,
+      "title": "混合室",
+      "description": "混合室抽水馬達"
+    },
+    "M5": {
+      "index": 4,
+      "title": "NH3-R2抽取",
+      "description": "NH3-R2抽取馬達"
+    },
+    "M6": {
+      "index": 5,
+      "title": "目前無作用",
+      "description": "目前無作用"
+    },
+    "M7": {
+      "index": 6,
+      "title": "光度測試/排廢液馬達",
+      "description": "光度測試/排廢液馬達"
+    }
+  }
+}
+
+

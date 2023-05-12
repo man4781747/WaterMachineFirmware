@@ -1,0 +1,57 @@
+{
+  "device_no": "Test",
+  "mode": "Mode_Master",
+  "firmware_version": "V2.23.52.0",
+  "time": "2023-05-12 16:14:03",
+  "utc": "+8",
+  "internet": {
+    "remote": {
+      "ip": "192.168.20.45",
+      "rssi": -36,
+      "mac_address": "7C:DF:A1:E1:18:18"
+    }
+  },
+  "cmd": "[GET]/api/PeristalticMotor",
+  "status": "OK",
+  "action": {
+    "target": "PeristalticMotor",
+    "method": "Update"
+  },
+  "parameter": {
+    "M1": {
+      "index": 0,
+      "title": "蝦池抽水",
+      "description": "蝦池抽水馬達"
+    },
+    "M2": {
+      "index": 1,
+      "title": "RO水抽水",
+      "description": "RO水抽水馬達"
+    },
+    "M3": {
+      "index": 2,
+      "title": "PH測試馬達",
+      "description": "PH測試馬達"
+    },
+    "M4": {
+      "index": 3,
+      "title": "混合室",
+      "description": "混合室抽水馬達"
+    },
+    "M5": {
+      "index": 4,
+      "title": "NH3-R2抽取",
+      "description": "NH3-R2抽取馬達"
+    },
+    "M6": {
+      "index": 5,
+      "title": "目前無作用",
+      "description": "目前無作用"
+    },
+    "M7": {
+      "index": 6,
+      "title": "光度測試/排廢液馬達",
+      "description": "光度測試/排廢液馬達"
+    }
+  }
+}

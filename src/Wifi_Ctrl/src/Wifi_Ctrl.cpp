@@ -20,6 +20,7 @@
 #include <iomanip>
 #include <regex>
 #include <map>
+#include <vector>
 #include "esp_task_wdt.h"
 
 
@@ -89,17 +90,21 @@ DynamicJsonDocument CWIFI_Ctrler::GetBaseWSReturnData(String MessageString)
   DynamicJsonDocument BaseWSReturnData(500000);
   BaseWSReturnData.set(*(Machine_Ctrl.spiffs.DeviceBaseInfo));
   // JsonObject json_doc = Machine_Ctrl.spiffs.DeviceBaseInfo->as<JsonObject>();
-  BaseWSReturnData["FIRMWARE_VERSION"].set(FIRMWARE_VERSION);
-  BaseWSReturnData["cmd"].set(MessageString);
-  BaseWSReturnData["wifi"].set(Machine_Ctrl.BackendServer.GetWifiInfo());
-  // BaseWSReturnData["device_status"].set(Machine_Ctrl.GetEventStatus());
+
   time_t nowTime = now();
   char datetimeChar[30];
   sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
     year(nowTime), month(nowTime), day(nowTime),
     hour(nowTime), minute(nowTime), second(nowTime)
   );
+  BaseWSReturnData["firmware_version"].set(FIRMWARE_VERSION);
   BaseWSReturnData["time"] = datetimeChar;
+  BaseWSReturnData["utc"] = "+8";
+  BaseWSReturnData["internet"].set(Machine_Ctrl.BackendServer.GetWifiInfo());
+  BaseWSReturnData["cmd"].set(MessageString);
+  
+  // BaseWSReturnData["device_status"].set(Machine_Ctrl.GetEventStatus());
+
   return BaseWSReturnData;
 } 
 
@@ -214,36 +219,7 @@ void ws_GetAllStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
   client->text(returnString);
 }
 
-void ws_GetEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_data, std::map<int, String>* UrlParaMap)
-{
-  String EventName = String((*UrlParaMap)[1].c_str());
-  ESP_LOGD(LOG_TAG_WIFI, "Event Name: %s", (*UrlParaMap)[1].c_str());
-  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
-  JsonObject D_event_group = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["event_group"];
-  if (D_event_group.containsKey(EventName)) {
-    D_baseInfoJSON["message"].set("OK");
-    D_baseInfoJSON["action"].set("UpdateOneEvent");
-    D_baseInfoJSON["parameter"][EventName].set(D_event_group[EventName]);
-  } else {
-    D_baseInfoJSON["message"].set("FAIL");
-    D_baseInfoJSON["parameter"]["message"] = "找不到Evevnt: " + EventName;
-  }
-  String returnString;
-  serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
-}
 
-void ws_GetAllEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_data, std::map<int, String>* UrlParaMap)
-{
-  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
-  JsonObject D_event_group = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["event_group"];
-  D_baseInfoJSON["message"].set("OK");
-  D_baseInfoJSON["action"].set("UpdateAllEvent");
-  D_baseInfoJSON["parameter"].set(D_event_group);
-  String returnString;
-  serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
-}
 
 void ws_GetWiFiStatusInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_data, std::map<int, String>* UrlParaMap)
 {
@@ -378,58 +354,65 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
   } else if (type == WS_EVT_DISCONNECT) {
     Serial.println("WebSocket client disconnected");
   } else if (type == WS_EVT_DATA) {
-    ESP_LOGD(LOG_TAG_WIFI, "WS_EVT_DATA");
     String MessageString = String(((char *)data));
-    ESP_LOGD(LOG_TAG_WIFI, "Get Message String");
-    
     int commaIndex = MessageString.indexOf("]");
     String METHOD = MessageString.substring(1, commaIndex);
     MessageString = MessageString.substring(commaIndex + 1);
-    
     commaIndex = MessageString.indexOf("?");
     String Message_CMD = MessageString.substring(0, commaIndex);
-    String Data = MessageString.substring(commaIndex + 1);
-
+    String QueryParameter = MessageString.substring(commaIndex + 1);
+    DynamicJsonDocument D_QueryParameter = urlParamsToJSON(QueryParameter.c_str());
+    DynamicJsonDocument D_FormData(10000);
+    DeserializationError error = deserializeJson(D_FormData, D_QueryParameter["data"].as<String>());
+    if (error) {
+      DynamicJsonDocument D_errorbaseInfo = Machine_Ctrl.BackendServer.GetBaseWSReturnData("["+METHOD+"]"+Message_CMD);
+      D_errorbaseInfo["message"] = "FAIL";
+      D_errorbaseInfo["parameter"]["message"] = "API帶有的Data解析錯誤，參數格式錯誤?";
+      String ErrorMessage;
+      serializeJsonPretty(D_errorbaseInfo, ErrorMessage);
+      client->text(ErrorMessage);
+      D_errorbaseInfo.clear();
+    }
+    D_QueryParameter.remove("data");
     std::string Message_CMD_std = std::string(Message_CMD.c_str());
     std::string METHOD_std = std::string(METHOD.c_str());
-    std::string Data_std = std::string(Data.c_str());
     ESP_LOGD(LOG_TAG_WIFI, "Message_API: %s", Message_CMD.c_str());
     ESP_LOGD(LOG_TAG_WIFI, "Message_METHOD: %s", METHOD.c_str());
-    ESP_LOGD(LOG_TAG_WIFI, "Message_Data: %s", Data.c_str());
 
     DynamicJsonDocument D_baseInfo = Machine_Ctrl.BackendServer.GetBaseWSReturnData("["+String(METHOD_std.c_str())+"]"+String(Message_CMD_std.c_str()));
     
     bool IsFind = false;
-    for (auto it = Machine_Ctrl.BackendServer.websocketApiSetting.begin(); it != Machine_Ctrl.BackendServer.websocketApiSetting.end(); ++it) {
+    for (auto it = Machine_Ctrl.BackendServer.websocketApiSetting.rbegin(); it != Machine_Ctrl.BackendServer.websocketApiSetting.rend(); ++it) {
       std::regex reg(it->first.c_str());
       std::smatch matches;
+      ESP_LOGD(LOG_TAG_WIFI, "reg: %s", it->first.c_str());
+      ESP_LOGD(LOG_TAG_WIFI, "Message_CMD_std: %s", Message_CMD_std.c_str());
       if (std::regex_match(Message_CMD_std, matches, reg)) {
         std::map<int, String> UrlParameter;
-        int paraIndex = 0;
         IsFind = true;
-        for (auto it = matches.begin(); it != matches.end(); ++it) {
-          UrlParameter.insert(std::make_pair(paraIndex, String(it->str().c_str())));
-          paraIndex++;
-        }
         if (it->second.count(METHOD_std)) {
-          DynamicJsonDocument D_data(10000);
-          DeserializationError error = deserializeJson(D_data, String(Data_std.c_str()));
-          if (error) {
-            ESP_LOGI(LOG_TAG_WIFI, "解析錯誤: %s", error.f_str());
-            D_baseInfo["message"] = "FAIL";
-            D_baseInfo["parameter"]["message"] = String(error.f_str());
-            String returnString;
-            serializeJsonPretty(D_baseInfo, returnString);
-            client->text(returnString);
-          } else {
-            it->second[METHOD_std]->func(server, client, &D_baseInfo, &D_data, &UrlParameter);
+          DynamicJsonDocument D_PathParameter(1000);
+          int pathParameterIndex = -1;
+          for (auto matches_it = matches.begin(); matches_it != matches.end(); ++matches_it) {
+            if (pathParameterIndex == -1) {
+              pathParameterIndex++;
+              continue;
+            }
+            if ((int)(it->second[METHOD_std]->pathParameterKeyMapList.size()) <= pathParameterIndex) {
+              break;
+            }
+            D_PathParameter[it->second[METHOD_std]->pathParameterKeyMapList[pathParameterIndex]] = String(matches_it->str().c_str());
           }
 
+          ESP_LOGD(LOG_TAG_WIFI, "Message_API: %s", Message_CMD.c_str());
+          ESP_LOGD(LOG_TAG_WIFI, "Message_METHOD: %s", METHOD.c_str());
+          it->second[METHOD_std]->func(server, client, &D_baseInfo, &D_PathParameter, &D_QueryParameter, &D_FormData);
         } else {
           ESP_LOGE(LOG_TAG_WIFI, "API %s 並無設定 METHOD: %s", Message_CMD_std.c_str(), METHOD_std.c_str());
             D_baseInfo["message"] = "FAIL";
             D_baseInfo["parameter"]["message"] = "Not allow: "+String(METHOD_std.c_str());
         }
+        break;
       }
     }
     if (!IsFind) {
@@ -585,20 +568,20 @@ void CWIFI_Ctrler::setAPIs()
   CWIFI_Ctrler *This = this;
   setAPI(*This);
 
-  AddWebsocketAPI("/api/BaseInfo", "GET", &ws_GetDeviceBaseInfo);
-  AddWebsocketAPI("/api/BaseInfo", "PATCH", &ws_UpdateDeviceBaseInfo);
+  // AddWebsocketAPI("/api/BaseInfo", "GET", &ws_GetDeviceBaseInfo);
+  // AddWebsocketAPI("/api/BaseInfo", "PATCH", &ws_UpdateDeviceBaseInfo);
 
-  AddWebsocketAPI("/api/Step/(.*)", "GET", &ws_GetStepInfo);
-  AddWebsocketAPI("/api/Step", "GET", &ws_GetAllStepInfo);
+  // AddWebsocketAPI("/api/Step/(.*)", "GET", &ws_GetStepInfo);
+  // AddWebsocketAPI("/api/Step", "GET", &ws_GetAllStepInfo);
 
-  AddWebsocketAPI("/api/Event/(.*)", "GET", &ws_GetEventInfo);
-  AddWebsocketAPI("/api/Event", "GET", &ws_GetAllEventInfo);
+  // AddWebsocketAPI("/api/Event/(.*)", "GET", &ws_GetEventInfo);
+  // AddWebsocketAPI("/api/Event", "GET", &ws_GetAllEventInfo);
 
-  AddWebsocketAPI("/api/WiFi", "GET", &ws_GetWiFiStatusInfo);
-  AddWebsocketAPI("/api/WiFi/Config", "GET", &ws_GetWiFiConfig);
-  AddWebsocketAPI("/api/WiFi/Local", "PATCH", &ws_LocalWiFiConfigChange);
+  // AddWebsocketAPI("/api/WiFi", "GET", &ws_GetWiFiStatusInfo);
+  // AddWebsocketAPI("/api/WiFi/Config", "GET", &ws_GetWiFiConfig);
+  // AddWebsocketAPI("/api/WiFi/Local", "PATCH", &ws_LocalWiFiConfigChange);
 
-  AddWebsocketAPI("/api/System", "PUT", &ws_OTAByURL);
+  // AddWebsocketAPI("/api/System", "PUT", &ws_OTAByURL);
   
   
   asyncServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -754,14 +737,14 @@ DynamicJsonDocument CWIFI_Ctrler::GetWifiInfo()
   JsonVariant json_obj = json_doc.to<JsonVariant>();
   WiFi.softAPgetHostname();
   
-  json_doc["Local"]["name"] = WifiConfigJSON["AP"]["AP_Name"].as<String>();
-  json_doc["Local"]["ip"] = WifiConfigJSON["AP"]["AP_IP"].as<String>();
-  json_doc["Local"]["gateway"] = WifiConfigJSON["AP"]["AP_gateway"].as<String>();
-  json_doc["Local"]["subnet_mask"] = WifiConfigJSON["AP"]["AP_subnet_mask"].as<String>();
+  // json_doc["Local"]["name"] = WifiConfigJSON["AP"]["AP_Name"].as<String>();
+  // json_doc["Local"]["ip"] = WifiConfigJSON["AP"]["AP_IP"].as<String>();
+  // json_doc["Local"]["gateway"] = WifiConfigJSON["AP"]["AP_gateway"].as<String>();
+  // json_doc["Local"]["subnet_mask"] = WifiConfigJSON["AP"]["AP_subnet_mask"].as<String>();
 
-  json_doc["Remote"]["ip"].set(IP);
-  json_doc["Remote"]["rssi"].set(rssi);
-  json_doc["Remote"]["mac_address"].set(mac_address);
+  json_doc["remote"]["ip"].set(IP);
+  json_doc["remote"]["rssi"].set(rssi);
+  json_doc["remote"]["mac_address"].set(mac_address);
   return json_doc;
 };
 
@@ -796,18 +779,18 @@ void CWIFI_Ctrler::UploadNewData()
 }
 
 
-void CWIFI_Ctrler::AddWebsocketAPI(String APIPath, String METHOD, void (*func)(AsyncWebSocket*, AsyncWebSocketClient*, DynamicJsonDocument*, DynamicJsonDocument*, std::map<int, String>*))
+void CWIFI_Ctrler::AddWebsocketAPI(String APIPath, String METHOD, void (*func)(AsyncWebSocket*, AsyncWebSocketClient*, DynamicJsonDocument*, DynamicJsonDocument*, DynamicJsonDocument*, DynamicJsonDocument*))
 {
   C_WebsocketAPI *newAPI = new C_WebsocketAPI(APIPath, METHOD, func);
   std::unordered_map<std::string, C_WebsocketAPI*> sub_map;
 
-  if (websocketApiSetting.count(std::string(APIPath.c_str())) == 0) {
-    sub_map[std::string(METHOD.c_str())] = newAPI;
+  if (websocketApiSetting.count(std::string(newAPI->APIPath.c_str())) == 0) {
+    sub_map[std::string(newAPI->METHOD.c_str())] = newAPI;
     websocketApiSetting.insert(
-      std::make_pair(std::string(APIPath.c_str()), sub_map)
+      std::make_pair(std::string(newAPI->APIPath.c_str()), sub_map)
     );
   } else {
-    websocketApiSetting[std::string(APIPath.c_str())][std::string(METHOD.c_str())] = newAPI;
+    websocketApiSetting[std::string(newAPI->APIPath.c_str())][std::string(newAPI->METHOD.c_str())] = newAPI;
   }
   
   // websocketApiSetting[std::string(APIPath.c_str())][std::string(METHOD.c_str())] = newAPI;
