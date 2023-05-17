@@ -5,29 +5,33 @@
 // #undef ARDUHAL_LOG_LEVEL
 // #define ARDUHAL_LOG_LEVEL 5
 
+// ArduinoJson.h
+// #define JSON_MAX_DEPTH 40
+
+
 #include <Arduino.h>
 #include <Wire.h>
 #include <esp_log.h>
+#define ARDUINOJSON_DEFAULT_NESTING_LIMIT 40
 #include <ArduinoJson.h>
 
 #include "../lib/LTR_329ALS_01/src/LTR_329ALS_01.h"
 
 #include "Machine_Ctrl/src/Machine_Ctrl.h"
 
-
 /////////////////
-#include <regex>
-#include <map>
-#include <vector>
-
-#include <HTTPClient.h>
-HTTPClient http;
-ALS_01_Data_t testValue;
-time_t nowTime;
-String postData;
-DynamicJsonDocument newData(500);
-char datetimeChar[30];
-
+// #include <Ethernet.h>
+// #include <Ethernet2.h>
+// EthernetServer server(80);
+// byte ethernet_mac[] = {
+//   0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED
+// };
+// IPAddress ethernet_ip(192, 168, 20, 222);
+// IPAddress gateway(192, 168, 20, 1);//宜蘭一場前場
+// IPAddress subnet(255, 255, 255, 0); //
+// EthernetClient client;
+// EthernetServer server(80);
+#include <Adafruit_PWMServoDriver.h>
 /////////////////////////
 
 const char* LOG_TAG = "MAIN";
@@ -36,9 +40,9 @@ SMachine_Ctrl Machine_Ctrl;
 const char* FIRMWARE_VERSION = "V2.23.52.0";
 
 
-int SCHP = 18; // Clock
-int STHP = 17; // Latch
-int DATA = 16;
+int SCHP = 42; // Clock
+int STHP = 41; // Latch
+int DATA = 40;
 
 void setup() {
   Serial.begin(115200);
@@ -46,17 +50,107 @@ void setup() {
 
   Machine_Ctrl.INIT_SPIFFS_config();
   Machine_Ctrl.INIT_I2C_Wires();
-  
-  pinMode(SCHP, OUTPUT);
-  pinMode(DATA, OUTPUT);  
-  pinMode(STHP, OUTPUT);
+  Machine_Ctrl.motorCtrl.INIT_Motors(Machine_Ctrl.WireOne);
+  Machine_Ctrl.peristalticMotorsCtrl.INIT_Motors(42,41,40,2);
+  // pinMode(SCHP, OUTPUT);
+  // pinMode(DATA, OUTPUT);  
+  // pinMode(STHP, OUTPUT);
+
   Machine_Ctrl.BackendServer.ConnectToWifi();
   Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
   Machine_Ctrl.BackendServer.ServerStart();
+
+
+
+  // Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
+
+
+  // for (int i=0;i<100;i++) {
+  //   Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(2, PeristalticMotorStatus::FORWARD);
+  //   Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(7, PeristalticMotorStatus::REVERSR);
+  //   Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
+  //   delay(50);
+  //   Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
+  // }
+
+  // Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
+  // Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(2, PeristalticMotorStatus::REVERSR);
+  // Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(7, PeristalticMotorStatus::FORWARD);
+  // Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
+  // delay(2000);
+  // Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
+
+  // Ethernet.init(9);
+  // Ethernet.begin(ethernet_mac, ethernet_ip);
+  // Serial.println(Ethernet.hardwareStatus());
+  // if (Ethernet.hardwareStatus() == EthernetNoHardware) {
+  //   Serial.println("Ethernet shield was not found.  Sorry, can't run without hardware. :(");
+  //   while (true) {
+  //     delay(1); // do nothing, no point running without Ethernet hardware
+  //   }
+  // }
+  // if (Ethernet.linkStatus() == LinkOFF) {
+  //   Serial.println("Ethernet cable is not connected.");
+  // }
+  // Serial.println("------------------");
+  // Serial.println(Ethernet.localIP());
+  // Serial.println("------------------");
 }
 
 void loop() {
-  delay(10000);
+  // byte error, address;
+  // int devices = 0;
+  // for (address = 1; address < 127; address++) {
+  //   Serial.printf("test %d\n",address);
+  //   Machine_Ctrl.WireOne.beginTransmission(address);
+  //   error = Machine_Ctrl.WireOne.endTransmission();
+  //   if (error == 0) {
+  //     Serial.print("I2C device found at address 0x");
+  //     if (address < 16) {
+  //       Serial.print("0");
+  //     }
+  //     Serial.println(address, HEX);
+
+  //     devices++;
+  //   }
+  // }
+  // if (devices == 0) {
+  //   Serial.println("No I2C devices found");
+  // }
+  delay(1000);
+  // if (client.connect("192.168.20.27", 5566)) {
+  //   Serial.println("connected");
+  //   client.println("GET / HTTP/1.1");//模擬池
+  //   client.println("Host: 192.168.20.222:80");//模擬池
+  //   client.println("Connection: close");//原版
+  //   client.println();
+  // } else {
+  //   Serial.println("Connection failed");
+  // }
+
+  // while (client.connected()) {
+  //   if (client.available()) {
+  //     char c = client.read();
+  //     Serial.print(c);
+  //   }
+  // }
+  // client.stop();
+
+
+  // delay(1000);
+
+  // EthernetClient client = server.available();
+  // if (client) {
+  //   Serial.println("New client connected");
+  //   while (client.connected()) {
+  //     if (client.available()) {
+  //       char c = client.read();
+  //       Serial.print(c);
+  //     }
+  //   }
+  //   client.stop();
+  //   Serial.println("Client disconnected");
+  // }
 
 
 

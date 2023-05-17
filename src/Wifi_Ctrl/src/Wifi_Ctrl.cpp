@@ -1,6 +1,6 @@
 #include "Wifi_Ctrl.h"
 #include <WiFi.h>
-#include <ESPAsyncWebServer.h>
+#include <SPI.h>
 #include "AsyncTCP.h"
 #include <ArduinoOTA.h> 
 #include <SPIFFS.h>
@@ -10,7 +10,10 @@
 #include <ESP32Servo.h>
 #include <NTPClient.h>
 #include <esp_system.h>
-
+// #include <Ethernet.h>
+// #include <AsyncWebServer_ESP32_W5500.h>
+// #include <AsyncWebServer_Ethernet.h>
+#include <ESPAsyncWebServer.h>
 #include <Update.h>
 #include <HTTPClient.h>
 
@@ -28,11 +31,22 @@
 #include "models.h"
 #include "urls.h"
 
+
+
 extern const char* FIRMWARE_VERSION;
 extern SMachine_Ctrl Machine_Ctrl;
 
 AsyncWebServer asyncServer(80);
 AsyncWebSocket ws("/ws");
+
+// EthernetServer ethernet_server(80);
+
+extern byte ethernet_mac;
+extern IPAddress ethernet_ip;
+// IPAddress ethernet_gateway(192, 168, 20, 1);
+
+
+
 const long  gmtOffset_sec = 3600*8; // GMT+8
 const int   daylightOffset_sec = 0; // DST+0
 WiFiUDP ntpUDP;
@@ -415,9 +429,34 @@ void CWIFI_Ctrler::UpdateMachineTimerByNTP()
 void CWIFI_Ctrler::ServerStart()
 {
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+  // ESP32_W5500_onEvent();
+  // SPI.begin(12, 13, 11, 9);
+  // ETH.begin(13, 11, 12, 9, 10, SPI_CLOCK_MHZ, SPI1_HOST);
+  
+  // Ethernet.init(9);
+  // Ethernet.begin(ethernet_mac, ethernet_ip);
+  // if (Ethernet.hardwareStatus() == EthernetNoHardware) {
+  //   Serial.println("Ethernet shield was not found.  Sorry, can't run without hardware. :(");
+  //   while (true) {
+  //     delay(1); // do nothing, no point running without Ethernet hardware
+  //   }
+  // }
+  // if (Ethernet.linkStatus() == LinkOFF) {
+  //   Serial.println("Ethernet cable is not connected.");
+  // }
+  // Serial.println("------------------");
+  // Serial.println(Ethernet.localIP());
+  // Serial.println("------------------");
+
+  // ETH.config(myIP, myGW, mySN, myDNS);
+  // ESP32_W5500_waitForConnect();
   ws.onEvent(onWebSocketEvent);
   asyncServer.addHandler(&ws);
   asyncServer.begin();
+
+  // ethernet_server.addHandler(&ws);
+  // ethernet_server.begin();
+  
   createWebServer();
 }
 
@@ -431,6 +470,7 @@ void CWIFI_Ctrler::setStaticAPIs()
 {
   asyncServer.serveStatic("/static/SPIFFS/",SPIFFS,"/");
   asyncServer.serveStatic("/",SPIFFS,"/").setDefaultFile("index.html");
+  
 }
 
 void CWIFI_Ctrler::setAPIs()

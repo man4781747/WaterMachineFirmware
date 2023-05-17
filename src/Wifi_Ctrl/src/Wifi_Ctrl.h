@@ -1,10 +1,13 @@
 #ifndef WIFI_CTRLER_H
 #define WIFI_CTRLER_H
 
+
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoOTA.h> 
+// #include <Ethernet.h>
+// #include <AsyncWebServer_ESP32_W5500.h>
 
 #include "AsyncTCP.h"
 #include <unordered_map>

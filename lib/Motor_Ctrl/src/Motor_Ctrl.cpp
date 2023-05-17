@@ -5,6 +5,7 @@
 #include <esp_system.h>
 
 #include <ArduinoJson.h>
+#include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
 #include <TimeLib.h>   
 
@@ -41,16 +42,14 @@ Motor_Ctrl::Motor_Ctrl()
  * @brief 馬達們控制物件初始化
  * 
  */
-void Motor_Ctrl::INIT_Motors()
+void Motor_Ctrl::INIT_Motors(TwoWire &Wire_)
 {
   ESP_LOGI("Motor_Ctrl","INIT_Motors");
-  myWire.begin(13, 14);
-  pwm_1 = Adafruit_PWMServoDriver(0x40, myWire);
-  pwm_1.begin();
-  pwm_1.setPWMFreq(50);
-  pwm_2 = Adafruit_PWMServoDriver(0x41, myWire);
-  pwm_2.begin();
-  pwm_2.setPWMFreq(50);
+  pwm_1 = new Adafruit_PWMServoDriver(0x40, Wire_);
+  pwm_1->begin();
+  pwm_1->setPWMFreq(50);
+  // pwm_2 = new Adafruit_PWMServoDriver(0x41, Wire_);
+  // pwm_2->setPWMFreq(50);
 }
 
 /**
@@ -70,12 +69,12 @@ void Motor_Ctrl::AddNewMotor(int channelIndex_, String motorID_, String motorNam
 void Motor_Ctrl::SetMotorTo(int channelIndex_, int angle)
 {
   ESP_LOGI("Motor","Motor %02d change to: %03d", channelIndex_, angle);
-  int pulse_wide = map(angle, 0, 180, 600, 2400);
+  int pulse_wide = map(angle, 0, 180, 800, 2200);
   int pulse_width = int((float)pulse_wide / 1000000.*50.*4096.);
   if (channelIndex_/16 == 1) {
-    pwm_2.setPWM(channelIndex_%16, 0, pulse_width);
+    pwm_2->setPWM(channelIndex_%16, 0, pulse_width);
   } else {
-    pwm_1.setPWM(channelIndex_%16, 0, pulse_width);
+    pwm_1->setPWM(channelIndex_%16, 0, pulse_width);
   }
 }
 
@@ -92,9 +91,9 @@ void Motor_Ctrl::SetMotorTo(String motorID, int angle)
   // int pulse_wide = map(angle, 0, 180, 600, 2400);
   // int pulse_width = int((float)pulse_wide / 1000000.*50.*4096.);
   // if (channelIndex_/16 == 1) {
-  //   pwm_2.setPWM(channelIndex_%16, 0, pulse_width);
+  //   pwm_2->setPWM(channelIndex_%16, 0, pulse_width);
   // } else {
-  //   pwm_1.setPWM(channelIndex_%16, 0, pulse_width);
+  //   pwm_1->setPWM(channelIndex_%16, 0, pulse_width);
   // }
 
   // ESP_LOGI("Motor","Motor %s set: %03d", motorID.c_str(), angle);
@@ -118,52 +117,69 @@ void Motor_Ctrl::MotorStatusChange(String motorID)
   int pulse_wide = map(motorsDict[std::string(motorID.c_str())].motorStatus, 0, 180, 600, 2400);
   int pulse_width = int((float)pulse_wide / 1000000.*50.*4096.);
   if (channelIndex_/16 == 1) {
-    pwm_2.setPWM(channelIndex_%16, 0, pulse_width);
+    pwm_2->setPWM(channelIndex_%16, 0, pulse_width);
   } else {
-    pwm_1.setPWM(channelIndex_%16, 0, pulse_width);
+    pwm_1->setPWM(channelIndex_%16, 0, pulse_width);
   }
 }
 
-
-/**
- * @brief 單一顆蠕動馬達初始化
- * 
- * @param motorIndex_ 
- * @param motorName_ 
- */
-void C_Single_Peristaltic_Motor::ActiveMotor(int motorIndex_, String motorID_, String motorName_, String descrption) {
-  motorIndex=motorIndex_;
-  motorID = motorID_;
-  motorDescription = descrption;
-  if (motorName_ == String("")) {
-    uint64_t randomValue = ((uint64_t)esp_random()) << 32 | esp_random();
-    char uuidString[32];
-    sprintf(uuidString, "%016llx", randomValue);
-    motorName = "Motor-"+String(uuidString);
-  } else {
-    motorName = motorName_;
-  }
-};
 
 
 /**
  * @brief 蠕動馬達們控制物件初始化
  * 
  */
-void C_Peristaltic_Motors_Ctrl::INIT_Motors()
+void C_Peristaltic_Motors_Ctrl::INIT_Motors(int SHCP_, int STCP_, int DATA_, int moduleNum_)
 {
   ESP_LOGI("Motor_Ctrl","INIT_Motors");
+  SHCP = SHCP_;
+  STCP = STCP_;
+  DATA = DATA_;
+  moduleNum = moduleNum_;
+  pinMode(SHCP, OUTPUT);
+  pinMode(STCP, OUTPUT);  
+  pinMode(DATA, OUTPUT);
+  moduleDataList = new uint8_t[moduleNum];
+  memset(moduleDataList, 0, sizeof(moduleDataList));
+  RunMotor(moduleDataList);
 }
 
-void C_Peristaltic_Motors_Ctrl::AddNewMotor(int channelIndex_, String motorID, String motorName_, String descrption)
+void C_Peristaltic_Motors_Ctrl::RunMotor(uint8_t *moduleDataList)
 {
-  ESP_LOGI("Peristaltic_Motors_Ctrl","AddNewPeristalticMotor: %02d, %s, %s", channelIndex_, motorName_.c_str(), descrption.c_str());
-  motorsDict[std::string(motorID.c_str())] = C_Single_Peristaltic_Motor();
-  motorsDict[std::string(motorID.c_str())].ActiveMotor(channelIndex_, motorID, motorName_, descrption );
-
+  digitalWrite(STCP, LOW);
+  for (int index = moduleNum-1;index >= 0;index--) {
+    shiftOut(DATA, SHCP, MSBFIRST, moduleDataList[index]);
+  }
+  digitalWrite(STCP, HIGH);
 }
 
-void C_Peristaltic_Motors_Ctrl::RunMotor(int motorIndex, int type)
+
+void C_Peristaltic_Motors_Ctrl::SetAllMotorStop()
 {
-  // ESP_LOGI("Peristaltic_Motors_Ctrl","Peristaltic motor %d set: %d", motorIndex, type);
+  memset(moduleDataList, 0, moduleNum);
+  RunMotor(moduleDataList);
+}
+
+void C_Peristaltic_Motors_Ctrl::SetMotorStatus(int index, PeristalticMotorStatus status)
+{
+  int moduleChoseIndex = index / 4;
+  int motortChoseIndexInModule = index % 4;
+  ESP_LOGI("蠕動馬達", "將模組: %d 的第 %d 顆馬達數值更改為 %d", moduleChoseIndex+1, motortChoseIndexInModule+1, status);
+  if (moduleChoseIndex >= moduleNum) {}
+  else {
+    moduleDataList[moduleChoseIndex] &= ~(0b11 << motortChoseIndexInModule*2);
+    moduleDataList[moduleChoseIndex] |= (status << motortChoseIndexInModule*2);
+  }
+}
+
+void C_Peristaltic_Motors_Ctrl::ShowNowSetting()
+{
+  char btyeContent[9];
+  btyeContent[8] = '\0';
+  for (int index = 0;index < moduleNum;index++) {
+    for (int i = 0; i <= 7; i++) {
+      btyeContent[i] = ((moduleDataList[index] >> i) & 1) ? '1' : '0';
+    }
+    ESP_LOGI("蠕動馬達", "當前設定: %d -> %s", index, btyeContent);
+  }
 }

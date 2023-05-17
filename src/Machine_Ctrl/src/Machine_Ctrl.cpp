@@ -5,6 +5,7 @@
 #include <ESP32Servo.h>
 
 #include <ESPAsyncWebServer.h>
+// #include <AsyncWebServer_ESP32_W5500.h>
 #include "AsyncTCP.h"
 
 #include <TimeLib.h>   
@@ -171,6 +172,173 @@ int SMachine_Ctrl::PeristalticMotorIDToMotorIndex(String motorID)
 ////////////////////////////////////////////////////
 // For 事件執行
 ////////////////////////////////////////////////////
+
+typedef struct {
+  String message;
+} TaskParameters;
+
+void SMachine_Ctrl::LOAD__ACTION(String actionJSONString)
+{
+  loadedAction->clear();
+  DeserializationError error = deserializeJson(*loadedAction, actionJSONString,  DeserializationOption::NestingLimit(20));
+  if (error) {
+    Serial.print("deserializeJson() failed: ");
+    Serial.println(error.c_str());
+  }
+}
+
+
+void LOADED_ACTION(void* parameter)
+{ 
+  ESP_LOGI("LOADED_ACTION","START");
+  JsonObject D_loadedActionJSON = Machine_Ctrl.loadedAction->as<JsonObject>();
+  
+  ESP_LOGI("LOADED_ACTION","執行動作: %s", D_loadedActionJSON["title"].as<String>().c_str());
+  ESP_LOGI("LOADED_ACTION","動作說明: %s", D_loadedActionJSON["description"].as<String>().c_str());
+  int stepCount = 1;
+  for (JsonVariant stepItem : D_loadedActionJSON["step_list"].as<JsonArray>()) {
+    JsonObject D_stepItem = stepItem.as<JsonObject>();
+    for (JsonPair D_stepItem_ : D_stepItem) {
+      ESP_LOGI("LOADED_ACTION","  執行流程: [%d]%s",stepCount, D_stepItem_.value()["title"].as<String>().c_str());
+      ESP_LOGI("LOADED_ACTION","  流程說明: %s", D_stepItem_.value()["description"].as<String>().c_str());
+      int eventGroupCount = 1;
+      for (JsonVariant eventGroupItem : D_stepItem_.value()["event_group_list"].as<JsonArray>()) {
+        JsonObject D_eventGroupItem = eventGroupItem.as<JsonObject>();
+        for (JsonPair D_eventGroupItem_ : D_eventGroupItem) {
+          ESP_LOGI("LOADED_ACTION","    執行事件組: [%d-%d]%s", stepCount, eventGroupCount, D_eventGroupItem_.value()["title"].as<String>().c_str());
+          ESP_LOGI("LOADED_ACTION","    事件組說明: %s", D_eventGroupItem_.value()["description"].as<String>().c_str());
+          int eventCount = 1;
+          for (JsonVariant eventItem : D_eventGroupItem_.value()["event_list"].as<JsonArray>()) {
+            if (eventItem.containsKey("pwm_motor_list")) {
+              ESP_LOGI("LOADED_ACTION","      [%d-%d-%d]伺服馬達控制",stepCount,eventGroupCount,eventCount);
+              for (JsonVariant pwmMotorItem : eventItem["pwm_motor_list"].as<JsonArray>()) {
+                ESP_LOGI("LOADED_ACTION","       - %s(%d) 轉至 %d 度", 
+                  pwmMotorItem["pwn_motor"]["title"].as<String>().c_str(), pwmMotorItem["pwn_motor"]["index"].as<int>(), 
+                  pwmMotorItem["status"].as<int>()
+                );
+                Machine_Ctrl.motorCtrl.SetMotorTo(pwmMotorItem["pwn_motor"]["index"].as<int>(), pwmMotorItem["status"].as<int>());
+              }
+              vTaskDelay(2000);
+            }
+
+            else if (eventItem.containsKey("peristaltic_motor_list")) {
+              ESP_LOGI("LOADED_ACTION","      [%d-%d-%d]蠕動馬達控制",stepCount,eventGroupCount,eventCount);
+              for (JsonVariant peristalticMotorItem : eventItem["peristaltic_motor_list"].as<JsonArray>()) {
+                serializeJsonPretty(peristalticMotorItem, Serial);
+                ESP_LOGI("LOADED_ACTION","       - %s(%d) %s 持續 %.2f 秒", 
+                  peristalticMotorItem["peristaltic_motor"]["title"].as<String>().c_str(), 
+                  peristalticMotorItem["peristaltic_motor"]["index"].as<int>(), 
+                  peristalticMotorItem["status"].as<int>()==-1 ? "正轉" : "反轉", peristalticMotorItem["time"].as<float>()
+                );
+
+                Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(
+                  peristalticMotorItem["peristaltic_motor"]["index"].as<int>(), 
+                  peristalticMotorItem["status"].as<int>() == 1 ? PeristalticMotorStatus::FORWARD : PeristalticMotorStatus::REVERSR
+                );
+                Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
+                vTaskDelay(peristalticMotorItem["time"].as<float>()*1000);
+                Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
+              }
+            }
+
+
+            eventCount += 1;
+          }
+        }
+        eventGroupCount+=1;
+      }
+    }
+    stepCount+=1;
+  }
+  ESP_LOGI("LOADED_ACTION","END");
+  Machine_Ctrl.TASK__NOW_ACTION = NULL;
+  vTaskDelete(NULL);
+}
+void SMachine_Ctrl::RUN__LOADED_ACTION()
+{
+  eTaskState taskState = eTaskGetState(&TASK__NOW_ACTION);
+  if (TASK__NOW_ACTION == NULL | taskState == eDeleted) {
+    xTaskCreate(
+      LOADED_ACTION, "LOADED_ACTION",
+      10000, NULL, 1, &TASK__NOW_ACTION
+    );
+  } else {
+    switch (taskState) {
+      case eRunning:
+        ESP_LOGW("PWMMotorTestEvent","eRunning");break;
+      case eBlocked: // 任務正在等待某些事件的發生
+        ESP_LOGW("PWMMotorTestEvent","eBlocked");break;
+      case eSuspended: // 任務已經被暫停
+        ESP_LOGW("PWMMotorTestEvent","eSuspended");break;
+      default: // 未知的狀態
+        ESP_LOGW("PWMMotorTestEvent","unknow");break;
+    }
+  } 
+}
+
+
+
+
+void PWMMotorTestEvent(void* parameter)
+{
+  ESP_LOGI("PWMMotorTestEvent","START");
+  TaskParameters* params = (TaskParameters*) parameter;
+  String motorID = params->message;
+  int MotorIndex = Machine_Ctrl.pwmMotorIDToMotorIndex(motorID);
+  if (MotorIndex > -1) {
+    Machine_Ctrl.motorCtrl.SetMotorTo(MotorIndex, 0);
+    vTaskDelay(2000);
+    Machine_Ctrl.motorCtrl.SetMotorTo(MotorIndex, 90);
+    vTaskDelay(2000);
+    Machine_Ctrl.motorCtrl.SetMotorTo(MotorIndex, 180);
+    JsonObject D_baseInfoJSON = Machine_Ctrl.BackendServer.GetBaseWSReturnData("").as<JsonObject>();
+    D_baseInfoJSON["status"].set("OK");
+    D_baseInfoJSON["action"]["target"].set("PwmMotor");
+    D_baseInfoJSON["action"]["method"].set("Test");
+    D_baseInfoJSON["parameter"]["status"].set("end");
+    D_baseInfoJSON["parameter"]["motor_id"].set(motorID);
+    String returnString;
+    serializeJsonPretty(D_baseInfoJSON, returnString);
+    Machine_Ctrl.BackendServer.ws_->textAll(returnString);
+  } else {
+    ESP_LOGE("PWMMotorTestEvent","找不到伺服馬達資訊: %s", motorID.c_str());
+  }
+  ESP_LOGI("PWMMotorTestEvent","END");
+  delete params;
+  Machine_Ctrl.TASK__NOW_ACTION = NULL;
+  vTaskDelete(NULL);
+}
+EVENT_RESULT SMachine_Ctrl::RUN__PWMMotorTestEvent(String motorID)
+{
+  EVENT_RESULT returnData;
+  eTaskState taskState = eTaskGetState(&TASK__NOW_ACTION);
+  returnData.status = taskState;
+  if (TASK__NOW_ACTION == NULL | taskState == eDeleted) {
+    TaskParameters* taskParams = new TaskParameters;
+    taskParams->message = motorID;
+
+    xTaskCreate(
+      PWMMotorTestEvent, "PWM_MOTOR_TEST",
+      10000, taskParams, 1, &TASK__NOW_ACTION
+    );
+    returnData.message = "OK";
+  } else {
+    switch (taskState) {
+      case eRunning:
+        returnData.message = "eRunning";ESP_LOGW("PWMMotorTestEvent","eRunning");break;
+      case eBlocked: // 任務正在等待某些事件的發生
+        returnData.message = "eBlocked";ESP_LOGW("PWMMotorTestEvent","eBlocked");break;
+      case eSuspended: // 任務已經被暫停
+        returnData.message = "eSuspended";ESP_LOGW("PWMMotorTestEvent","eSuspended");break;
+      default: // 未知的狀態
+        returnData.message = "unknow";ESP_LOGW("PWMMotorTestEvent","unknow");break;
+    }
+  } 
+  return returnData;
+}
+
+
+
 void PWMMotorEvent(void* parameter)
 {
   // for(;;){
@@ -228,11 +396,9 @@ void PeristalticMotorEvent(void* parameter)
       TickType_t startTick = xTaskGetTickCount();
       while ((xTaskGetTickCount() - startTick - Machine_Ctrl.TaskSuspendTimeSum) * portTICK_PERIOD_MS <= totalTime) {
         // ESP_LOGW("PeristalticMotorEvent","START");
-        Machine_Ctrl.peristalticMotorsCtrl.RunMotor(MotorIndex, event["status"].as<int>());
         vTaskDelay(pdMS_TO_TICKS(1));
       }
       ESP_LOGW("PeristalticMotorEvent","loop time: %d", (xTaskGetTickCount() - startTick - Machine_Ctrl.TaskSuspendTimeSum) * portTICK_PERIOD_MS / 1000);
-      Machine_Ctrl.peristalticMotorsCtrl.RunMotor(MotorIndex, 0);
     }
   }
   ESP_LOGW("PeristalticMotorEvent","END");
@@ -490,8 +656,7 @@ void SMachine_Ctrl::Stop_AllPeristalticMotor()
   JsonObject DeviceSetting = spiffs.DeviceSetting->as<JsonObject>();
   if (DeviceSetting.containsKey("peristaltic_motor")) {
     for (JsonPair peristalticMotorItem : DeviceSetting["peristaltic_motor"].as<JsonObject>()) {
-      peristalticMotorsCtrl.RunMotor(peristalticMotorItem.value()["index"].as<int>(),0);
-    }
+      }
   }
 }
 

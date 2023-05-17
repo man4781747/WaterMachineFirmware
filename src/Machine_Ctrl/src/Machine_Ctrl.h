@@ -86,6 +86,14 @@ class SMachine_Ctrl
     // For 事件執行
     ////////////////////////////////////////////////////
 
+    // EVENT_RESULT RUN__PWMMotorTestEvent(String motorID);
+
+    void LOAD__ACTION(String actionJSONString);
+    void RUN__LOADED_ACTION();
+
+
+    EVENT_RESULT RUN__PWMMotorTestEvent(String motorID);
+    
     EVENT_RESULT RUN__PWMMotorEvent(JsonArray PWMMotorEventList);
 
     EVENT_RESULT RUN__PeristalticMotorEvent(JsonArray PeristalticMotorEventList);
@@ -135,6 +143,13 @@ class SMachine_Ctrl
     ////////////////////////////////////////////////////
     // 公用參數
     ////////////////////////////////////////////////////
+
+    /**
+     * @brief 當前執行動作TASK
+     * 
+     */
+    TaskHandle_t TASK__NOW_ACTION;
+    DynamicJsonDocument *loadedAction = new DynamicJsonDocument(500000);
 
     TaskHandle_t TASK__PWM_MOTOR;
     TaskHandle_t TASK__Peristaltic_MOTOR;

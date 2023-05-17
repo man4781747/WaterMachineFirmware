@@ -6,21 +6,27 @@
 
 void setAPI(CWIFI_Ctrler &WIFI_Ctrler)
 {
+  WIFI_Ctrler.AddWebsocketAPI("/api/System/STOP", "GET", &ws_StopAllActionTask);
+
+
   WIFI_Ctrler.AddWebsocketAPI("/api/DeiveConfig", "GET", &ws_GetDeiveConfig);
   WIFI_Ctrler.AddWebsocketAPI("/api/DeiveConfig", "PATCH", &ws_PatchDeiveConfig);
 
+  WIFI_Ctrler.AddWebsocketAPI("/api/PeristalticMotor/(<name>.*)/test", "GET", &ws_TestPeristalticMotor);
   WIFI_Ctrler.AddWebsocketAPI("/api/PeristalticMotor/(<name>.*)", "DELETE", &ws_DeletePeristalticMotorInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/PeristalticMotor/(<name>.*)", "GET", &ws_GetPeristalticMotorInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/PeristalticMotor/(<name>.*)", "PATCH", &ws_PatchPeristalticMotorInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/PeristalticMotor", "GET", &ws_GetAllPeristalticMotorInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/PeristalticMotor", "POST", &ws_AddNewPeristalticMotorInfo);
 
+  WIFI_Ctrler.AddWebsocketAPI("/api/pwmMotor/(<name>.*)/test", "GET", &ws_TestPwmMotor);
   WIFI_Ctrler.AddWebsocketAPI("/api/pwmMotor/(<name>.*)", "GET", &ws_GetPwmMotorInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/pwmMotor/(<name>.*)", "PATCH", &ws_PatchPwmMotorInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/pwmMotor/(<name>.*)", "DELETE", &ws_DeletePwmMotorInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/pwmMotor", "GET", &ws_GetAllPwmMotorInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/pwmMotor", "POST", &ws_AddNewPwmMotorInfo);
   
+  WIFI_Ctrler.AddWebsocketAPI("/api/Event/(<name>.*)/test", "GET", &ws_TestEvent);
   WIFI_Ctrler.AddWebsocketAPI("/api/Event/(<name>.*)", "GET", &ws_GetEventInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/Event/(<name>.*)", "PATCH", &ws_PatchEventInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/Event/(<name>.*)", "DELETE", &ws_DeleteEventInfo);

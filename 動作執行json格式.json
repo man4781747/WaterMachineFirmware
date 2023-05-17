@@ -1,0 +1,75 @@
+{
+  "title": "伺服馬達測試",
+  "description": "伺服馬達測試",
+  "create_time": 1684255464,
+  "finish_time": -1,
+  "step_list": [
+    {
+      "pwmMotorTest": {
+        "title": "伺服馬達測試",
+        "description": "伺服馬達測試",
+        "finish_time": -1,
+        "event_group_list": [
+          {
+            "pwmMotorTest": {
+              "title": "伺服馬達測試",
+              "description": "伺服馬達測試",
+              "finish_time": -1,
+              "event_list": [
+                {
+                  "pwm_motor_list": [
+                    {
+                      "pwn_motor": {
+                        "index": 0,
+                        "title": "目前無作用",
+                        "description": "目前無作用",
+                        "finish_time": -1
+                      },
+                      "status": 0
+                    }
+                  ]
+                },
+                {
+                  "pwm_motor_list": [
+                    {
+                      "pwn_motor": {
+                        "index": 0,
+                        "title": "目前無作用",
+                        "description": "目前無作用",
+                        "finish_time": -1
+                      },
+                      "status": 90
+                    }
+                  ]
+                },
+                {
+                  "pwm_motor_list": [
+                    {
+                      "pwn_motor": {
+                        "index": 0,
+                        "title": "目前無作用",
+                        "description": "目前無作用",
+                        "finish_time": -1
+                      },
+                      "status": 180
+                    }
+                  ]
+                },
+                {
+                  "peristaltic_motor": {
+                    "index": 2,
+                    "title": "PH測試馬達",
+                    "description": "PH測試馬達",
+                    "finish_time": -1
+                  },
+                  "status": -1,
+                  "time": 1
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
