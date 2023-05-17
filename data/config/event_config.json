@@ -1,9 +1,21 @@
 {
+  "spectrophotometer": {
+    "A": {
+      "index": 0,
+      "title": "(藍光)氨氮檢測",
+      "description": "(藍光)氨氮檢測"
+    },
+    "B": {
+      "index": 1,
+      "title": "(綠光)亞硝酸鹽檢測",
+      "description": "(綠光)亞硝酸鹽檢測"
+    }
+  },
   "pwm_motor": {
     "S_B1": {
-        "index": 31,
-        "title": "蝦池-1",
-        "description": "控制對外抽蝦池的伺服馬達"
+      "index": 31,
+      "title": "蝦池-1",
+      "description": "控制對外抽蝦池的伺服馬達"
     },
     "S_B2": {
         "index": 30,

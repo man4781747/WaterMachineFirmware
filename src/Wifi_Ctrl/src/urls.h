@@ -12,12 +12,28 @@ void setAPI(CWIFI_Ctrler &WIFI_Ctrler)
   WIFI_Ctrler.AddWebsocketAPI("/api/DeiveConfig", "GET", &ws_GetDeiveConfig);
   WIFI_Ctrler.AddWebsocketAPI("/api/DeiveConfig", "PATCH", &ws_PatchDeiveConfig);
 
+
+
+  //!分光光度計設定相關API
+
+  WIFI_Ctrler.AddWebsocketAPI("/api/Spectrophotometer/(<name>.*)", "DELETE", &ws_DeleteSpectrophotometerInfo);
+  WIFI_Ctrler.AddWebsocketAPI("/api/Spectrophotometer/(<name>.*)", "GET", &ws_GetSpectrophotometerInfo);
+  WIFI_Ctrler.AddWebsocketAPI("/api/Spectrophotometer/(<name>.*)", "PATCH", &ws_PatchSpectrophotometerInfo);
+  WIFI_Ctrler.AddWebsocketAPI("/api/Spectrophotometer", "GET", &ws_GetAllSpectrophotometerInfo);
+  WIFI_Ctrler.AddWebsocketAPI("/api/Spectrophotometer", "POST", &ws_AddNewSpectrophotometerInfo);
+
+
+  //!蠕動馬達設定相關API
+
   WIFI_Ctrler.AddWebsocketAPI("/api/PeristalticMotor/(<name>.*)/test", "GET", &ws_TestPeristalticMotor);
   WIFI_Ctrler.AddWebsocketAPI("/api/PeristalticMotor/(<name>.*)", "DELETE", &ws_DeletePeristalticMotorInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/PeristalticMotor/(<name>.*)", "GET", &ws_GetPeristalticMotorInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/PeristalticMotor/(<name>.*)", "PATCH", &ws_PatchPeristalticMotorInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/PeristalticMotor", "GET", &ws_GetAllPeristalticMotorInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/PeristalticMotor", "POST", &ws_AddNewPeristalticMotorInfo);
+
+
+  //!伺服馬達設定相關API
 
   WIFI_Ctrler.AddWebsocketAPI("/api/pwmMotor/(<name>.*)/test", "GET", &ws_TestPwmMotor);
   WIFI_Ctrler.AddWebsocketAPI("/api/pwmMotor/(<name>.*)", "GET", &ws_GetPwmMotorInfo);
@@ -26,6 +42,9 @@ void setAPI(CWIFI_Ctrler &WIFI_Ctrler)
   WIFI_Ctrler.AddWebsocketAPI("/api/pwmMotor", "GET", &ws_GetAllPwmMotorInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/pwmMotor", "POST", &ws_AddNewPwmMotorInfo);
   
+
+  //!事件組設定相關API
+
   WIFI_Ctrler.AddWebsocketAPI("/api/Event/(<name>.*)/test", "GET", &ws_TestEvent);
   WIFI_Ctrler.AddWebsocketAPI("/api/Event/(<name>.*)", "GET", &ws_GetEventInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/Event/(<name>.*)", "PATCH", &ws_PatchEventInfo);

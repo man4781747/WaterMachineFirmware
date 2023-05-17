@@ -224,7 +224,6 @@ void LOADED_ACTION(void* parameter)
             else if (eventItem.containsKey("peristaltic_motor_list")) {
               ESP_LOGI("LOADED_ACTION","      [%d-%d-%d]蠕動馬達控制",stepCount,eventGroupCount,eventCount);
               for (JsonVariant peristalticMotorItem : eventItem["peristaltic_motor_list"].as<JsonArray>()) {
-                serializeJsonPretty(peristalticMotorItem, Serial);
                 ESP_LOGI("LOADED_ACTION","       - %s(%d) %s 持續 %.2f 秒", 
                   peristalticMotorItem["peristaltic_motor"]["title"].as<String>().c_str(), 
                   peristalticMotorItem["peristaltic_motor"]["index"].as<int>(), 

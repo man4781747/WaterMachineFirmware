@@ -56,14 +56,18 @@
                   ]
                 },
                 {
-                  "peristaltic_motor": {
-                    "index": 2,
-                    "title": "PH測試馬達",
-                    "description": "PH測試馬達",
-                    "finish_time": -1
-                  },
-                  "status": -1,
-                  "time": 1
+                  "pwm_motor_list": [
+                    {
+                      "peristaltic_motor": {
+                        "index": 2,
+                        "title": "PH測試馬達",
+                        "description": "PH測試馬達",
+                        "finish_time": -1
+                      },
+                      "status": -1,
+                      "time": 1
+                    }
+                  ]
                 }
               ]
             }
