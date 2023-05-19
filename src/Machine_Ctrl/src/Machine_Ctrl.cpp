@@ -192,7 +192,7 @@ void LOADED_ACTION(void* parameter)
 { 
   ESP_LOGI("LOADED_ACTION","START");
   JsonObject D_loadedActionJSON = Machine_Ctrl.loadedAction->as<JsonObject>();
-  
+  serializeJsonPretty(D_loadedActionJSON, Serial);
   ESP_LOGI("LOADED_ACTION","執行動作: %s", D_loadedActionJSON["title"].as<String>().c_str());
   ESP_LOGI("LOADED_ACTION","動作說明: %s", D_loadedActionJSON["description"].as<String>().c_str());
   int stepCount = 1;
@@ -217,6 +217,7 @@ void LOADED_ACTION(void* parameter)
                   pwmMotorItem["status"].as<int>()
                 );
                 Machine_Ctrl.motorCtrl.SetMotorTo(pwmMotorItem["pwn_motor"]["index"].as<int>(), pwmMotorItem["status"].as<int>());
+                pwmMotorItem["finish_time"].set(now());
               }
               vTaskDelay(2000);
             }
@@ -237,19 +238,91 @@ void LOADED_ACTION(void* parameter)
                 Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
                 vTaskDelay(peristalticMotorItem["time"].as<float>()*1000);
                 Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
+                peristalticMotorItem["finish_time"].set(now());
               }
             }
 
+            else if (eventItem.containsKey("spectrophotometer_list")) {
+              ESP_LOGI("LOADED_ACTION","      [%d-%d-%d]分光光度計控制",stepCount,eventGroupCount,eventCount);
+              for (JsonVariant spectrophotometerItem : eventItem["spectrophotometer_list"].as<JsonArray>()) {
+                int spectrophotometerIndex = spectrophotometerItem["spectrophotometer"]["index"].as<int>();
+                String GainStr = spectrophotometerItem["gain"].as<String>();
+                String value_name = spectrophotometerItem["value_name"].as<String>();
+                ESP_LOGI("LOADED_ACTION","       - %s(%d) %s 測量倍率，並紀錄為: %s", 
+                  spectrophotometerItem["spectrophotometer"]["title"].as<String>().c_str(), 
+                  spectrophotometerIndex, 
+                  GainStr.c_str(), value_name.c_str()
+                );
+                Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(spectrophotometerIndex);
+                if (GainStr == "1X") {
+                  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_1X);
+                }
+                else if (GainStr == "2X") {
+                  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_2X);
+                }
+                else if (GainStr == "4X") {
+                  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_4X);
+                }
+                else if (GainStr == "8X") {
+                  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_8X);
+                }
+                else if (GainStr == "48X") {
+                  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_48X);
+                }
+                else if (GainStr == "96X") {
+                  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_96X);
+                }
+                ALS_01_Data_t testValue = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+                Serial.println(testValue.CH_0);
+                Serial.println(testValue.CH_1);
+                spectrophotometerItem["finish_time"].set(now());
+              }
+            }
 
+            JsonObject D_baseInfoJSON = Machine_Ctrl.BackendServer.GetBaseWSReturnData("").as<JsonObject>();
+            D_baseInfoJSON["status"].set("OK");
+            D_baseInfoJSON["action"]["target"].set("RunHistory");
+            D_baseInfoJSON["action"]["method"].set("Update");
+            D_baseInfoJSON["parameter"].set(D_loadedActionJSON);
+            String returnString;
+            serializeJsonPretty(D_baseInfoJSON, returnString);
+            Machine_Ctrl.BackendServer.ws_->textAll(returnString);
             eventCount += 1;
           }
+          D_eventGroupItem_.value()["finish_time"].set(now());
+          JsonObject D_baseInfoJSON = Machine_Ctrl.BackendServer.GetBaseWSReturnData("").as<JsonObject>();
+          D_baseInfoJSON["status"].set("OK");
+          D_baseInfoJSON["action"]["target"].set("RunHistory");
+          D_baseInfoJSON["action"]["method"].set("Update");
+          D_baseInfoJSON["parameter"].set(D_loadedActionJSON);
+          String returnString;
+          serializeJsonPretty(D_baseInfoJSON, returnString);
+          Machine_Ctrl.BackendServer.ws_->textAll(returnString);
         }
         eventGroupCount+=1;
       }
+      D_stepItem_.value()["finish_time"].set(now());
+      JsonObject D_baseInfoJSON = Machine_Ctrl.BackendServer.GetBaseWSReturnData("").as<JsonObject>();
+      D_baseInfoJSON["status"].set("OK");
+      D_baseInfoJSON["action"]["target"].set("RunHistory");
+      D_baseInfoJSON["action"]["method"].set("Update");
+      D_baseInfoJSON["parameter"].set(D_loadedActionJSON);
+      String returnString;
+      serializeJsonPretty(D_baseInfoJSON, returnString);
+      Machine_Ctrl.BackendServer.ws_->textAll(returnString);
     }
     stepCount+=1;
   }
   ESP_LOGI("LOADED_ACTION","END");
+  D_loadedActionJSON["finish_time"].set(now());
+  JsonObject D_baseInfoJSON = Machine_Ctrl.BackendServer.GetBaseWSReturnData("").as<JsonObject>();
+  D_baseInfoJSON["status"].set("OK");
+  D_baseInfoJSON["action"]["target"].set("RunHistory");
+  D_baseInfoJSON["action"]["method"].set("Update");
+  D_baseInfoJSON["parameter"].set(D_loadedActionJSON);
+  String returnString;
+  serializeJsonPretty(D_baseInfoJSON, returnString);
+  Machine_Ctrl.BackendServer.ws_->textAll(returnString);
   Machine_Ctrl.TASK__NOW_ACTION = NULL;
   vTaskDelete(NULL);
 }

@@ -120,3 +120,32 @@ bool CLTR_329ALS_01::IfNewData()
   uint8_t AllSataus = I2CWire->read();
   return (AllSataus >> 2) & 1;
 }
+
+void CMULTI_LTR_329ALS_01::openSensorByIndex(int index)
+{
+  uint8_t openCode[1];
+  memset(openCode, 0, 1);
+  openCode[0] &= ~(0b11 << (3-index)*2);
+  openCode[0] |= (0b11 << (3-index)*2);
+  digitalWrite(stcpPin, LOW);
+  shiftOut(dataPin, shcpPin, LSBFIRST, openCode[0]);
+  // shiftOut(dataPin, shcpPin, LSBFIRST, 0b11111111);
+  digitalWrite(stcpPin, HIGH);
+}
+
+void CMULTI_LTR_329ALS_01::closeAllSensor()
+{
+  digitalWrite(stcpPin, LOW);
+  shiftOut(dataPin, shcpPin, LSBFIRST, 0b00000000);
+  digitalWrite(stcpPin, HIGH);
+}
+
+void CMULTI_LTR_329ALS_01::SetGain(ALS_Gain gain)
+{
+  LTR_329ALS_01->ALS_Contr_Config.ALS_Gain = gain;
+}
+
+ALS_01_Data_t CMULTI_LTR_329ALS_01::TakeOneValue()
+{
+  return LTR_329ALS_01->TakeOneValue();
+}

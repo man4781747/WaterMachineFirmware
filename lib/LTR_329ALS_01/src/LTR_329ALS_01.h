@@ -84,13 +84,19 @@ class CMULTI_LTR_329ALS_01
       shcpPin = shcp_;
       stcpPin = stcp_;
       I2CWire = Wire_;
+      pinMode(dataPin, OUTPUT);
+      pinMode(stcpPin, OUTPUT);
+      pinMode(shcpPin, OUTPUT);
+      LTR_329ALS_01 = new CLTR_329ALS_01(Wire_);
     };
     void openSensorByIndex(int index);
     void closeAllSensor();
-
+    void SetGain(ALS_Gain gain);
+    ALS_01_Data_t TakeOneValue();
+    
     int dataPin, shcpPin, stcpPin;
     TwoWire* I2CWire;
-
+    CLTR_329ALS_01* LTR_329ALS_01;
   private:
 };
 

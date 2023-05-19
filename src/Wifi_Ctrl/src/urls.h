@@ -8,14 +8,23 @@ void setAPI(CWIFI_Ctrler &WIFI_Ctrler)
 {
   WIFI_Ctrler.AddWebsocketAPI("/api/System/STOP", "GET", &ws_StopAllActionTask);
 
+  WIFI_Ctrler.AddWebsocketAPI("/api/System", "GET", &ws_StopAllActionTask);
+
 
   WIFI_Ctrler.AddWebsocketAPI("/api/DeiveConfig", "GET", &ws_GetDeiveConfig);
   WIFI_Ctrler.AddWebsocketAPI("/api/DeiveConfig", "PATCH", &ws_PatchDeiveConfig);
 
 
+  //!蝦池設定相關API
+  WIFI_Ctrler.AddWebsocketAPI("/api/Pool/(<name>.*)", "DELETE", &ws_DeletePoolInfo);
+  WIFI_Ctrler.AddWebsocketAPI("/api/Pool/(<name>.*)", "GET", &ws_GetPoolInfo);
+  WIFI_Ctrler.AddWebsocketAPI("/api/Pool/(<name>.*)", "PATCH", &ws_PatchPoolInfo);
+  WIFI_Ctrler.AddWebsocketAPI("/api/Pool", "GET", &ws_GetAllPoolInfo);
+  WIFI_Ctrler.AddWebsocketAPI("/api/Pool", "POST", &ws_AddNewPoolInfo);
 
   //!分光光度計設定相關API
 
+  WIFI_Ctrler.AddWebsocketAPI("/api/Spectrophotometer/(<name>.*)/test", "GET", &ws_TestSpectrophotometer);
   WIFI_Ctrler.AddWebsocketAPI("/api/Spectrophotometer/(<name>.*)", "DELETE", &ws_DeleteSpectrophotometerInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/Spectrophotometer/(<name>.*)", "GET", &ws_GetSpectrophotometerInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/Spectrophotometer/(<name>.*)", "PATCH", &ws_PatchSpectrophotometerInfo);
@@ -52,7 +61,14 @@ void setAPI(CWIFI_Ctrler &WIFI_Ctrler)
   WIFI_Ctrler.AddWebsocketAPI("/api/Event", "GET", &ws_GetAllEventInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/Event", "POST", &ws_AddNewEventInfo);
 
+
+  //!步驟設定相關API
+
+  WIFI_Ctrler.AddWebsocketAPI("/api/Step/(<name>.*)", "GET", &ws_GetStepInfo);
+  WIFI_Ctrler.AddWebsocketAPI("/api/Step/(<name>.*)", "PATCH", &ws_PatchStepInfo);
+  WIFI_Ctrler.AddWebsocketAPI("/api/Step/(<name>.*)", "DELETE", &ws_DeleteStepInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/Step", "GET", &ws_GetAllStepInfo);
+  WIFI_Ctrler.AddWebsocketAPI("/api/Step", "POST", &ws_AddNewStepInfo);
 
 
 }

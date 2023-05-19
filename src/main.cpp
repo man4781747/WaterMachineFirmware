@@ -40,9 +40,7 @@ SMachine_Ctrl Machine_Ctrl;
 const char* FIRMWARE_VERSION = "V2.23.52.0";
 
 
-int SCHP = 42; // Clock
-int STHP = 41; // Latch
-int DATA = 40;
+
 
 void setup() {
   Serial.begin(115200);
@@ -51,14 +49,39 @@ void setup() {
   Machine_Ctrl.INIT_SPIFFS_config();
   Machine_Ctrl.INIT_I2C_Wires();
   Machine_Ctrl.motorCtrl.INIT_Motors(Machine_Ctrl.WireOne);
+  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
   Machine_Ctrl.peristalticMotorsCtrl.INIT_Motors(42,41,40,2);
-  // pinMode(SCHP, OUTPUT);
-  // pinMode(DATA, OUTPUT);  
-  // pinMode(STHP, OUTPUT);
-
   Machine_Ctrl.BackendServer.ConnectToWifi();
   Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
   Machine_Ctrl.BackendServer.ServerStart();
+
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(0);
+  // ALS_01_Data_t testValue = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  // Serial.println("==== 1 ====");
+  // Serial.println(testValue.CH_0);
+  // Serial.println(testValue.CH_1);
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_2X);
+  // testValue = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  // Serial.println(testValue.CH_0);
+  // Serial.println(testValue.CH_1);
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_4X);
+  // testValue = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  // Serial.println(testValue.CH_0);
+  // Serial.println(testValue.CH_1);
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_8X);
+  // testValue = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  // Serial.println(testValue.CH_0);
+  // Serial.println(testValue.CH_1);
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_48X);
+  // testValue = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  // Serial.println(testValue.CH_0);
+  // Serial.println(testValue.CH_1);
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_96X);
+  // testValue = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  // Serial.println(testValue.CH_0);
+  // Serial.println(testValue.CH_1);
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
+
 
 
 
@@ -101,7 +124,7 @@ void loop() {
   // byte error, address;
   // int devices = 0;
   // for (address = 1; address < 127; address++) {
-  //   Serial.printf("test %d\n",address);
+  //   // Serial.printf("test %d\n",address);
   //   Machine_Ctrl.WireOne.beginTransmission(address);
   //   error = Machine_Ctrl.WireOne.endTransmission();
   //   if (error == 0) {
@@ -117,7 +140,7 @@ void loop() {
   // if (devices == 0) {
   //   Serial.println("No I2C devices found");
   // }
-  delay(1000);
+  // delay(1000);
   // if (client.connect("192.168.20.27", 5566)) {
   //   Serial.println("connected");
   //   client.println("GET / HTTP/1.1");//模擬池
@@ -154,14 +177,32 @@ void loop() {
 
 
 
-  // digitalWrite(STHP, LOW);
-  // shiftOut(DATA, SCHP, LSBFIRST, 0b11000000);
-  // digitalWrite(STHP, HIGH);
-  // delay(500);
-  // Machine_Ctrl.LTR_329ALS_01_Ctrler.ALS_Contr_Config.ALS_Gain = ALS_Gain::Gain_96X;
-  // testValue = Machine_Ctrl.LTR_329ALS_01_Ctrler.TakeOneValue();
+  // digitalWrite(STCP, LOW);
+  // shiftOut(DATA, SHCP, LSBFIRST, 0b11000000);
+  // digitalWrite(STCP, HIGH);
+  // delay(1000);
+  // Machine_Ctrl.LTR_329ALS_01_Ctrler.ALS_Contr_Config.ALS_Gain = ALS_Gain::Gain_48X;
+  // ALS_01_Data_t testValue = Machine_Ctrl.LTR_329ALS_01_Ctrler.TakeOneValue();
+  // Serial.println("==== 1 ====");
   // Serial.println(testValue.CH_0);
   // Serial.println(testValue.CH_1);
+  // digitalWrite(STCP, LOW);
+  // shiftOut(DATA, SHCP, LSBFIRST, 0b00000000);
+  // digitalWrite(STCP, HIGH);
+  delay(1000);
+  // digitalWrite(STCP, LOW);
+  // shiftOut(DATA, SHCP, LSBFIRST, 0b00110000);
+  // digitalWrite(STCP, HIGH);
+  // delay(3000);
+  // Machine_Ctrl.LTR_329ALS_01_Ctrler.ALS_Contr_Config.ALS_Gain = ALS_Gain::Gain_96X;
+  // ALS_01_Data_t testValue_2 = Machine_Ctrl.LTR_329ALS_01_Ctrler.TakeOneValue();
+  // Serial.println("==== 2 ====");
+  // Serial.println(testValue_2.CH_0);
+  // Serial.println(testValue_2.CH_1);
+
+
+
+
   // newData.clear();
   // postData = "";
   // newData["SensorIndex"] = "1";

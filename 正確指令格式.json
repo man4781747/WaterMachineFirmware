@@ -2,6 +2,7 @@
 
 {
   "device_no": "Test",                  // 儀器編號、名稱
+  
   "mode": "Mode_Master",                // 儀器模式(主、從)
   "firmware_version": "V2.23.52.0",     // 韌體版本號
   "cmd": "[GET]/api/PeristalticMotor",  // 指令復誦
@@ -18,7 +19,6 @@
   },
   "time": "2023-05-12 10:51:49",        // 發送時間
   "utc": "+8",                          // 時區
-  "status": "OK",                       // 指令正確與否 (OK or FAIL)
   "action": {                           // 儀器指令行為
     "target": "PeristalticMotor",          // 行為目標
     "method": "Update"                     // 行為動作

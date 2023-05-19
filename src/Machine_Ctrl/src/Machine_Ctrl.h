@@ -167,7 +167,8 @@ class SMachine_Ctrl
     TwoWire WireOne = TwoWire(0);
     int WireOne_SDA = 5;
     int WireOne_SCL = 6;
-    CLTR_329ALS_01 LTR_329ALS_01_Ctrler = CLTR_329ALS_01(&WireOne);
+    CMULTI_LTR_329ALS_01 MULTI_LTR_329ALS_01_Ctrler = CMULTI_LTR_329ALS_01(16, 18, 17, &WireOne);
+    // CLTR_329ALS_01 LTR_329ALS_01_Ctrler = CLTR_329ALS_01(&WireOne);
 
     ////////////////////////////////////////////////////
     // 捨棄使用，純紀錄

@@ -1,4 +1,22 @@
 {
+  "pools": {
+    "pool-1": {
+      "title": "蝦池1",
+      "description": "蝦池1"
+    },
+    "pool-2": {
+      "title": "蝦池2",
+      "description": "蝦池2"
+    },
+    "pool-3": {
+      "title": "蝦池3",
+      "description": "蝦池3"
+    },
+    "pool-4": {
+      "title": "蝦池4",
+      "description": "蝦池4"
+    }
+  },
   "spectrophotometer": {
     "A": {
       "index": 0,
@@ -365,20 +383,42 @@
             { "wait": 10 }
         ]
     },
-    "NO2_Value_Get" : {
-        "title": "亞硝酸鹽數值獲得",
-        "description": "此段Code尚未編寫，待材料到期後處裡",
+    "NO2_Wash_Value_Get" : {
+      "title": "亞硝酸鹽清洗數值獲得",
+      "description": "亞硝酸鹽清洗數值獲得",
+      "event": [
+        {"spectrophotometer_list": [
+          {"spectrophotometer_id": "B", "gain": "4X", "value_name": "NO2_wash"}
+        ]}
+      ]
+    },
+    "NO2_Test_Value_Get" : {
+      "title": "亞硝酸鹽量測數值獲得",
+      "description": "亞硝酸鹽量測數值獲得",
+      "event": [
+        {"spectrophotometer_list": [
+          {"spectrophotometer_id": "B", "gain": "4X", "value_name": "NO2_test"}
+        ]}
+      ]
+    },
+    "NH4_Wash_Value_Get" : {
+        "title": "氨氮清洗數值獲得",
+        "description": "氨氮清洗數值獲得",
         "event": [
-            { "wait": 5 }
+          {"spectrophotometer_list": [
+            {"spectrophotometer_id": "A", "gain": "4X", "value_name": "NH4_wash"}
+          ]}
         ]
     },
-    "NH3_Value_Get" : {
-        "title": "氨氮數值獲得",
-        "description": "此段Code尚未編寫，待材料到期後處裡",
-        "event": [
-            { "wait": 5 }
-        ]
-    },
+    "NH4_Test_Value_Get" : {
+      "title": "氨氮量測數值獲得",
+      "description": "氨氮量測數值獲得",
+      "event": [
+        {"spectrophotometer_list": [
+          {"spectrophotometer_id": "A", "gain": "4X", "value_name": "NH4_test"}
+        ]}
+      ]
+  },
     "PH_Value_Get" : {
         "title": "PH值獲得",
         "description": "此段Code尚未編寫，待材料到期後處裡",
@@ -432,24 +472,13 @@
     }
   },
   "steps_group": {
-      "TEST": {
-          "title": "測試用",
-          "description": "測試用測試用測試用測試用",
-          "steps": [
-              "Clear_MixRoom", "Mix_Liquid_In_MixRoom", "Push_RO_Liquid_To_MixRoom",
-              "Push_Sample_Liquid_To_MixRoom", "Push_NO2_Liquid_To_MixRoom", 
-              "Push_NH3R1_Liquid_To_MixRoom", "Push_NH3R2_Liquid_To_MixRoom",
-              "Push_MixRoom_To_NO2_SensorRoom", "Clear_NO2_SensorRoom_To_MixRoom",
-              "Push_MixRoom_To_NH3_SensorRoom", "Clear_NH3_SensorRoom_To_MixRoom"
-          ]
-      },
       "NO2_Original_Value_Get": {
-          "title": "亞硝酸鹽原點檢測",
-          "description": "亞硝酸鹽原點檢測", 
-          "steps": [
-              "Clear_MixRoom", "Push_RO_Liquid_To_MixRoom", "Push_MixRoom_To_NO2_SensorRoom",
-              "NO2_Value_Get", "Clear_NO2_SensorRoom_To_MixRoom", "Clear_MixRoom"
-          ]
+        "title": "亞硝酸鹽原點檢測",
+        "description": "亞硝酸鹽原點檢測", 
+        "steps": [
+          "Clear_MixRoom", "Push_RO_Liquid_To_MixRoom", "Push_MixRoom_To_NO2_SensorRoom",
+          "NO2_Wash_Value_Get", "Clear_NO2_SensorRoom_To_MixRoom", "Clear_MixRoom"
+        ]
       },
       "NO2_Sample_Value_Get": {
           "title": "亞硝酸鹽待測液檢測",
@@ -457,7 +486,7 @@
           "steps": [
               "Clear_MixRoom", "Push_RO_Liquid_To_MixRoom", "Push_Sample_Liquid_To_MixRoom",
               "Mix_Liquid_In_MixRoom", "Push_NO2_Liquid_To_MixRoom", "Wait_5_Min", 
-              "Push_MixRoom_To_NO2_SensorRoom", "NO2_Value_Get", "Clear_NO2_SensorRoom_To_MixRoom", 
+              "Push_MixRoom_To_NO2_SensorRoom", "NO2_Test_Value_Get", "Clear_NO2_SensorRoom_To_MixRoom", 
               "Clear_MixRoom"
           ]
       },
@@ -466,7 +495,7 @@
           "description": "氨氮原點檢測", 
           "steps": [
               "Clear_MixRoom", "Push_Sample_Liquid_To_MixRoom", "Mix_Liquid_In_MixRoom", 
-              "Push_MixRoom_To_NH3_SensorRoom", "NH3_Value_Get", "Clear_NH3_SensorRoom_To_MixRoom", 
+              "Push_MixRoom_To_NH3_SensorRoom", "NH4_Wash_Value_Get", "Clear_NH3_SensorRoom_To_MixRoom", 
               "Clear_MixRoom"
           ]
       },
@@ -476,7 +505,7 @@
           "steps": [
               "Clear_MixRoom", "Push_Sample_Liquid_To_MixRoom", "Push_NH3R1_Liquid_To_MixRoom",
               "Mix_Liquid_In_MixRoom", "Push_NH3R2_Liquid_To_MixRoom", "Mix_Liquid_In_MixRoom",  
-              "Wait_5_Min", "Push_MixRoom_To_NH3_SensorRoom", "NH3_Value_Get", 
+              "Wait_5_Min", "Push_MixRoom_To_NH3_SensorRoom", "NH4_Test_Value_Get", 
               "Clear_NH3_SensorRoom_To_MixRoom", "Clear_MixRoom"
           ]
       },
