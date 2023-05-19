@@ -70,6 +70,13 @@ void setAPI(CWIFI_Ctrler &WIFI_Ctrler)
   WIFI_Ctrler.AddWebsocketAPI("/api/Step", "GET", &ws_GetAllStepInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/Step", "POST", &ws_AddNewStepInfo);
 
+  //!流程設定相關API
+  
+  WIFI_Ctrler.AddWebsocketAPI("/api/Pipeline/(<name>.*)", "GET", &ws_GetPipelineInfo);
+  WIFI_Ctrler.AddWebsocketAPI("/api/Pipeline/(<name>.*)", "PATCH", &ws_PatchPipelineInfo);
+  WIFI_Ctrler.AddWebsocketAPI("/api/Pipeline/(<name>.*)", "DELETE", &ws_DeletePipelineInfo);
+  WIFI_Ctrler.AddWebsocketAPI("/api/Pipeline", "GET", &ws_GetAllPipelineInfo);
+  WIFI_Ctrler.AddWebsocketAPI("/api/Pipeline", "POST", &ws_AddNewPipelineInfo);
 
 }
 

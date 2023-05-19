@@ -1338,4 +1338,139 @@ void ws_AddNewStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
   }
 }
 
+
+//!流程設定相關API
+
+
+void ws_GetPipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
+{
+  String TargetName = D_PathParameter->as<JsonObject>()["name"];
+  ESP_LOGD("Websocket API", "Pipeline Name: %s", TargetName.c_str());
+  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
+  JsonObject D_pipeline = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pipeline"];
+  if (D_pipeline.containsKey(TargetName)) {
+    D_baseInfoJSON["status"].set("OK");
+    D_baseInfoJSON["action"]["target"].set("Pipeline");
+    D_baseInfoJSON["action"]["method"].set("Update");
+    D_baseInfoJSON["parameter"][TargetName].set(D_pipeline[TargetName]);
+  } else {
+    D_baseInfoJSON["status"].set("FAIL");
+    D_baseInfoJSON["parameter"]["message"] = "找不到Pipeline: " + TargetName;
+  }
+  String returnString;
+  serializeJsonPretty(D_baseInfoJSON, returnString);
+  client->text(returnString);
+}
+
+void ws_PatchPipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
+{
+  String TargetName = D_PathParameter->as<JsonObject>()["name"];
+  ESP_LOGD("websocket API", "Patch Pipeline Name: %s", TargetName.c_str());
+  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
+  JsonObject D_pipeline = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pipeline"];
+  if (D_pipeline.containsKey(TargetName)) {
+    JsonObject D_newConfig = D_FormData->as<JsonObject>();
+    JsonObject D_oldConfig = D_pipeline[TargetName];
+
+    if (D_oldConfig["title"].as<String>() != D_newConfig["title"].as<String>()) {
+      D_oldConfig["title"] = D_newConfig["title"].as<String>();
+    }
+    if (D_oldConfig["description"].as<String>() != D_newConfig["description"].as<String>()) {
+      D_oldConfig["description"] = D_newConfig["description"].as<String>();
+    }
+    if (D_oldConfig["pool"].as<String>() != D_newConfig["pool"].as<String>()) {
+      D_oldConfig["pool"] = D_newConfig["pool"].as<String>();
+    }
+    D_oldConfig.remove("steps");
+    D_oldConfig["steps"].set(D_newConfig["steps"]);
+    
+    D_baseInfoJSON["parameter"][TargetName].set(D_oldConfig);
+    D_baseInfoJSON["status"].set("OK");
+    D_baseInfoJSON["action"]["target"].set("Pipeline");
+    D_baseInfoJSON["action"]["method"].set("Update");
+    String returnString;
+    serializeJsonPretty(D_baseInfoJSON, returnString);
+    ws.textAll(returnString);
+  } else {
+    D_baseInfoJSON["status"].set("FAIL");
+    D_baseInfoJSON["parameter"]["message"] = "找不到Pipeline: " + TargetName;
+    String returnString;
+    serializeJsonPretty(D_baseInfoJSON, returnString);
+    client->text(returnString);
+  }
+}
+
+
+void ws_DeletePipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
+{
+  String TargetName = D_PathParameter->as<JsonObject>()["name"];
+  ESP_LOGD("Websocket API", "Delete Event Name: %s", TargetName.c_str());
+  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
+  JsonObject D_pipeline = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pipeline"];
+  if (D_pipeline.containsKey(TargetName)) {
+    D_pipeline.remove(TargetName);
+    D_baseInfoJSON["status"].set("OK");
+    D_baseInfoJSON["action"]["method"] = "Delete";
+    D_baseInfoJSON["action"]["target"] = "Pipeline";
+    D_baseInfoJSON["parameter"]["delete_id"] = TargetName;
+    String returnString;
+    serializeJsonPretty(D_baseInfoJSON, returnString);
+    server->textAll(returnString);
+  } else {
+    D_baseInfoJSON["status"].set("FAIL");
+    D_baseInfoJSON["parameter"]["message"] = "找不到Delete: " + TargetName;
+    String returnString;
+    serializeJsonPretty(D_baseInfoJSON, returnString);
+    client->text(returnString);
+  }
+}
+
+void ws_GetAllPipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
+{
+  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
+  JsonObject D_pipeline = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pipeline"];
+  D_baseInfoJSON["status"].set("OK");
+  D_baseInfoJSON["action"]["target"].set("Pipeline");
+  D_baseInfoJSON["action"]["method"].set("Update");
+  D_baseInfoJSON["parameter"].set(D_pipeline);
+  String returnString;
+  serializeJsonPretty(D_baseInfoJSON, returnString);
+  client->text(returnString);
+}
+
+void ws_AddNewPipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
+{
+  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
+  JsonObject D_newConfig = D_FormData->as<JsonObject>();
+  if (!D_newConfig.containsKey("title") | !D_newConfig.containsKey("pool")) {
+    D_baseInfoJSON["status"].set("FAIL");
+    D_baseInfoJSON["parameter"]["message"] = "title 參數與 pool 參數為必要項目";
+    String returnString;
+    serializeJsonPretty(D_baseInfoJSON, returnString);
+    client->text(returnString);
+  } else {
+    JsonObject D_pipeline = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pipeline"];
+    char random_name[16];
+    uint8_t random_bytes[8];
+    esp_fill_random(random_bytes, sizeof(random_bytes));
+    for (int i = 0; i < sizeof(random_bytes); i++) {
+      sprintf(&random_name[i*2], "%02x", random_bytes[i]);
+    }
+    String NewIDString = String(random_name);
+    D_pipeline[NewIDString]["title"].set(D_newConfig["title"].as<String>());
+    D_pipeline[NewIDString]["description"].set(D_newConfig["description"].as<String>());
+    D_pipeline[NewIDString]["pool"].set(D_newConfig["pool"].as<String>());
+    D_pipeline[NewIDString].createNestedArray("steps");
+    D_baseInfoJSON["status"].set("OK");
+    D_baseInfoJSON["action"]["target"].set("Pipeline");
+    D_baseInfoJSON["action"]["method"].set("Update");
+    D_baseInfoJSON["parameter"][NewIDString].set(D_pipeline[NewIDString]);
+    String returnString;
+    serializeJsonPretty(D_baseInfoJSON, returnString);
+    ws.textAll(returnString);
+  }
+}
+
+
+
 #endif

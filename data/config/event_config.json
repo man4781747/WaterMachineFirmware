@@ -517,5 +517,25 @@
               "Clear_PH_Sensor", "Push_RO_Liquid_To_PH_Sensor"
           ]
       }
+  },
+  "pipeline": {
+    "pool_1_all_data_get": {
+      "title": "獲得第一池的所有資訊",
+      "description": "獲得第一池的所有資訊", 
+      "pool": "pool-1",
+      "steps": [
+        "NO2_Original_Value_Get", "NO2_Sample_Value_Get", "NH3_Original_Value_Get",
+        "NH3_Sample_Value_Get", "PH_Value_Get"
+      ]
+    },
+    "pool_2_all_data_get": {
+      "title": "獲得第二池的所有資訊",
+      "description": "獲得第二池的所有資訊", 
+      "pool": "pool-2",
+      "steps": [
+        "NO2_Original_Value_Get", "NO2_Sample_Value_Get", "NH3_Original_Value_Get",
+        "NH3_Sample_Value_Get", "PH_Value_Get"
+      ]
+    }
   }
 }
