@@ -12,10 +12,9 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <esp_log.h>
-#define ARDUINOJSON_DEFAULT_NESTING_LIMIT 40
 #include <ArduinoJson.h>
 
-#include "../lib/LTR_329ALS_01/src/LTR_329ALS_01.h"
+// #include "../lib/LTR_329ALS_01/src/LTR_329ALS_01.h"
 
 #include "Machine_Ctrl/src/Machine_Ctrl.h"
 
@@ -31,7 +30,104 @@
 // IPAddress subnet(255, 255, 255, 0); //
 // EthernetClient client;
 // EthernetServer server(80);
-#include <Adafruit_PWMServoDriver.h>
+// #include <Adafruit_PWMServoDriver.h>
+#include <HTTPClient.h>
+
+uint16_t CH0_Buff [30];
+uint16_t CH1_Buff [30];
+DynamicJsonDocument PostData(10000);
+ALS_01_Data_t test;
+HTTPClient http;
+String PostString;
+time_t nowTime;
+char datetimeChar[30];
+/**
+ * @brief 計算平均值
+ * 
+ * @param x 
+ * @param len 
+ * @return double 
+ */
+double average(const uint16_t* x, int len)
+{
+  uint32_t sum = 0;
+  for (int i = 0; i < len; i++) {
+    sum += x[i];
+  }
+  double average = static_cast<double>(sum) / len;
+  return average;
+}
+
+/**
+ * @brief 獲得方差
+ * 
+ * @param x 
+ * @param len 
+ * @return double 
+ */
+double variance(const uint16_t* x, int len)
+{
+  double sum = 0;
+  double avg = average(x, len);
+  for (int i = 0; i < len; i++) {
+    double diff = static_cast<double>(x[i]) - avg;
+    sum += diff * diff;
+  }
+  double variance = static_cast<double>(sum) / len;
+  return variance;
+}
+
+/**
+ * @brief 得到標準差
+ * 
+ * @param x 
+ * @param len 
+ * @return double 
+ */
+double standardDev(const uint16_t* x, int len)
+{
+  double var = variance(x, len);
+  if (var == 0.) {
+    return 0.;
+  }
+  return sqrt(var);
+}
+
+/**
+ * @brief 獲得過濾後的平均數值
+ * 
+ * @param x 
+ * @param len 
+ * @return double 
+ * 
+ * @note 計算標準差時，有可能遇到標準差算出來為0的狀況，
+ * 此時平均值就為答案
+ */
+double afterFilterValue(const uint16_t* x, int len)
+{
+  double standard = standardDev(x, len);
+  double avg = average(x, len);
+
+  if (standard == 0.) {
+    return avg;
+  }
+  uint32_t sum = 0;
+  double sumLen = 0.;
+
+  for (int i = 0; i < len; i++) {
+    if (abs((double)x[i]-avg) < standard*2) {
+      sum += x[i];
+      sumLen += 1;
+    }
+  }
+  return static_cast<double>(sum)/sumLen;
+}
+
+void sensorTest(int Index);
+long oneMinSave = 0;
+long fiveMinSave = 0;
+long tenMinSave = 0;
+long TwntyFiveMinSave = 0;
 /////////////////////////
 
 const char* LOG_TAG = "MAIN";
@@ -55,72 +151,20 @@ void setup() {
   Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
   Machine_Ctrl.BackendServer.ServerStart();
 
-  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(0);
-  // ALS_01_Data_t testValue = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
-  // Serial.println("==== 1 ====");
-  // Serial.println(testValue.CH_0);
-  // Serial.println(testValue.CH_1);
-  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_2X);
-  // testValue = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
-  // Serial.println(testValue.CH_0);
-  // Serial.println(testValue.CH_1);
-  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_4X);
-  // testValue = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
-  // Serial.println(testValue.CH_0);
-  // Serial.println(testValue.CH_1);
-  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_8X);
-  // testValue = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
-  // Serial.println(testValue.CH_0);
-  // Serial.println(testValue.CH_1);
-  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_48X);
-  // testValue = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
-  // Serial.println(testValue.CH_0);
-  // Serial.println(testValue.CH_1);
-  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_96X);
-  // testValue = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
-  // Serial.println(testValue.CH_0);
-  // Serial.println(testValue.CH_1);
-  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
 
+  // digitalWrite(Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.stcpPin, LOW);
+  // shiftOut(
+  //   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.dataPin, 
+  //   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.shcpPin, 
+  //   LSBFIRST, 0b11110011
+  // );
+  // digitalWrite(Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.stcpPin, HIGH);
 
-
-
-  // Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
-
-
-  // for (int i=0;i<100;i++) {
-  //   Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(2, PeristalticMotorStatus::FORWARD);
-  //   Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(7, PeristalticMotorStatus::REVERSR);
-  //   Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
-  //   delay(50);
-  //   Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
-  // }
-
-  // Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
-  // Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(2, PeristalticMotorStatus::REVERSR);
-  // Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(7, PeristalticMotorStatus::FORWARD);
-  // Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
-  // delay(2000);
-  // Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
-
-  // Ethernet.init(9);
-  // Ethernet.begin(ethernet_mac, ethernet_ip);
-  // Serial.println(Ethernet.hardwareStatus());
-  // if (Ethernet.hardwareStatus() == EthernetNoHardware) {
-  //   Serial.println("Ethernet shield was not found.  Sorry, can't run without hardware. :(");
-  //   while (true) {
-  //     delay(1); // do nothing, no point running without Ethernet hardware
-  //   }
-  // }
-  // if (Ethernet.linkStatus() == LinkOFF) {
-  //   Serial.println("Ethernet cable is not connected.");
-  // }
-  // Serial.println("------------------");
-  // Serial.println(Ethernet.localIP());
-  // Serial.println("------------------");
 }
 
 void loop() {
+  
+  // delay(1000);
   // byte error, address;
   // int devices = 0;
   // for (address = 1; address < 127; address++) {
@@ -140,116 +184,197 @@ void loop() {
   // if (devices == 0) {
   //   Serial.println("No I2C devices found");
   // }
-  // delay(1000);
-  // if (client.connect("192.168.20.27", 5566)) {
-  //   Serial.println("connected");
-  //   client.println("GET / HTTP/1.1");//模擬池
-  //   client.println("Host: 192.168.20.222:80");//模擬池
-  //   client.println("Connection: close");//原版
-  //   client.println();
-  // } else {
-  //   Serial.println("Connection failed");
-  // }
 
-  // while (client.connected()) {
-  //   if (client.available()) {
-  //     char c = client.read();
-  //     Serial.print(c);
-  //   }
-  // }
-  // client.stop();
-
-
-  // delay(1000);
-
-  // EthernetClient client = server.available();
-  // if (client) {
-  //   Serial.println("New client connected");
-  //   while (client.connected()) {
-  //     if (client.available()) {
-  //       char c = client.read();
-  //       Serial.print(c);
-  //     }
-  //   }
-  //   client.stop();
-  //   Serial.println("Client disconnected");
+  // if ( now()/(1*60) != oneMinSave) {
+  //   oneMinSave = now()/(1*60);
+  //   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(0);
+  //   sensorTest(0);
+  //   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
   // }
 
 
+  // if ( now()/(5*60) != fiveMinSave) {
+  //   fiveMinSave = now()/(5*60);
+  //   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(1);
+  //   sensorTest(1);
+  //   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
+  // }
 
-  // digitalWrite(STCP, LOW);
-  // shiftOut(DATA, SHCP, LSBFIRST, 0b11000000);
-  // digitalWrite(STCP, HIGH);
-  // delay(1000);
-  // Machine_Ctrl.LTR_329ALS_01_Ctrler.ALS_Contr_Config.ALS_Gain = ALS_Gain::Gain_48X;
-  // ALS_01_Data_t testValue = Machine_Ctrl.LTR_329ALS_01_Ctrler.TakeOneValue();
-  // Serial.println("==== 1 ====");
-  // Serial.println(testValue.CH_0);
-  // Serial.println(testValue.CH_1);
-  // digitalWrite(STCP, LOW);
-  // shiftOut(DATA, SHCP, LSBFIRST, 0b00000000);
-  // digitalWrite(STCP, HIGH);
-  delay(1000);
-  // digitalWrite(STCP, LOW);
-  // shiftOut(DATA, SHCP, LSBFIRST, 0b00110000);
-  // digitalWrite(STCP, HIGH);
-  // delay(3000);
-  // Machine_Ctrl.LTR_329ALS_01_Ctrler.ALS_Contr_Config.ALS_Gain = ALS_Gain::Gain_96X;
-  // ALS_01_Data_t testValue_2 = Machine_Ctrl.LTR_329ALS_01_Ctrler.TakeOneValue();
-  // Serial.println("==== 2 ====");
-  // Serial.println(testValue_2.CH_0);
-  // Serial.println(testValue_2.CH_1);
+  // if ( now()/(10*60) != tenMinSave) {
+  //   tenMinSave = now()/(10*60);
+  //   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(2);
+  //   sensorTest(2);
+  //   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
+  // }
 
-
-
-
-  // newData.clear();
-  // postData = "";
-  // newData["SensorIndex"] = "1";
-  // newData["Type"] = "96X";
-  // newData["CH0"] = testValue.CH_0;
-  // newData["CH1"] = testValue.CH_1;
-  // nowTime = now();
-  // sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
-  //   year(nowTime), month(nowTime), day(nowTime),
-  //   hour(nowTime), minute(nowTime), second(nowTime)
-  // );
-  // newData["DataTime"] = datetimeChar;
-  // http.begin("http://192.168.20.27:5566/data");
-  // http.addHeader("Content-Type", "application/json");
-  // serializeJsonPretty(newData, postData);
-  // http.POST(postData);
-  // delay(2500);
-  // http.end();
-
-  // digitalWrite(STHP, LOW);
-  // shiftOut(DATA, SCHP, LSBFIRST, 0b00110000);
-  // digitalWrite(STHP, HIGH);
-  // delay(500);
-  // Machine_Ctrl.LTR_329ALS_01_Ctrler.ALS_Contr_Config.ALS_Gain = ALS_Gain::Gain_96X;
-  // testValue = Machine_Ctrl.LTR_329ALS_01_Ctrler.TakeOneValue();
-  // Serial.println(testValue.CH_0);
-  // Serial.println(testValue.CH_1);
-  // newData.clear();
-  // postData = "";
-  // newData["SensorIndex"] = "2";
-  // newData["Type"] = "96X";
-  // newData["CH0"] = testValue.CH_0;
-  // newData["CH1"] = testValue.CH_1;
-  // nowTime = now();
-  // sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
-  //   year(nowTime), month(nowTime), day(nowTime),
-  //   hour(nowTime), minute(nowTime), second(nowTime)
-  // );
-  // newData["DataTime"] = datetimeChar;
-  // http.begin("http://192.168.20.27:5566/data");
-  // http.addHeader("Content-Type", "application/json");
-  // serializeJsonPretty(newData, postData);
-  // http.POST(postData);
-  // delay(2500);
-  // http.end();
+  // if ( now()/(25*60) != TwntyFiveMinSave) {
+  //   TwntyFiveMinSave = now()/(25*60);
+  //   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(3);
+  //   sensorTest(3);
+  //   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
+  // }
 
   // ArduinoOTA.handle();
 
 }
+
+void sensorTest(int Index){
+  Machine_Ctrl.WireOne.beginTransmission(0x70);
+  Machine_Ctrl.WireOne.write(1 << Index);
+  Machine_Ctrl.WireOne.endTransmission();
+  delay(10);
+  PostData.clear();
+  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_1X);
+  for (int i=0;i<30;i++) {
+    test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+    CH0_Buff[i] = test.CH_0;
+    CH1_Buff[i] = test.CH_1;
+  }
+  PostData["CH0"] = afterFilterValue(CH0_Buff, 30);
+  PostData["CH1"] = afterFilterValue(CH1_Buff, 30);
+  // Serial.printf(" %.2f, %.2f\n",PostData["CH0"],PostData["CH1"]);
+
+  nowTime = now();
+  sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
+    year(nowTime), month(nowTime), day(nowTime),
+    hour(nowTime), minute(nowTime), second(nowTime)
+  );
+  PostData["DataTime"] = datetimeChar;
+  PostData["SensorIndex"] = String(Index + 1);
+  PostData["Type"] = "1X";
+  PostString = "";
+  http.begin("http://192.168.20.27:5566/data");
+  http.addHeader("Content-Type", "application/json");
+  serializeJsonPretty(PostData, PostString);
+  http.POST(PostString);
+  http.end();
+  ////
+  PostData.clear();
+  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_2X);
+  for (int i=0;i<30;i++) {
+    test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+    CH0_Buff[i] = (double)test.CH_0;
+    CH1_Buff[i] = (double)test.CH_1;
+  }
+  PostData["CH0"] = afterFilterValue(CH0_Buff, 30);
+  PostData["CH1"] = afterFilterValue(CH1_Buff, 30);
+  Serial.printf("Index:1 - 2X: %.2f, %.2f\n",PostData["CH0"],PostData["CH1"]);
+  nowTime = now();
+  sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
+    year(nowTime), month(nowTime), day(nowTime),
+    hour(nowTime), minute(nowTime), second(nowTime)
+  );
+  PostData["DataTime"] = datetimeChar;
+  PostData["SensorIndex"] = String(Index + 1);
+  PostData["Type"] = "2X";
+  PostString = "";
+  http.begin("http://192.168.20.27:5566/data");
+  http.addHeader("Content-Type", "application/json");
+  serializeJsonPretty(PostData, PostString);
+  http.POST(PostString);
+  http.end();
+  ////
+  PostData.clear();
+  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_4X);
+  for (int i=0;i<30;i++) {
+    test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+    CH0_Buff[i] = (double)test.CH_0;
+    CH1_Buff[i] = (double)test.CH_1;
+  }
+  PostData["CH0"] = afterFilterValue(CH0_Buff, 30);
+  PostData["CH1"] = afterFilterValue(CH1_Buff, 30);
+  Serial.printf("Index:1 - 4X: %.2f, %.2f\n",PostData["CH0"],PostData["CH1"]);
+  nowTime = now();
+  sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
+    year(nowTime), month(nowTime), day(nowTime),
+    hour(nowTime), minute(nowTime), second(nowTime)
+  );
+  PostData["DataTime"] = datetimeChar;
+  PostData["SensorIndex"] = String(Index + 1);
+  PostData["Type"] = "4X";
+  PostString = "";
+  http.begin("http://192.168.20.27:5566/data");
+  http.addHeader("Content-Type", "application/json");
+  serializeJsonPretty(PostData, PostString);
+  http.POST(PostString);
+  http.end();
+  ////
+  PostData.clear();
+  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_8X);
+  for (int i=0;i<30;i++) {
+    test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+    CH0_Buff[i] = (double)test.CH_0;
+    CH1_Buff[i] = (double)test.CH_1;
+  }
+  PostData["CH0"] = afterFilterValue(CH0_Buff, 30);
+  PostData["CH1"] = afterFilterValue(CH1_Buff, 30);
+  Serial.printf("Index:1 - 8X: %.2f, %.2f\n",PostData["CH0"],PostData["CH1"]);
+  nowTime = now();
+  sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
+    year(nowTime), month(nowTime), day(nowTime),
+    hour(nowTime), minute(nowTime), second(nowTime)
+  );
+  PostData["DataTime"] = datetimeChar;
+  PostData["SensorIndex"] = String(Index + 1);
+  PostData["Type"] = "8X";
+  PostString = "";
+  http.begin("http://192.168.20.27:5566/data");
+  http.addHeader("Content-Type", "application/json");
+  serializeJsonPretty(PostData, PostString);
+  http.POST(PostString);
+  http.end();
+  ////
+  PostData.clear();
+  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_48X);
+  for (int i=0;i<30;i++) {
+    test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+    CH0_Buff[i] = (double)test.CH_0;
+    CH1_Buff[i] = (double)test.CH_1;
+  }
+  PostData["CH0"] = afterFilterValue(CH0_Buff, 30);
+  PostData["CH1"] = afterFilterValue(CH1_Buff, 30);
+  Serial.printf("Index:1 - 48X: %.2f, %.2f\n",PostData["CH0"],PostData["CH1"]);
+  nowTime = now();
+  sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
+    year(nowTime), month(nowTime), day(nowTime),
+    hour(nowTime), minute(nowTime), second(nowTime)
+  );
+  PostData["DataTime"] = datetimeChar;
+  PostData["SensorIndex"] = String(Index + 1);
+  PostData["Type"] = "48X";
+  PostString = "";
+  http.begin("http://192.168.20.27:5566/data");
+  http.addHeader("Content-Type", "application/json");
+  serializeJsonPretty(PostData, PostString);
+  http.POST(PostString);
+  http.end();
+  ////
+  PostData.clear();
+  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_96X);
+  for (int i=0;i<30;i++) {
+    test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+    CH0_Buff[i] = (double)test.CH_0;
+    CH1_Buff[i] = (double)test.CH_1;
+  }
+  PostData["CH0"] = afterFilterValue(CH0_Buff, 30);
+  PostData["CH1"] = afterFilterValue(CH1_Buff, 30);
+  Serial.printf("Index:1 - 96X: %.2f, %.2f\n",PostData["CH0"],PostData["CH1"]);
+  nowTime = now();
+  sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
+    year(nowTime), month(nowTime), day(nowTime),
+    hour(nowTime), minute(nowTime), second(nowTime)
+  );
+  PostData["DataTime"] = datetimeChar;
+  PostData["SensorIndex"] = String(Index + 1);
+  PostData["Type"] = "96X";
+  PostString = "";
+  http.begin("http://192.168.20.27:5566/data");
+  http.addHeader("Content-Type", "application/json");
+  serializeJsonPretty(PostData, PostString);
+  http.POST(PostString);
+  http.end();
+
+
+}
+
 

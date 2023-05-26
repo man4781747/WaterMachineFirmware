@@ -1,0 +1,54 @@
+{
+  "title": "(流程)事件組測試",
+  "description": "(流程)事件組測試",
+  "create_time": 1685099649,
+  "pool": "temp-pool",
+  "finish_time": -1,
+  "step_list": [
+    {
+      "pwmMotorTest": {
+        "title": "(步驟)事件組測試",
+        "description": "(步驟)事件組測試",
+        "finish_time": -1,
+        "event_group_list": [
+          {
+            "Clear_MixRoom": {
+              "title": "清空混合室",
+              "description": "清空混合室內所有液體，將其作為廢液排出。",
+              "finish_time": -1,
+              "event_list": [
+                {
+                  "pwm_motor_list": [
+                    {
+                      "pwn_motor": {
+                        "index": 4,
+                        "title": "光度測試/排廢液",
+                        "description": "光度測試/排廢液管路開關"
+                      },
+                      "finish_time": -1,
+                      "status": 0
+                    }
+                  ]
+                },
+                {
+                  "peristaltic_motor_list": [
+                    {
+                      "peristaltic_motor": {
+                        "index": 6,
+                        "title": "光度測試/排廢液馬達",
+                        "description": "光度測試/排廢液馬達",
+                        "finish_time": -1
+                      },
+                      "status": 1,
+                      "time": 5
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

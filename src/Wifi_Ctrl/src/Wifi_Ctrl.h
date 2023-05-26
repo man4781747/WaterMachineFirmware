@@ -62,7 +62,6 @@ class C_WebsocketAPI
       }
       APIPath = String(reMix_APIPath.c_str());
       ESP_LOGI("WS_API Setting", "註冊 API: [%s]%s", METHOD.c_str(), reMix_APIPath.c_str());
-            
     };
   private:
 };

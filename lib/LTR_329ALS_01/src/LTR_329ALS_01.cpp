@@ -28,10 +28,10 @@ void CLTR_329ALS_01::Set_ALS_Contr(ALS_Contr_t config)
   I2CWire->write(configBit);
   I2CWire->endTransmission();
   delay(10);
-  I2CWire->requestFrom(0x29, 1);
-  Serial.print("ALS_CTRL: ");
-  print_binary(I2CWire->read(), 8);
-  Serial.println("");
+  I2CWire->requestFrom(addr, 1);
+  // Serial.print("ALS_CTRL: ");
+  // print_binary(I2CWire->read(), 8);
+  // Serial.println("");
 }
 
 void CLTR_329ALS_01::Set_ALS_Meas_Rate(ALS_Meas_Rate_t config)
@@ -44,44 +44,44 @@ void CLTR_329ALS_01::Set_ALS_Meas_Rate(ALS_Meas_Rate_t config)
   I2CWire->write(configBit);
   I2CWire->endTransmission();
   delay(10);
-  I2CWire->requestFrom(0x29, 1);
-  Serial.print("configBit: ");
-  print_binary(configBit, 8);
-  Serial.println("");
+  I2CWire->requestFrom(addr, 1);
+  // Serial.print("configBit: ");
+  // print_binary(configBit, 8);
+  // Serial.println("");
 }
 
 ALS_01_Data_t CLTR_329ALS_01::GetData()
 {
   ALS_01_Data_t returnData;
 
-  I2CWire->beginTransmission(0x29);
+  I2CWire->beginTransmission(addr);
   I2CWire->write(0x89);
   I2CWire->endTransmission();
   delay(1);
-  I2CWire->requestFrom(0x29, 1);
+  I2CWire->requestFrom(addr, 1);
   uint8_t CH1_high_byte = I2CWire->read();
 
-  I2CWire->beginTransmission(0x29);
+  I2CWire->beginTransmission(addr);
   I2CWire->write(0x88);
   I2CWire->endTransmission();
   delay(1);
-  I2CWire->requestFrom(0x29, 1);
+  I2CWire->requestFrom(addr, 1);
   uint8_t CH1_low_byte = I2CWire->read();
   returnData.CH_1 = ((uint16_t)CH1_high_byte << 8) | CH1_low_byte;
 
 
-  I2CWire->beginTransmission(0x29);
+  I2CWire->beginTransmission(addr);
   I2CWire->write(0x8B);
   I2CWire->endTransmission();
   delay(1);
-  I2CWire->requestFrom(0x29, 1);
+  I2CWire->requestFrom(addr, 1);
   uint8_t CH0_high_byte = I2CWire->read();
 
-  I2CWire->beginTransmission(0x29);
+  I2CWire->beginTransmission(addr);
   I2CWire->write(0x8A);
   I2CWire->endTransmission();
   delay(1);
-  I2CWire->requestFrom(0x29, 1);
+  I2CWire->requestFrom(addr, 1);
   uint8_t CH0_low_byte = I2CWire->read();
   returnData.CH_0 = ((uint16_t)CH0_high_byte << 8) | CH0_low_byte;
 
@@ -112,11 +112,11 @@ ALS_01_Data_t CLTR_329ALS_01::TakeOneValue()
 
 bool CLTR_329ALS_01::IfNewData()
 {
-  I2CWire->beginTransmission(0x29);
+  I2CWire->beginTransmission(addr);
   I2CWire->write(0x8C);
   I2CWire->endTransmission();
   delay(1);
-  I2CWire->requestFrom(0x29, 1);
+  I2CWire->requestFrom(addr, 1);
   uint8_t AllSataus = I2CWire->read();
   return (AllSataus >> 2) & 1;
 }
@@ -130,6 +130,17 @@ void CMULTI_LTR_329ALS_01::openSensorByIndex(int index)
   digitalWrite(stcpPin, LOW);
   shiftOut(dataPin, shcpPin, LSBFIRST, openCode[0]);
   // shiftOut(dataPin, shcpPin, LSBFIRST, 0b11111111);
+  digitalWrite(stcpPin, HIGH);
+}
+
+void CMULTI_LTR_329ALS_01::closeSensorByIndex(int index)
+{
+  uint8_t openCode[1];
+  memset(openCode, 0, 1);
+  openCode[0] &= ~(0b11 << (3-index)*2);
+  openCode[0] |= (0b00 << (3-index)*2);
+  digitalWrite(stcpPin, LOW);
+  shiftOut(dataPin, shcpPin, LSBFIRST, openCode[0]);
   digitalWrite(stcpPin, HIGH);
 }
 

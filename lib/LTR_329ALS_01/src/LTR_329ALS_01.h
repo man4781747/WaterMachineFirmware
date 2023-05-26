@@ -90,6 +90,7 @@ class CMULTI_LTR_329ALS_01
       LTR_329ALS_01 = new CLTR_329ALS_01(Wire_);
     };
     void openSensorByIndex(int index);
+    void closeSensorByIndex(int index);
     void closeAllSensor();
     void SetGain(ALS_Gain gain);
     ALS_01_Data_t TakeOneValue();

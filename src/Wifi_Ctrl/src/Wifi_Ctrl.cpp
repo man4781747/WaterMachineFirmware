@@ -103,8 +103,6 @@ DynamicJsonDocument CWIFI_Ctrler::GetBaseWSReturnData(String MessageString)
 {
   DynamicJsonDocument BaseWSReturnData(500000);
   BaseWSReturnData.set(*(Machine_Ctrl.spiffs.DeviceBaseInfo));
-  // JsonObject json_doc = Machine_Ctrl.spiffs.DeviceBaseInfo->as<JsonObject>();
-
   time_t nowTime = now();
   char datetimeChar[30];
   sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
@@ -112,13 +110,31 @@ DynamicJsonDocument CWIFI_Ctrler::GetBaseWSReturnData(String MessageString)
     hour(nowTime), minute(nowTime), second(nowTime)
   );
   BaseWSReturnData["firmware_version"].set(FIRMWARE_VERSION);
+
+  int startIndex = MessageString.indexOf("/", 0);
+  startIndex = MessageString.indexOf("/", startIndex+1);
+  int endIndex = MessageString.indexOf("/", startIndex+1);
+  if (startIndex == -1) {
+    BaseWSReturnData["cmd"].set(MessageString);
+  } else if (endIndex == -1) {
+    BaseWSReturnData["cmd"].set(MessageString.substring(startIndex+1, MessageString.length()));
+  } else {
+    BaseWSReturnData["cmd"].set(MessageString.substring(startIndex+1, endIndex));
+  }
+  BaseWSReturnData["internet"].set(Machine_Ctrl.BackendServer.GetWifiInfo());
   BaseWSReturnData["time"] = datetimeChar;
   BaseWSReturnData["utc"] = "+8";
-  BaseWSReturnData["internet"].set(Machine_Ctrl.BackendServer.GetWifiInfo());
-  BaseWSReturnData["cmd"].set(MessageString);
-  
-  // BaseWSReturnData["device_status"].set(Machine_Ctrl.GetEventStatus());
+  BaseWSReturnData["action"]["message"].set("看到這行代表API設定時忘記設定本項目了，請通知工程師修正，謝謝");
+  BaseWSReturnData["action"]["status"].set("看到這行代表API設定時忘記設定本項目了，請通知工程師修正，謝謝");
+  BaseWSReturnData.createNestedObject("parameter");
+  BaseWSReturnData["cmd_detail"].set(MessageString);
+  if (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
+    BaseWSReturnData["device_status"].set("Busy");
+  } else {
+    BaseWSReturnData["device_status"].set("Idle");
+  }
 
+  // BaseWSReturnData["device_status"].set(Machine_Ctrl.GetEventStatus());
   return BaseWSReturnData;
 } 
 
@@ -223,20 +239,8 @@ void ws_OTAByURL(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJs
 void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
   if (type == WS_EVT_CONNECT) {
     Serial.println("WebSocket client connected");
-    Machine_Ctrl.UpdateAllPoolsDataRandom();
-    DynamicJsonDocument json_doc = Machine_Ctrl.BackendServer.GetBaseWSReturnData("WS_EVT_CONNECT");
-    // json_doc["parameter"].set(Machine_Ctrl.poolsCtrl.GetAllPoolsBaseInfo());
-
-    time_t nowTime = now();
-    char datetimeChar[30];
-    sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
-      year(nowTime), month(nowTime), day(nowTime),
-      hour(nowTime), minute(nowTime), second(nowTime)
-    );
-    json_doc["time"] = datetimeChar;
-    String returnString;
-    serializeJsonPretty(json_doc, returnString);
-    client->text(returnString);
+    DynamicJsonDocument D_baseInfo = Machine_Ctrl.BackendServer.GetBaseWSReturnData("PoolData");
+    ws_GetAllPoolData(server, client, &D_baseInfo, NULL, NULL, NULL);
   } else if (type == WS_EVT_DISCONNECT) {
     Serial.println("WebSocket client disconnected");
   } else if (type == WS_EVT_DATA) {
@@ -298,7 +302,9 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
     }
     if (!IsFind) {
       ESP_LOGE(LOG_TAG_WIFI, "找不到API: %s", Message_CMD_std.c_str());
-      D_baseInfo["parameter"]["message"] = "Cnat find: "+String(Message_CMD_std.c_str());
+      D_baseInfo["parameter"]["message"] = "找不到API: "+String(Message_CMD_std.c_str());
+      D_baseInfo["action"]["status"] = "FAIL";
+      D_baseInfo["action"]["message"] = "找不到API: "+String(Message_CMD_std.c_str());
       String returnString;
       serializeJsonPretty(D_baseInfo, returnString);
       client->text(returnString);
@@ -340,7 +346,7 @@ void OTAServiceTask(void* parameter) {
   ArduinoOTA.begin();
   for(;;){
     ArduinoOTA.handle();
-    vTaskDelay(1);
+    vTaskDelay(1000/portTICK_PERIOD_MS);
   }
 }
 

@@ -48,8 +48,8 @@ void Motor_Ctrl::INIT_Motors(TwoWire &Wire_)
   pwm_1 = new Adafruit_PWMServoDriver(0x40, Wire_);
   pwm_1->begin();
   pwm_1->setPWMFreq(50);
-  // pwm_2 = new Adafruit_PWMServoDriver(0x41, Wire_);
-  // pwm_2->setPWMFreq(50);
+  pwm_2 = new Adafruit_PWMServoDriver(0x41, Wire_);
+  pwm_2->setPWMFreq(50);
 }
 
 /**
@@ -68,7 +68,7 @@ void Motor_Ctrl::AddNewMotor(int channelIndex_, String motorID_, String motorNam
 
 void Motor_Ctrl::SetMotorTo(int channelIndex_, int angle)
 {
-  ESP_LOGI("Motor","Motor %02d change to: %03d", channelIndex_, angle);
+  // ESP_LOGI("Motor","Motor %02d change to: %03d", channelIndex_, angle);
   int pulse_wide = map(angle, 0, 180, 800, 2200);
   int pulse_width = int((float)pulse_wide / 1000000.*50.*4096.);
   if (channelIndex_/16 == 1) {
@@ -164,7 +164,7 @@ void C_Peristaltic_Motors_Ctrl::SetMotorStatus(int index, PeristalticMotorStatus
 {
   int moduleChoseIndex = index / 4;
   int motortChoseIndexInModule = index % 4;
-  ESP_LOGI("蠕動馬達", "將模組: %d 的第 %d 顆馬達數值更改為 %d", moduleChoseIndex+1, motortChoseIndexInModule+1, status);
+  // ESP_LOGI("蠕動馬達", "將模組: %d 的第 %d 顆馬達數值更改為 %d", moduleChoseIndex+1, motortChoseIndexInModule+1, status);
   if (moduleChoseIndex >= moduleNum) {}
   else {
     moduleDataList[moduleChoseIndex] &= ~(0b11 << motortChoseIndexInModule*2);

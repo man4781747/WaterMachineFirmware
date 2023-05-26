@@ -1,57 +1,297 @@
 {
-  "device_no": "Test",
-  "mode": "Mode_Master",
-  "firmware_version": "V2.23.52.0",
-  "time": "2023-05-12 16:14:03",
-  "utc": "+8",
-  "internet": {
-    "remote": {
-      "ip": "192.168.20.45",
-      "rssi": -36,
-      "mac_address": "7C:DF:A1:E1:18:18"
+  "title": "(流程)步驟測試",
+  "description": "(流程)步驟測試",
+  "create_time": 1685099674,
+  "pool": "temp-pool",
+  "data_type": "TEST",
+  "finish_time": -1,
+  "step_list": [
+    {
+      "NO2_Original_Value_Get": {
+        "title": "亞硝酸鹽原點檢測",
+        "description": "亞硝酸鹽原點檢測",
+        "finish_time": -1,
+        "event_group_list": [
+          {
+            "Clear_MixRoom": {
+              "title": "清空混合室",
+              "description": "清空混合室內所有液體，將其作為廢液排出。",
+              "finish_time": -1,
+              "event_list": [
+                {
+                  "pwm_motor_list": [
+                    {
+                      "pwn_motor": {
+                        "index": 4,
+                        "title": "光度測試/排廢液",
+                        "description": "光度測試/排廢液管路開關"
+                      },
+                      "finish_time": -1,
+                      "status": 0
+                    }
+                  ]
+                },
+                {
+                  "peristaltic_motor_list": [
+                    {
+                      "peristaltic_motor": {
+                        "index": 6,
+                        "title": "光度測試/排廢液馬達",
+                        "description": "光度測試/排廢液馬達",
+                        "finish_time": -1
+                      },
+                      "status": 1,
+                      "time": 5
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "Push_RO_Liquid_To_MixRoom": {
+              "title": "抽取試劑水至混合室",
+              "description": "抽取試劑水，並送至混合室",
+              "finish_time": -1,
+              "event_list": [
+                {
+                  "pwm_motor_list": [
+                    {
+                      "pwn_motor": {
+                        "index": 18,
+                        "title": "試劑水/RO水",
+                        "description": "試劑水/RO水管路開關"
+                      },
+                      "finish_time": -1,
+                      "status": 0
+                    },
+                    {
+                      "pwn_motor": {
+                        "index": 17,
+                        "title": "通往PH測試",
+                        "description": "通往PH測試管路開關"
+                      },
+                      "finish_time": -1,
+                      "status": 0
+                    },
+                    {
+                      "pwn_motor": {
+                        "index": 16,
+                        "title": "目前無作用",
+                        "description": "目前無作用"
+                      },
+                      "finish_time": -1,
+                      "status": 0
+                    },
+                    {
+                      "pwn_motor": {
+                        "index": 3,
+                        "title": "NO2試劑",
+                        "description": "NO2試劑管路開關"
+                      },
+                      "finish_time": -1,
+                      "status": 0
+                    },
+                    {
+                      "pwn_motor": {
+                        "index": 2,
+                        "title": "目前無作用",
+                        "description": "目前無作用"
+                      },
+                      "finish_time": -1,
+                      "status": 0
+                    },
+                    {
+                      "pwn_motor": {
+                        "index": 1,
+                        "title": "NH3-R1試劑",
+                        "description": "NH3-R1試劑管路開關"
+                      },
+                      "finish_time": -1,
+                      "status": 0
+                    },
+                    {
+                      "pwn_motor": {
+                        "index": 0,
+                        "title": "目前無作用",
+                        "description": "目前無作用"
+                      },
+                      "finish_time": -1,
+                      "status": 0
+                    }
+                  ]
+                },
+                {
+                  "peristaltic_motor_list": [
+                    {
+                      "peristaltic_motor": {
+                        "index": 3,
+                        "title": "混合室",
+                        "description": "混合室抽水馬達",
+                        "finish_time": -1
+                      },
+                      "status": 1,
+                      "time": 5
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "Push_MixRoom_To_NO2_SensorRoom": {
+              "title": "抽取混合室溶液至亞硝酸鹽光度檢測室",
+              "description": "抽取混合室溶液至亞硝酸鹽光度檢測室",
+              "finish_time": -1,
+              "event_list": [
+                {
+                  "pwm_motor_list": [
+                    {
+                      "pwn_motor": {
+                        "index": 4,
+                        "title": "光度測試/排廢液",
+                        "description": "光度測試/排廢液管路開關"
+                      },
+                      "finish_time": -1,
+                      "status": 0
+                    },
+                    {
+                      "pwn_motor": {
+                        "index": 8,
+                        "title": "安氮光度測試",
+                        "description": "安氮光度測試管路開關"
+                      },
+                      "finish_time": -1,
+                      "status": 0
+                    },
+                    {
+                      "pwn_motor": {
+                        "index": 9,
+                        "title": "亞硝酸鹽光度測試",
+                        "description": "亞硝酸鹽光度測試管路開關"
+                      },
+                      "finish_time": -1,
+                      "status": 0
+                    }
+                  ]
+                },
+                {
+                  "peristaltic_motor_list": [
+                    {
+                      "peristaltic_motor": {
+                        "index": 6,
+                        "title": "光度測試/排廢液馬達",
+                        "description": "光度測試/排廢液馬達",
+                        "finish_time": -1
+                      },
+                      "status": 1,
+                      "time": 5
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "NO2_Wash_Value_Get": {
+              "title": "亞硝酸鹽清洗數值獲得",
+              "description": "亞硝酸鹽清洗數值獲得",
+              "finish_time": -1,
+              "event_list": []
+            }
+          },
+          {
+            "Clear_NO2_SensorRoom_To_MixRoom": {
+              "title": "亞硝酸鹽光度檢測室溶液退回混合室",
+              "description": "亞硝酸鹽光度檢測室溶液退回混合室",
+              "finish_time": -1,
+              "event_list": [
+                {
+                  "pwm_motor_list": [
+                    {
+                      "pwn_motor": {
+                        "index": 4,
+                        "title": "光度測試/排廢液",
+                        "description": "光度測試/排廢液管路開關"
+                      },
+                      "finish_time": -1,
+                      "status": 0
+                    },
+                    {
+                      "pwn_motor": {
+                        "index": 8,
+                        "title": "安氮光度測試",
+                        "description": "安氮光度測試管路開關"
+                      },
+                      "finish_time": -1,
+                      "status": 0
+                    },
+                    {
+                      "pwn_motor": {
+                        "index": 9,
+                        "title": "亞硝酸鹽光度測試",
+                        "description": "亞硝酸鹽光度測試管路開關"
+                      },
+                      "finish_time": -1,
+                      "status": 0
+                    }
+                  ]
+                },
+                {
+                  "peristaltic_motor_list": [
+                    {
+                      "peristaltic_motor": {
+                        "index": 6,
+                        "title": "光度測試/排廢液馬達",
+                        "description": "光度測試/排廢液馬達",
+                        "finish_time": -1
+                      },
+                      "status": -1,
+                      "time": 5
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "Clear_MixRoom": {
+              "title": "清空混合室",
+              "description": "清空混合室內所有液體，將其作為廢液排出。",
+              "finish_time": -1,
+              "event_list": [
+                {
+                  "pwm_motor_list": [
+                    {
+                      "pwn_motor": {
+                        "index": 4,
+                        "title": "光度測試/排廢液",
+                        "description": "光度測試/排廢液管路開關"
+                      },
+                      "finish_time": -1,
+                      "status": 0
+                    }
+                  ]
+                },
+                {
+                  "peristaltic_motor_list": [
+                    {
+                      "peristaltic_motor": {
+                        "index": 6,
+                        "title": "光度測試/排廢液馬達",
+                        "description": "光度測試/排廢液馬達",
+                        "finish_time": -1
+                      },
+                      "status": 1,
+                      "time": 5
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
     }
-  },
-  "cmd": "[GET]/api/PeristalticMotor",
-  "status": "OK",
-  "action": {
-    "target": "PeristalticMotor",
-    "method": "Update"
-  },
-  "parameter": {
-    "M1": {
-      "index": 0,
-      "title": "蝦池抽水",
-      "description": "蝦池抽水馬達"
-    },
-    "M2": {
-      "index": 1,
-      "title": "RO水抽水",
-      "description": "RO水抽水馬達"
-    },
-    "M3": {
-      "index": 2,
-      "title": "PH測試馬達",
-      "description": "PH測試馬達"
-    },
-    "M4": {
-      "index": 3,
-      "title": "混合室",
-      "description": "混合室抽水馬達"
-    },
-    "M5": {
-      "index": 4,
-      "title": "NH3-R2抽取",
-      "description": "NH3-R2抽取馬達"
-    },
-    "M6": {
-      "index": 5,
-      "title": "目前無作用",
-      "description": "目前無作用"
-    },
-    "M7": {
-      "index": 6,
-      "title": "光度測試/排廢液馬達",
-      "description": "光度測試/排廢液馬達"
-    }
-  }
+  ]
 }

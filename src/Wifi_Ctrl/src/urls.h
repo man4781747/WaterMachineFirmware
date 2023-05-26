@@ -15,7 +15,18 @@ void setAPI(CWIFI_Ctrler &WIFI_Ctrler)
   WIFI_Ctrler.AddWebsocketAPI("/api/DeiveConfig", "PATCH", &ws_PatchDeiveConfig);
 
 
+  WIFI_Ctrler.AddWebsocketAPI("/api/GetState", "GET", &ws_GetNowStatus);
+
+  //!機器步驟執行相關API
+
+  WIFI_Ctrler.AddWebsocketAPI("/api/RunHistory", "GET", &ws_GetNRunHistoryInfo);
+
+  //!Sensor結果資料
+
+  WIFI_Ctrler.AddWebsocketAPI("/api/PoolData", "GET", &ws_GetAllPoolData);
+
   //!蝦池設定相關API
+
   WIFI_Ctrler.AddWebsocketAPI("/api/Pool/(<name>.*)", "DELETE", &ws_DeletePoolInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/Pool/(<name>.*)", "GET", &ws_GetPoolInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/Pool/(<name>.*)", "PATCH", &ws_PatchPoolInfo);
@@ -30,7 +41,6 @@ void setAPI(CWIFI_Ctrler &WIFI_Ctrler)
   WIFI_Ctrler.AddWebsocketAPI("/api/Spectrophotometer/(<name>.*)", "PATCH", &ws_PatchSpectrophotometerInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/Spectrophotometer", "GET", &ws_GetAllSpectrophotometerInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/Spectrophotometer", "POST", &ws_AddNewSpectrophotometerInfo);
-
 
   //!蠕動馬達設定相關API
 
@@ -64,6 +74,7 @@ void setAPI(CWIFI_Ctrler &WIFI_Ctrler)
 
   //!步驟設定相關API
 
+  WIFI_Ctrler.AddWebsocketAPI("/api/Step/(<name>.*)/test", "GET", &ws_TestStep);
   WIFI_Ctrler.AddWebsocketAPI("/api/Step/(<name>.*)", "GET", &ws_GetStepInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/Step/(<name>.*)", "PATCH", &ws_PatchStepInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/Step/(<name>.*)", "DELETE", &ws_DeleteStepInfo);
@@ -72,6 +83,7 @@ void setAPI(CWIFI_Ctrler &WIFI_Ctrler)
 
   //!流程設定相關API
   
+  WIFI_Ctrler.AddWebsocketAPI("/api/Pipeline/(<name>.*)/test", "GET", &ws_TestPipeline);
   WIFI_Ctrler.AddWebsocketAPI("/api/Pipeline/(<name>.*)", "GET", &ws_GetPipelineInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/Pipeline/(<name>.*)", "PATCH", &ws_PatchPipelineInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/Pipeline/(<name>.*)", "DELETE", &ws_DeletePipelineInfo);
