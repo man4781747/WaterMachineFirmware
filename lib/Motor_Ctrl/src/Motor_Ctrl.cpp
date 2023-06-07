@@ -49,6 +49,7 @@ void Motor_Ctrl::INIT_Motors(TwoWire &Wire_)
   pwm_1->begin();
   pwm_1->setPWMFreq(50);
   pwm_2 = new Adafruit_PWMServoDriver(0x41, Wire_);
+  pwm_2->begin();
   pwm_2->setPWMFreq(50);
 }
 
@@ -68,8 +69,8 @@ void Motor_Ctrl::AddNewMotor(int channelIndex_, String motorID_, String motorNam
 
 void Motor_Ctrl::SetMotorTo(int channelIndex_, int angle)
 {
-  // ESP_LOGI("Motor","Motor %02d change to: %03d", channelIndex_, angle);
-  int pulse_wide = map(angle, 0, 180, 800, 2200);
+  ESP_LOGI("Motor","Motor %02d change to: %03d", channelIndex_, angle);
+  int pulse_wide = map(angle, 0, 180, 500, 2500);
   int pulse_width = int((float)pulse_wide / 1000000.*50.*4096.);
   if (channelIndex_/16 == 1) {
     pwm_2->setPWM(channelIndex_%16, 0, pulse_width);
@@ -114,7 +115,7 @@ void Motor_Ctrl::MotorStatusChange(String motorID)
 {
   int channelIndex_ = motorsDict[std::string(motorID.c_str())].channelIndex;
   ESP_LOGI("Motor","Motor %s change to: %03d", motorID.c_str(), motorsDict[std::string(motorID.c_str())].motorStatus);
-  int pulse_wide = map(motorsDict[std::string(motorID.c_str())].motorStatus, 0, 180, 600, 2400);
+  int pulse_wide = map(motorsDict[std::string(motorID.c_str())].motorStatus, 0, 180, 500, 2500);
   int pulse_width = int((float)pulse_wide / 1000000.*50.*4096.);
   if (channelIndex_/16 == 1) {
     pwm_2->setPWM(channelIndex_%16, 0, pulse_width);

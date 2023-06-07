@@ -27,6 +27,12 @@ struct EVENT_RESULT {
   String message = "";
 };
 
+struct Peristaltic_task_config {
+  int index;
+  int status;
+  float time;
+  int until;
+};
 
 
 ////////////////////////////////////////////////////
@@ -48,6 +54,7 @@ class SMachine_Ctrl
 
     void INIT_SPIFFS_config();
     void INIT_I2C_Wires();
+    void INIT_PoolData();
 
     ////////////////////////////////////////////////////
     // For 更新設定
@@ -96,7 +103,7 @@ class SMachine_Ctrl
     
     EVENT_RESULT RUN__PWMMotorEvent(JsonArray PWMMotorEventList);
 
-    EVENT_RESULT RUN__PeristalticMotorEvent(JsonArray PeristalticMotorEventList);
+    EVENT_RESULT RUN__PeristalticMotorEvent(Peristaltic_task_config *config_);
 
     EVENT_RESULT RUN__History();
 
@@ -151,6 +158,8 @@ class SMachine_Ctrl
     TaskHandle_t TASK__NOW_ACTION;
     DynamicJsonDocument *loadedAction = new DynamicJsonDocument(500000);
 
+    DynamicJsonDocument *sensorDataSave = new DynamicJsonDocument(50000);
+
     TaskHandle_t TASK__PWM_MOTOR;
     TaskHandle_t TASK__Peristaltic_MOTOR;
     TaskHandle_t TASK__History;
@@ -164,7 +173,7 @@ class SMachine_Ctrl
     CWIFI_Ctrler BackendServer;
     SPIFFS_Ctrl spiffs;
 
-    TwoWire WireOne = TwoWire(0);
+    TwoWire WireOne = TwoWire(1);
     int WireOne_SDA = 5;
     int WireOne_SCL = 6;
     CMULTI_LTR_329ALS_01 MULTI_LTR_329ALS_01_Ctrler = CMULTI_LTR_329ALS_01(16, 18, 17, &WireOne);

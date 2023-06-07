@@ -68,6 +68,17 @@ OTAByFileStatus nowOTAByFileStatus = OTAByFileStatus::OTAByFileStatusNO;
 // For 處理資料
 ////////////////////////////////////////////////////
 
+String removeNonUTF8Characters(const String& input) {
+  // 正则表达式模式，匹配非 UTF-8 字符
+  std::regex pattern("[^\\x20-\\x7E]+");
+  
+  std::string inputString_STD = std::string(input.c_str());
+  // 使用空字符串替换非 UTF-8 字符
+  std::string result = std::regex_replace(inputString_STD, pattern, "");
+  
+  return String(result.c_str());
+}
+
 DynamicJsonDocument urlParamsToJSON(const std::string& urlParams) {
   std::stringstream ss(urlParams);
   std::string item;
@@ -240,11 +251,13 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
   if (type == WS_EVT_CONNECT) {
     Serial.println("WebSocket client connected");
     DynamicJsonDocument D_baseInfo = Machine_Ctrl.BackendServer.GetBaseWSReturnData("PoolData");
+    D_baseInfo["action"]["message"].set("Connected");
     ws_GetAllPoolData(server, client, &D_baseInfo, NULL, NULL, NULL);
   } else if (type == WS_EVT_DISCONNECT) {
     Serial.println("WebSocket client disconnected");
   } else if (type == WS_EVT_DATA) {
-    String MessageString = String(((char *)data));
+    String MessageString = removeNonUTF8Characters(String(((char *)data)));
+
     int commaIndex = MessageString.indexOf("]");
     String METHOD = MessageString.substring(1, commaIndex);
     MessageString = MessageString.substring(commaIndex + 1);

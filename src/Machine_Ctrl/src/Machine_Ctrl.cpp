@@ -43,6 +43,24 @@ void SMachine_Ctrl::INIT_I2C_Wires()
   WireOne.begin(WireOne_SDA, WireOne_SCL);
 }
 
+void SMachine_Ctrl::INIT_PoolData()
+{
+  JsonObject D_pools = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pools"];
+  for (JsonPair D_poolItem : D_pools) {
+    (*sensorDataSave)[D_poolItem.key()]["PoolID"].set(D_poolItem.key());
+    (*sensorDataSave)[D_poolItem.key()]["PoolName"].set(D_poolItem.value().as<JsonObject>()["title"].as<String>());
+    (*sensorDataSave)[D_poolItem.key()]["PoolDescription"].set(D_poolItem.value().as<JsonObject>()["description"].as<String>());
+    (*sensorDataSave)[D_poolItem.key()]["NO2_wash_volt"].set(-1.);
+    (*sensorDataSave)[D_poolItem.key()]["NO2_test_volt"].set(-1.);
+    (*sensorDataSave)[D_poolItem.key()]["NO2"].set(-1.);
+    (*sensorDataSave)[D_poolItem.key()]["NH4_wash_volt"].set(-1.);
+    (*sensorDataSave)[D_poolItem.key()]["NH4_test_volt"].set(-1.);
+    (*sensorDataSave)[D_poolItem.key()]["NH4"].set(-1.);
+    (*sensorDataSave)[D_poolItem.key()]["pH_volt"].set(-1.);
+    (*sensorDataSave)[D_poolItem.key()]["pH"].set(-1.);
+  }
+}
+
 ////////////////////////////////////////////////////
 // For 更新設定
 ////////////////////////////////////////////////////
@@ -199,6 +217,7 @@ void LOADED_ACTION(void* parameter)
   ESP_LOGI("LOADED_ACTION","蝦池ID: %s", poolID.c_str());
   ESP_LOGI("LOADED_ACTION","是否為測試: %s", D_loadedActionJSON["data_type"].as<String>() == String("TEST")? "是" : "否");
   DynamicJsonDocument poolSensorData(30000);
+
   bool AnySensorData = false;
   int stepCount = 1;
   for (JsonVariant stepItem : D_loadedActionJSON["step_list"].as<JsonArray>()) {
@@ -244,14 +263,43 @@ void LOADED_ACTION(void* parameter)
                   peristalticMotorItem["peristaltic_motor"]["index"].as<int>(), 
                   peristalticMotorItem["status"].as<int>()==-1 ? "正轉" : "反轉", peristalticMotorItem["time"].as<float>()
                 );
+                Peristaltic_task_config config_;
+                config_.index = peristalticMotorItem["peristaltic_motor"]["index"].as<int>();
+                Serial.println(peristalticMotorItem["peristaltic_motor"]["index"].as<int>());
+                Serial.println(config_.index);
+                config_.status = peristalticMotorItem["status"].as<int>() == 1 ? PeristalticMotorStatus::FORWARD : PeristalticMotorStatus::REVERSR;
+                config_.time = peristalticMotorItem["time"].as<float>();
+                String untilString = peristalticMotorItem["until"].as<String>();
+                if (untilString == "RO") {
+                  config_.until = 1;
+                } 
+                else if (untilString == "SAMPLE") {
+                  config_.until = 2;
+                }
+                else {
+                  config_.until = -1;
+                }
+                Machine_Ctrl.RUN__PeristalticMotorEvent(&config_);
 
-                Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(
-                  peristalticMotorItem["peristaltic_motor"]["index"].as<int>(), 
-                  peristalticMotorItem["status"].as<int>() == 1 ? PeristalticMotorStatus::FORWARD : PeristalticMotorStatus::REVERSR
-                );
-                Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
-                vTaskDelay(peristalticMotorItem["time"].as<float>()*1000/portTICK_PERIOD_MS);
-                Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
+
+
+
+                
+                while (Machine_Ctrl.TASK__Peristaltic_MOTOR != NULL) {
+                  vTaskDelay(10);
+                }
+
+
+                // Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(
+                //   peristalticMotorItem["peristaltic_motor"]["index"].as<int>(), 
+                //   peristalticMotorItem["status"].as<int>() == 1 ? PeristalticMotorStatus::FORWARD : PeristalticMotorStatus::REVERSR
+                // );
+                // Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
+                // long timecheck = millis();
+                
+
+                // vTaskDelay(peristalticMotorItem["time"].as<float>()*1000/portTICK_PERIOD_MS);
+                // Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
                 peristalticMotorItem["finish_time"].set(now());
               }
             }
@@ -262,11 +310,16 @@ void LOADED_ACTION(void* parameter)
                 int spectrophotometerIndex = spectrophotometerItem["spectrophotometer"]["index"].as<int>();
                 String GainStr = spectrophotometerItem["gain"].as<String>();
                 String value_name = spectrophotometerItem["value_name"].as<String>();
+                String spectrophotometerName = spectrophotometerItem["spectrophotometer"]["title"].as<String>();
                 ESP_LOGI("LOADED_ACTION","       - %s(%d) %s 測量倍率，並紀錄為: %s", 
-                  spectrophotometerItem["spectrophotometer"]["title"].as<String>().c_str(), 
+                  spectrophotometerName.c_str(), 
                   spectrophotometerIndex, 
                   GainStr.c_str(), value_name.c_str()
                 );
+                Machine_Ctrl.WireOne.beginTransmission(0x70);
+                Machine_Ctrl.WireOne.write(1 << spectrophotometerIndex);
+                Machine_Ctrl.WireOne.endTransmission();
+                vTaskDelay(100/portTICK_PERIOD_MS);
                 Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(spectrophotometerIndex);
                 if (GainStr == "1X") {
                   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_1X);
@@ -287,18 +340,50 @@ void LOADED_ACTION(void* parameter)
                   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_96X);
                 }
                 ALS_01_Data_t testValue = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+                Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
+
                 time_t nowTime = now();
                 spectrophotometerItem["finish_time"].set(now());
                 spectrophotometerItem["measurement_time"].set(now());
-                poolSensorData[poolID][value_name]["Gain"].set(GainStr);
-                poolSensorData[poolID][value_name]["Value"]["CH0"].set(testValue.CH_0);
-                poolSensorData[poolID][value_name]["Value"]["CH1"].set(testValue.CH_1);
                 char datetimeChar[30];
                 sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
                   year(nowTime), month(nowTime), day(nowTime),
                   hour(nowTime), minute(nowTime), second(nowTime)
                 );
+                /**
+                 * 當 ["action"]["method"] == "RUN" 時，代表為正式執行的流程
+                 * 其收到的Sensor數值必須存入 Machine_Ctrl.sensorDataSave 中
+                 * 
+                 * 反之，若 ["action"]["method"] == "TEST" 時，代表目前為""測試""中
+                 * 其收到的Sensor數值""不能""存入 Machine_Ctrl.sensorDataSave 中
+                 * 
+                 */
+
+                if (D_loadedActionJSON["action"]["method"].as<String>() == "RUN") {
+                  (*Machine_Ctrl.sensorDataSave)[poolID][value_name].set(testValue.CH_0);
+                  (*Machine_Ctrl.sensorDataSave)[poolID]["Data_datetime"].set(datetimeChar);
+                }
+                poolSensorData[poolID][value_name]["Gain"].set(GainStr);
+                poolSensorData[poolID][value_name]["Value"]["CH0"].set(testValue.CH_0);
+                poolSensorData[poolID][value_name]["Value"]["CH1"].set(testValue.CH_1);
                 poolSensorData[poolID][value_name]["Time"].set(datetimeChar);
+
+
+                JsonObject D_baseInfoJSON = Machine_Ctrl.BackendServer.GetBaseWSReturnData("Auto").as<JsonObject>();
+                D_baseInfoJSON["status"].set("OK");
+                D_baseInfoJSON["action"]["target"].set("Log");
+                D_baseInfoJSON["action"]["method"].set("Update");
+                D_baseInfoJSON["action"]["message"].set(
+                  "分光光度計: " + spectrophotometerName + "獲得新量測值"
+                );
+                D_baseInfoJSON["action"]["description"].set(
+                  "資料名稱: "+value_name+"倍率: "+GainStr + ",CH0: "+String(testValue.CH_0)+",CH1: "+String(testValue.CH_1)
+                );
+                D_baseInfoJSON["action"]["status"].set("OK");
+                String returnString;
+                serializeJsonPretty(D_baseInfoJSON, returnString);
+                Machine_Ctrl.BackendServer.ws_->binaryAll(returnString);
+
                 AnySensorData = true;
               }
             }
@@ -374,9 +459,17 @@ void LOADED_ACTION(void* parameter)
   if (AnySensorData) {
     JsonObject D_baseInfoJSON = Machine_Ctrl.BackendServer.GetBaseWSReturnData("Auto").as<JsonObject>();
     D_baseInfoJSON["device_status"].set("Idle");
-    D_baseInfoJSON["status"].set("OK");
-    D_baseInfoJSON["action"]["target"].set("PoolSensorData");
+    D_baseInfoJSON["cmd"].set("poolData");
+    if (D_loadedActionJSON["data_type"].as<String>() == String("TEST")) {
+      D_baseInfoJSON["action"]["target"].set("TEST_PoolSensorData");
+      D_baseInfoJSON["action"]["message"].set("獲得測試用數據");
+    } else {
+      D_baseInfoJSON["action"]["target"].set("PoolSensorData");
+      D_baseInfoJSON["action"]["message"].set("OK");
+    }
+
     D_baseInfoJSON["action"]["method"].set("Update");
+    D_baseInfoJSON["action"]["status"].set("OK");
     D_baseInfoJSON["parameter"].set(poolSensorData);
     String AfterSensorData;
     serializeJsonPretty(D_baseInfoJSON, AfterSensorData);
@@ -520,34 +613,46 @@ EVENT_RESULT SMachine_Ctrl::RUN__PWMMotorEvent(JsonArray PWMMotorEventList)
 void PeristalticMotorEvent(void* parameter)
 {
   ESP_LOGW("PeristalticMotorEvent","START");
-  JsonArray PeristalticMotorEventList = *((JsonArray*) parameter);
-  for (JsonVariant event : PeristalticMotorEventList) {
-    int MotorIndex = Machine_Ctrl.PeristalticMotorIDToMotorIndex(event["peristaltic_motor_id"].as<String>());
-    if (MotorIndex > -1) {
-      int totalTime = event["time"].as<int>()*1000;
-      Machine_Ctrl.TaskSuspendTimeSum = 0;
-      TickType_t startTick = xTaskGetTickCount();
-      while ((xTaskGetTickCount() - startTick - Machine_Ctrl.TaskSuspendTimeSum) * portTICK_PERIOD_MS <= totalTime) {
-        // ESP_LOGW("PeristalticMotorEvent","START");
-        vTaskDelay(pdMS_TO_TICKS(1));
-      }
-      ESP_LOGW("PeristalticMotorEvent","loop time: %d", (xTaskGetTickCount() - startTick - Machine_Ctrl.TaskSuspendTimeSum) * portTICK_PERIOD_MS / 1000);
-    }
+  Peristaltic_task_config config_ = *((Peristaltic_task_config*) parameter);
+  PeristalticMotorStatus status = (config_.status==1 ? PeristalticMotorStatus::FORWARD : PeristalticMotorStatus::REVERSR);
+  Serial.println(config_.index);
+  Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(
+    config_.index, 
+    status
+  );
+  Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
+  long timecheck = millis();
+  long maxTime = (long)config_.time*1000;
+  if (config_.until != -1) {
+    pinMode(config_.until, INPUT);
   }
+  while (
+    millis() - timecheck <= maxTime
+  ) {
+    if (config_.until != -1) {
+      int value = digitalRead(config_.until);
+      if (value == HIGH) {
+        break;
+      }
+    }
+    vTaskDelay(10);
+  }
+  Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
   ESP_LOGW("PeristalticMotorEvent","END");
   Machine_Ctrl.TASK__Peristaltic_MOTOR = NULL;
   vTaskDelete(NULL);
 }
-EVENT_RESULT SMachine_Ctrl::RUN__PeristalticMotorEvent(JsonArray PeristalticMotorEventList)
+EVENT_RESULT SMachine_Ctrl::RUN__PeristalticMotorEvent(Peristaltic_task_config *config_)
 {
   EVENT_RESULT returnData;
   eTaskState taskState = eTaskGetState(&TASK__Peristaltic_MOTOR);
   returnData.status = taskState;
+  Serial.println(config_->index);
   if (TASK__Peristaltic_MOTOR == NULL | taskState == eDeleted) {
     ESP_LOGW("Build_SwitchMotorScan","START");
     xTaskCreate(
       PeristalticMotorEvent, "MOTOR_RUN",
-      10000, &PeristalticMotorEventList, 1, &TASK__Peristaltic_MOTOR
+      10000, config_, 1, &TASK__Peristaltic_MOTOR
     );
     returnData.message = "OK";
   } else {
@@ -662,7 +767,6 @@ void RunHistory(void* parameter)
                 vTaskDelay(100);
               }
 
-              Machine_Ctrl.RUN__PeristalticMotorEvent(L_peristalticMotorSettingList);
               
               while (Machine_Ctrl.TASK__Peristaltic_MOTOR != NULL) {
                 vTaskDelay(100);
