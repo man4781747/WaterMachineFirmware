@@ -1,5 +1,7 @@
 #include "Machine_Ctrl.h"
 #include <esp_log.h>
+#include "esp_random.h"
+
 #include <Wire.h>
 #include <ArduinoJson.h>
 #include <ESP32Servo.h>
@@ -15,6 +17,8 @@
 #include <vector>
 #include <variant>
 #include <functional>
+#include <random>
+#include <ctime>
 
 TaskHandle_t TASK_SwitchMotorScan = NULL;
 TaskHandle_t TASK_PeristalticMotorScan = NULL;
@@ -24,6 +28,15 @@ TaskHandle_t TASK_PeristalticMotorScan = NULL;
 ////////////////////////////////////////////////////
 // For 初始化
 ////////////////////////////////////////////////////
+
+double getRandomNumber(double mean, double stddev) {
+
+  // std::random_device rd;  // 随机数种子
+  // std::mt19937 gen(rd()); // 随机数引擎
+  // std::normal_distribution<double> dist(mean, stddev);
+  // double sample = dist(gen); 
+  return mean + (double)((esp_random() % 1000)/1000.);
+}
 
 /**
  * @brief SPIFFS 初始化
@@ -60,108 +73,6 @@ void SMachine_Ctrl::INIT_PoolData()
     (*sensorDataSave)[D_poolItem.key()]["pH"].set(-1.);
   }
 }
-
-////////////////////////////////////////////////////
-// For 更新設定
-////////////////////////////////////////////////////
-
-
-////////////////////////////////////////////////////
-// For 資訊獲得
-////////////////////////////////////////////////////  
-
-void SMachine_Ctrl::PrintAllPWNMotorSetting()
-{
-  JsonObject DeviceSetting = spiffs.DeviceSetting->as<JsonObject>();
-  if (DeviceSetting.containsKey("pwm_motor")) {
-    JsonObject D_pwmMotorSetting = DeviceSetting["pwm_motor"];
-    ESP_LOGI("INFO", "====================================================");
-    int pwmMotorCount = 1;
-    for (JsonPair pwmMotorItem : D_pwmMotorSetting) {
-      ESP_LOGI("INFO", "%02d.\t伺服馬達ID:\t%s", pwmMotorCount, pwmMotorItem.key().c_str());
-      ESP_LOGI("INFO", " |\t伺服馬達控制編號:\t%d", pwmMotorItem.value()["index"].as<int>());
-      ESP_LOGI("INFO", " |\t伺服馬達名稱:\t%s", pwmMotorItem.value()["title"].as<String>().c_str());
-      ESP_LOGI("INFO", " |\t伺服馬達說明:\t%s", pwmMotorItem.value()["description"].as<String>().c_str());
-      pwmMotorCount++;
-    }
-  }
-}
-
-void SMachine_Ctrl::PrintAllPeristalticMotorSetting()
-{
-  JsonObject DeviceSetting = spiffs.DeviceSetting->as<JsonObject>();
-  if (DeviceSetting.containsKey("peristaltic_motor")) {
-    JsonObject D_PeristalticMotorSetting = DeviceSetting["peristaltic_motor"];
-    ESP_LOGI("INFO", "====================================================");
-    int peristalticMotorCount = 1;
-    for (JsonPair peristalticMotorItem : D_PeristalticMotorSetting) {
-      ESP_LOGI("INFO", "%02d.\t蠕動馬達ID:\t%s", peristalticMotorCount, peristalticMotorItem.key().c_str());
-      ESP_LOGI("INFO", " |\t蠕動馬達控制編號:\t%d", peristalticMotorItem.value()["index"].as<int>());
-      ESP_LOGI("INFO", " |\t蠕動馬達名稱:\t%s", peristalticMotorItem.value()["title"].as<String>().c_str());
-      ESP_LOGI("INFO", " |\t蠕動馬達說明:\t%s", peristalticMotorItem.value()["description"].as<String>().c_str());
-      peristalticMotorCount++;
-    }
-  }
-}
-
-void SMachine_Ctrl::PrintAllEventSetting()
-{
-  JsonObject DeviceSetting = spiffs.DeviceSetting->as<JsonObject>();
-  if (DeviceSetting.containsKey("event_group")) {
-    JsonObject D_eventGroup = DeviceSetting["event_group"];
-    for (JsonPair eventItem : D_eventGroup) {
-      ESP_LOGI("INFO", "====================================================");
-      ESP_LOGI("INFO", "Event Group ID:\t%s", eventItem.key().c_str());
-      ESP_LOGI("INFO", "Title:\t%s", eventItem.value()["title"].as<String>().c_str());
-      ESP_LOGI("INFO", "Desp:\t%s", eventItem.value()["description"].as<String>().c_str());
-      ESP_LOGI("INFO", "Events:");
-      int eventCount = 1;
-      for (JsonVariant event : eventItem.value()["event"].as<JsonArray>()) {
-        if (event.containsKey("pwm_motor_list")) {
-          ESP_LOGI("INFO", "\t%d.\t伺服馬達控制", eventCount);
-          for (JsonVariant event : event["pwm_motor_list"].as<JsonArray>()) {
-            ESP_LOGI("INFO", "\t|\t - %s -> %03d", event["pwm_motor_id"].as<String>().c_str(), event["status"].as<int>());
-          }
-        } else if (event.containsKey("peristaltic_motor_list")) {
-          ESP_LOGI("INFO", "\t%d.\t蠕動馬達控制", eventCount);
-          for (JsonVariant event : event["peristaltic_motor_list"].as<JsonArray>()) {
-            ESP_LOGI(
-              "INFO", "\t|\t - %s -> %d in %d seconds", 
-              event["peristaltic_motor_id"].as<String>().c_str(), 
-              event["status"].as<int>(),
-              event["time"].as<int>()
-            );
-          }
-        } else if (event.containsKey("wait")) {
-          ESP_LOGI("INFO", "\t%d.\t等待時間: %d 秒", eventCount, event["wait"].as<int>());
-        }
-        eventCount++;
-      }
-    }
-  }
-}
-
-void SMachine_Ctrl::PrintAllStepSetting()
-{
-  JsonObject DeviceSetting = spiffs.DeviceSetting->as<JsonObject>();
-  if (DeviceSetting.containsKey("steps_group")) {
-    JsonObject D_stepGroup = DeviceSetting["steps_group"];
-    for (JsonPair stepItem : D_stepGroup) {
-      ESP_LOGI("INFO", "====================================================");
-      ESP_LOGI("INFO", "Step Group ID:\t%s", stepItem.key().c_str());
-      ESP_LOGI("INFO", "Title:\t%s", stepItem.value()["title"].as<String>().c_str());
-      ESP_LOGI("INFO", "Desp:\t%s", stepItem.value()["description"].as<String>().c_str());
-      JsonArray L_steps = stepItem.value()["steps"].as<JsonArray>();
-      ESP_LOGI("INFO", "Steps:");
-      int stepCount = 1;
-      for (JsonVariant step : L_steps) {
-        ESP_LOGI("INFO", "\t%d.\t%s", stepCount, step.as<String>().c_str());
-        stepCount++;
-      }
-    }
-  }
-}
-
 
 ////////////////////////////////////////////////////
 // For 數值轉換
@@ -205,6 +116,20 @@ void SMachine_Ctrl::LOAD__ACTION(String actionJSONString)
   }
 }
 
+void SMachine_Ctrl::LOAD__ACTION(JsonObject actionJSON)
+{
+  ESP_LOGI("LOADED_ACTION","CLEAR");
+  loadedAction->clear();
+  ESP_LOGI("LOADED_ACTION","SET");
+  loadedAction->set(actionJSON);
+  ESP_LOGI("LOADED_ACTION","OK");
+  // serializeJsonPretty(*loadedAction, Serial);
+  // DeserializationError error = deserializeJson(*loadedAction, actionJSONString,  DeserializationOption::NestingLimit(20));
+  // if (error) {
+  //   Serial.print("deserializeJson() failed: ");
+  //   Serial.println(error.c_str());
+  // }
+}
 
 void LOADED_ACTION(void* parameter)
 { 
@@ -216,6 +141,13 @@ void LOADED_ACTION(void* parameter)
   ESP_LOGI("LOADED_ACTION","流程說明: %s", D_loadedActionJSON["description"].as<String>().c_str());
   ESP_LOGI("LOADED_ACTION","蝦池ID: %s", poolID.c_str());
   ESP_LOGI("LOADED_ACTION","是否為測試: %s", D_loadedActionJSON["data_type"].as<String>() == String("TEST")? "是" : "否");
+  Machine_Ctrl.SetLog(
+    3, 
+    "執行流程: "+D_loadedActionJSON["title"].as<String>(),
+    "流程說明: "+D_loadedActionJSON["description"].as<String>(),
+    Machine_Ctrl.BackendServer.ws_, NULL
+  );
+  
   DynamicJsonDocument poolSensorData(30000);
 
   bool AnySensorData = false;
@@ -238,6 +170,14 @@ void LOADED_ACTION(void* parameter)
             D_eventGroupItem_.value()["title"].as<String>().c_str(),
             D_eventGroupItem_.value()["description"].as<String>().c_str()
           );
+
+          Machine_Ctrl.SetLog(
+            3, 
+            "執行事件: "+D_eventGroupItem_.value()["title"].as<String>(),
+            "主流程: "+ D_stepItem_.value()["title"].as<String>(),
+            Machine_Ctrl.BackendServer.ws_, NULL
+          );
+
           int eventCount = 1;
           JsonObject D_eventGroupItemDetail = D_eventGroupItem_.value().as<JsonObject>();
           for (JsonVariant eventItem : D_eventGroupItemDetail["event_list"].as<JsonArray>()) {
@@ -265,8 +205,6 @@ void LOADED_ACTION(void* parameter)
                 );
                 Peristaltic_task_config config_;
                 config_.index = peristalticMotorItem["peristaltic_motor"]["index"].as<int>();
-                Serial.println(peristalticMotorItem["peristaltic_motor"]["index"].as<int>());
-                Serial.println(config_.index);
                 config_.status = peristalticMotorItem["status"].as<int>() == 1 ? PeristalticMotorStatus::FORWARD : PeristalticMotorStatus::REVERSR;
                 config_.time = peristalticMotorItem["time"].as<float>();
                 String untilString = peristalticMotorItem["until"].as<String>();
@@ -280,14 +218,9 @@ void LOADED_ACTION(void* parameter)
                   config_.until = -1;
                 }
                 Machine_Ctrl.RUN__PeristalticMotorEvent(&config_);
-
-
-
-
-                
-                while (Machine_Ctrl.TASK__Peristaltic_MOTOR != NULL) {
-                  vTaskDelay(10);
-                }
+                // while (Machine_Ctrl.TASK__Peristaltic_MOTOR != NULL) {
+                //   vTaskDelay(10);
+                // }
 
 
                 // Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(
@@ -300,8 +233,26 @@ void LOADED_ACTION(void* parameter)
 
                 // vTaskDelay(peristalticMotorItem["time"].as<float>()*1000/portTICK_PERIOD_MS);
                 // Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
-                peristalticMotorItem["finish_time"].set(now());
+                // peristalticMotorItem["finish_time"].set(now());
               }
+
+              vTaskDelay(1000/portTICK_PERIOD_MS);
+
+              bool allDone = false;
+              while (allDone == false) {
+                allDone = true;
+                for (int index=0;index<sizeof(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);index++) {
+                  if (
+                    Machine_Ctrl.peristalticMotorsCtrl.moduleDataList[index] != 0
+                  ) {
+                    allDone = false;
+                  }
+                  vTaskDelay(1/portTICK_PERIOD_MS);
+                }
+                vTaskDelay(10/portTICK_PERIOD_MS);
+              }
+              // peristalticMotorItem["finish_time"].set(now());
+
             }
 
             else if (eventItem.containsKey("spectrophotometer_list")) {
@@ -358,8 +309,8 @@ void LOADED_ACTION(void* parameter)
                  * 其收到的Sensor數值""不能""存入 Machine_Ctrl.sensorDataSave 中
                  * 
                  */
-
-                if (D_loadedActionJSON["action"]["method"].as<String>() == "RUN") {
+                Serial.println(D_loadedActionJSON["data_type"].as<String>());
+                if (D_loadedActionJSON["data_type"].as<String>() == "RUN") {
                   (*Machine_Ctrl.sensorDataSave)[poolID][value_name].set(testValue.CH_0);
                   (*Machine_Ctrl.sensorDataSave)[poolID]["Data_datetime"].set(datetimeChar);
                 }
@@ -369,90 +320,40 @@ void LOADED_ACTION(void* parameter)
                 poolSensorData[poolID][value_name]["Time"].set(datetimeChar);
 
 
-                JsonObject D_baseInfoJSON = Machine_Ctrl.BackendServer.GetBaseWSReturnData("Auto").as<JsonObject>();
-                D_baseInfoJSON["status"].set("OK");
-                D_baseInfoJSON["action"]["target"].set("Log");
-                D_baseInfoJSON["action"]["method"].set("Update");
-                D_baseInfoJSON["action"]["message"].set(
-                  "分光光度計: " + spectrophotometerName + "獲得新量測值"
+                Machine_Ctrl.SetLog(
+                  3, 
+                  "分光光度計: " + spectrophotometerName + "獲得新量測值",
+                  "資料名稱: "+value_name+"倍率: "+GainStr + ",CH0: "+String(testValue.CH_0)+",CH1: "+String(testValue.CH_1),
+                  Machine_Ctrl.BackendServer.ws_, NULL
                 );
-                D_baseInfoJSON["action"]["description"].set(
-                  "資料名稱: "+value_name+"倍率: "+GainStr + ",CH0: "+String(testValue.CH_0)+",CH1: "+String(testValue.CH_1)
-                );
-                D_baseInfoJSON["action"]["status"].set("OK");
-                String returnString;
-                serializeJsonPretty(D_baseInfoJSON, returnString);
-                Machine_Ctrl.BackendServer.ws_->binaryAll(returnString);
 
                 AnySensorData = true;
               }
             }
-
-            JsonObject D_baseInfoJSON = Machine_Ctrl.BackendServer.GetBaseWSReturnData("Auto").as<JsonObject>();
-            D_baseInfoJSON["status"].set("OK");
-            D_baseInfoJSON["action"]["target"].set("RunHistory");
-            D_baseInfoJSON["action"]["method"].set("Update");
-            D_baseInfoJSON["parameter"]["step"] = stepCount;
-            D_baseInfoJSON["parameter"]["eventGroup"] = eventGroupCount;
-            D_baseInfoJSON["parameter"]["event"] = eventCount;
-            D_baseInfoJSON["parameter"]["status"] = "DONE";
-            // D_baseInfoJSON["parameter"].set(D_loadedActionJSON);
-            String returnString;
-            serializeJsonPretty(D_baseInfoJSON, returnString);
-            Machine_Ctrl.BackendServer.ws_->binaryAll(returnString);
             eventCount += 1;
             vTaskDelay(100/portTICK_PERIOD_MS);
           }
           D_eventGroupItemDetail["finish_time"].set(now());
-          JsonObject D_baseInfoJSON = Machine_Ctrl.BackendServer.GetBaseWSReturnData("Auto").as<JsonObject>();
-          D_baseInfoJSON["status"].set("OK");
-          D_baseInfoJSON["action"]["target"].set("RunHistory");
-          D_baseInfoJSON["action"]["method"].set("Update");
-          D_baseInfoJSON["parameter"]["step"] = stepCount;
-          D_baseInfoJSON["parameter"]["eventGroup"] = eventGroupCount;
-          D_baseInfoJSON["parameter"]["event"] = -1;
-          D_baseInfoJSON["parameter"]["status"] = "DONE";
-          // D_baseInfoJSON["parameter"].set(D_loadedActionJSON);
-          String returnString;
-          serializeJsonPretty(D_baseInfoJSON, returnString);
-          Machine_Ctrl.BackendServer.ws_->binaryAll(returnString);
           vTaskDelay(100/portTICK_PERIOD_MS);
         }
         eventGroupCount+=1;
       }
       D_stepItem_.value()["finish_time"].set(now());
-      JsonObject D_baseInfoJSON = Machine_Ctrl.BackendServer.GetBaseWSReturnData("Auto").as<JsonObject>();
-      D_baseInfoJSON["status"].set("OK");
-      D_baseInfoJSON["action"]["target"].set("RunHistory");
-      D_baseInfoJSON["action"]["method"].set("Update");
-      D_baseInfoJSON["parameter"]["step"] = stepCount;
-      D_baseInfoJSON["parameter"]["eventGroup"] = -1;
-      D_baseInfoJSON["parameter"]["event"] = -1;
-      D_baseInfoJSON["parameter"]["status"] = "DONE";
-      // D_baseInfoJSON["parameter"].set(D_loadedActionJSON);
-      String returnString;
-      serializeJsonPretty(D_baseInfoJSON, returnString);
-      Machine_Ctrl.BackendServer.ws_->binaryAll(returnString);
       vTaskDelay(100/portTICK_PERIOD_MS);
     }
     stepCount+=1;
   }
   ESP_LOGI("LOADED_ACTION","END");
+  Machine_Ctrl.TASK__NOW_ACTION = NULL;
   D_loadedActionJSON["finish_time"].set(now());
-  // JsonObject D_baseInfoJSON = Machine_Ctrl.BackendServer.GetBaseWSReturnData("Auto").as<JsonObject>();
-  JsonObject D_baseInfoJSON = Machine_Ctrl.BackendServer.GetBaseWSReturnData("Auto").as<JsonObject>();
-  D_baseInfoJSON["device_status"].set("Idle");
-  D_baseInfoJSON["status"].set("OK");
-  D_baseInfoJSON["action"]["target"].set("RunHistory");
-  D_baseInfoJSON["action"]["method"].set("Update");
-  D_baseInfoJSON["parameter"]["step"] = -1;
-  D_baseInfoJSON["parameter"]["eventGroup"] = -1;
-  D_baseInfoJSON["parameter"]["event"] = -1;
-  D_baseInfoJSON["parameter"]["status"] = "DONE";
-  // D_baseInfoJSON["parameter"].set(D_loadedActionJSON);
-  String returnString;
-  serializeJsonPretty(D_baseInfoJSON, returnString);
-  Machine_Ctrl.BackendServer.ws_->binaryAll(returnString);
+
+  Machine_Ctrl.SetLog(
+    3, 
+    "流程: " + D_loadedActionJSON["title"].as<String>() + " 完成",
+    "",
+    Machine_Ctrl.BackendServer.ws_, NULL
+  );
+
   vTaskDelay(100/portTICK_PERIOD_MS);
 
 
@@ -463,20 +364,17 @@ void LOADED_ACTION(void* parameter)
     if (D_loadedActionJSON["data_type"].as<String>() == String("TEST")) {
       D_baseInfoJSON["action"]["target"].set("TEST_PoolSensorData");
       D_baseInfoJSON["action"]["message"].set("獲得測試用數據");
+      D_baseInfoJSON["parameter"].set(poolSensorData);
+      D_baseInfoJSON["action"]["method"].set("Update");
+      D_baseInfoJSON["action"]["status"].set("OK");
+      String AfterSensorData;
+      serializeJsonPretty(D_baseInfoJSON, AfterSensorData);
+      Machine_Ctrl.BackendServer.ws_->binaryAll(AfterSensorData);
     } else {
-      D_baseInfoJSON["action"]["target"].set("PoolSensorData");
-      D_baseInfoJSON["action"]["message"].set("OK");
+      Machine_Ctrl.BroadcastNewPoolData(poolID);
     }
-
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["action"]["status"].set("OK");
-    D_baseInfoJSON["parameter"].set(poolSensorData);
-    String AfterSensorData;
-    serializeJsonPretty(D_baseInfoJSON, AfterSensorData);
-    Machine_Ctrl.BackendServer.ws_->binaryAll(AfterSensorData);
   }
-
-  Machine_Ctrl.TASK__NOW_ACTION = NULL;
+  
   vTaskDelete(NULL);
 }
 void SMachine_Ctrl::RUN__LOADED_ACTION()
@@ -505,124 +403,19 @@ void SMachine_Ctrl::RUN__LOADED_ACTION()
 
 
 
-void PWMMotorTestEvent(void* parameter)
-{
-  ESP_LOGI("PWMMotorTestEvent","START");
-  TaskParameters* params = (TaskParameters*) parameter;
-  String motorID = params->message;
-  int MotorIndex = Machine_Ctrl.pwmMotorIDToMotorIndex(motorID);
-  if (MotorIndex > -1) {
-    Machine_Ctrl.motorCtrl.SetMotorTo(MotorIndex, 0);
-    vTaskDelay(2000);
-    Machine_Ctrl.motorCtrl.SetMotorTo(MotorIndex, 90);
-    vTaskDelay(2000);
-    Machine_Ctrl.motorCtrl.SetMotorTo(MotorIndex, 180);
-    JsonObject D_baseInfoJSON = Machine_Ctrl.BackendServer.GetBaseWSReturnData("").as<JsonObject>();
-    D_baseInfoJSON["status"].set("OK");
-    D_baseInfoJSON["action"]["target"].set("PwmMotor");
-    D_baseInfoJSON["action"]["method"].set("Test");
-    D_baseInfoJSON["parameter"]["status"].set("end");
-    D_baseInfoJSON["parameter"]["motor_id"].set(motorID);
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    Machine_Ctrl.BackendServer.ws_->binaryAll(returnString);
-  } else {
-    ESP_LOGE("PWMMotorTestEvent","找不到伺服馬達資訊: %s", motorID.c_str());
-  }
-  ESP_LOGI("PWMMotorTestEvent","END");
-  delete params;
-  Machine_Ctrl.TASK__NOW_ACTION = NULL;
-  vTaskDelete(NULL);
-}
-EVENT_RESULT SMachine_Ctrl::RUN__PWMMotorTestEvent(String motorID)
-{
-  EVENT_RESULT returnData;
-  eTaskState taskState = eTaskGetState(&TASK__NOW_ACTION);
-  returnData.status = taskState;
-  if (TASK__NOW_ACTION == NULL | taskState == eDeleted) {
-    TaskParameters* taskParams = new TaskParameters;
-    taskParams->message = motorID;
-
-    xTaskCreate(
-      PWMMotorTestEvent, "PWM_MOTOR_TEST",
-      10000, taskParams, 1, &TASK__NOW_ACTION
-    );
-    returnData.message = "OK";
-  } else {
-    switch (taskState) {
-      case eRunning:
-        returnData.message = "eRunning";ESP_LOGW("PWMMotorTestEvent","eRunning");break;
-      case eBlocked: // 任務正在等待某些事件的發生
-        returnData.message = "eBlocked";ESP_LOGW("PWMMotorTestEvent","eBlocked");break;
-      case eSuspended: // 任務已經被暫停
-        returnData.message = "eSuspended";ESP_LOGW("PWMMotorTestEvent","eSuspended");break;
-      default: // 未知的狀態
-        returnData.message = "unknow";ESP_LOGW("PWMMotorTestEvent","unknow");break;
-    }
-  } 
-  return returnData;
-}
-
-
-
-void PWMMotorEvent(void* parameter)
-{
-  // for(;;){
-  ESP_LOGW("PWMMotorEvent","START");
-  JsonArray PWMMotorEventList = *((JsonArray*) parameter);
-  for (JsonVariant event : PWMMotorEventList) {
-    int MotorIndex = Machine_Ctrl.pwmMotorIDToMotorIndex(event["pwm_motor_id"].as<String>());
-    if (MotorIndex > -1) {
-      Machine_Ctrl.motorCtrl.SetMotorTo(MotorIndex, event["status"].as<int>());
-      vTaskDelay(100);
-    }
-  }
-  vTaskDelay(2500);
-  ESP_LOGW("PWMMotorEvent","END");
-  Machine_Ctrl.TASK__PWM_MOTOR = NULL;
-  vTaskDelete(NULL);
-    // vTaskDelete(Machine_Ctrl.TASK__PWM_MOTOR);
-  // }
-}
-EVENT_RESULT SMachine_Ctrl::RUN__PWMMotorEvent(JsonArray PWMMotorEventList)
-{
-  EVENT_RESULT returnData;
-  eTaskState taskState = eTaskGetState(&TASK__PWM_MOTOR);
-  returnData.status = taskState;
-  if (TASK__PWM_MOTOR == NULL | taskState == eDeleted) {
-    xTaskCreate(
-      PWMMotorEvent, "PWM_MOTOR_RUN",
-      10000, &PWMMotorEventList, 1, &TASK__PWM_MOTOR
-    );
-    returnData.message = "OK";
-  } else {
-    switch (taskState) {
-      case eRunning:
-        returnData.message = "eRunning";ESP_LOGW("PWMMotorEvent","eRunning");break;
-      case eBlocked: // 任務正在等待某些事件的發生
-        returnData.message = "eBlocked";ESP_LOGW("PWMMotorEvent","eBlocked");break;
-      case eSuspended: // 任務已經被暫停
-        returnData.message = "eSuspended";ESP_LOGW("PWMMotorEvent","eSuspended");break;
-      default: // 未知的狀態
-        returnData.message = "unknow";ESP_LOGW("PWMMotorEvent","unknow");break;
-    }
-  } 
-  return returnData;
-}
-
 void PeristalticMotorEvent(void* parameter)
 {
   ESP_LOGW("PeristalticMotorEvent","START");
   Peristaltic_task_config config_ = *((Peristaltic_task_config*) parameter);
   PeristalticMotorStatus status = (config_.status==1 ? PeristalticMotorStatus::FORWARD : PeristalticMotorStatus::REVERSR);
-  Serial.println(config_.index);
   Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(
     config_.index, 
     status
   );
   Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
   long timecheck = millis();
-  long maxTime = (long)config_.time*1000;
+  long maxTime = (long)(config_.time*1000);
+  // Serial.printf("config.time: %.2f, time: %d", config_.time, maxTime);
   if (config_.until != -1) {
     pinMode(config_.until, INPUT);
   }
@@ -637,38 +430,26 @@ void PeristalticMotorEvent(void* parameter)
     }
     vTaskDelay(10);
   }
-  Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
-  ESP_LOGW("PeristalticMotorEvent","END");
-  Machine_Ctrl.TASK__Peristaltic_MOTOR = NULL;
+
+  Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(
+    config_.index, 
+    PeristalticMotorStatus::STOP
+  );
+  Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
+  // Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
+  // ESP_LOGW("PeristalticMotorEvent","END");
+  // Machine_Ctrl.TASK__Peristaltic_MOTOR = NULL;
   vTaskDelete(NULL);
 }
 EVENT_RESULT SMachine_Ctrl::RUN__PeristalticMotorEvent(Peristaltic_task_config *config_)
 {
   EVENT_RESULT returnData;
-  eTaskState taskState = eTaskGetState(&TASK__Peristaltic_MOTOR);
-  returnData.status = taskState;
-  Serial.println(config_->index);
-  if (TASK__Peristaltic_MOTOR == NULL | taskState == eDeleted) {
-    ESP_LOGW("Build_SwitchMotorScan","START");
-    xTaskCreate(
-      PeristalticMotorEvent, "MOTOR_RUN",
-      10000, config_, 1, &TASK__Peristaltic_MOTOR
-    );
-    returnData.message = "OK";
-  } else {
-    switch (taskState) {
-      case eRunning:
-        returnData.message = "eRunning";ESP_LOGW("Build_SwitchMotorScan","eRunning");break;
-      case eReady: // 任務已經被排程但還沒有執行
-        returnData.message = "eReady";ESP_LOGW("Build_SwitchMotorScan","eReady");break;
-      case eBlocked: // 任務正在等待某些事件的發生
-        returnData.message = "eBlocked";ESP_LOGW("Build_SwitchMotorScan","eBlocked");break;
-      case eSuspended: // 任務已經被暫停
-        returnData.message = "eSuspended";ESP_LOGW("Build_SwitchMotorScan","eSuspended");break;
-      default: // 未知的狀態
-        returnData.message = "unknow";ESP_LOGW("Build_SwitchMotorScan","unknow");break;
-    }
-  } 
+
+  xTaskCreate(
+    PeristalticMotorEvent, "MOTOR_RUN",
+    10000, config_, 1, NULL
+  );
+  returnData.message = "OK";
   return returnData;
 }
 
@@ -682,176 +463,6 @@ void wsSendStepStatus()
   Machine_Ctrl.BackendServer.ws_->binaryAll(returnString);
 }
 
-void RunHistory(void* parameter)
-{
-  JsonObject DeviceSetting = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>();
-  JsonObject D_stepGroups = DeviceSetting["steps_group"];
-  JsonObject D_eventGroup =  DeviceSetting["event_group"];
-  if (DeviceSetting.containsKey("run_history")) {
-    JsonObject D_history =  DeviceSetting["run_history"];
-    String S_step_id = D_history["step_id"].as<String>();
-    ESP_LOGI("HISTORY","執行流程::\t%s", S_step_id.c_str());
-    ESP_LOGI("HISTORY","觸發者:\t%s", D_history["triger_by"].as<String>().c_str());
-    time_t NOW = now();
-    if (D_history["first_active_time"].as<int>() == -1) {
-      D_history["first_active_time"] = String(NOW);
-    }
-    D_history["last_active_time"] = String(NOW);
-    Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-    ////////////
-    wsSendStepStatus();
-    ////////////
-    if (D_stepGroups.containsKey(S_step_id)) {
-      int eventGroupCount = 0;
-      for (JsonVariant D_eventGroupRunHistory : D_history["enent_group_list"].as<JsonArray>()) {
-        eventGroupCount++;
-        String S_eventGroupID = D_eventGroupRunHistory["event_group_id"].as<String>();
-        ESP_LOGI("HISTORY", " - 步驟 %02d:\t%s", eventGroupCount, S_eventGroupID.c_str());
-        if (D_eventGroup.containsKey(S_eventGroupID)) {
-          JsonObject D_eventGroupSetting = D_eventGroup[S_eventGroupID];
-          ESP_LOGI("HISTORY", " - 標題:\t%s", D_eventGroupSetting["title"].as<String>().c_str());
-          ESP_LOGI("HISTORY", " - 說明:\t%s", D_eventGroupSetting["description"].as<String>().c_str());
-          
-          time_t endTime = D_eventGroupRunHistory["end_time"].as<time_t>();
-          if (endTime != -1) {
-            ESP_LOGI("HISTORY", " - 步驟 %02d %s 已在 %04d/%02d/%02d %02d:%02d:%02d 執行完畢，跳過", 
-              eventGroupCount, S_eventGroupID.c_str(),
-              year(endTime), month(endTime), day(endTime), hour(endTime), minute(endTime), second(endTime)
-            );
-            continue;
-          }
-
-          if (D_eventGroupRunHistory["active_time"].as<time_t>() == -1) {
-            D_eventGroupRunHistory["active_time"] = now();
-            Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-            ////////////
-            wsSendStepStatus();
-            ////////////
-          }
-          JsonArray L_eventRunHistory = D_eventGroupRunHistory["enent_list"].as<JsonArray>();
-          int eventCount = -1;
-          for (JsonVariant D_eventSettingChose : D_eventGroupSetting["event"].as<JsonArray>()) {
-            eventCount++;
-            ESP_LOGI("HISTORY", "   * 執行步驟 %d-%d", eventGroupCount, eventCount+1);
-            ////////////
-            wsSendStepStatus();
-            ////////////
-            time_t evenEndTime = L_eventRunHistory[eventCount]["end_time"].as<time_t>();
-            if (evenEndTime != -1) {
-              ESP_LOGI("HISTORY", "   * 步驟 %d-%d 已在 %04d/%02d/%02d %02d:%02d:%02d 執行完畢，跳過", 
-                eventGroupCount, eventCount+1,
-                year(evenEndTime), month(evenEndTime), day(evenEndTime), hour(evenEndTime), minute(evenEndTime), second(evenEndTime)
-              );
-              continue;
-            }
-            if (L_eventRunHistory[eventCount]["active_time"].as<int>() == -1) {
-              L_eventRunHistory[eventCount]["active_time"] = now();
-              Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-              ////////////
-              wsSendStepStatus();
-              ////////////
-            }
-            if (D_eventSettingChose.containsKey("pwm_motor_list")) {
-              JsonArray L_pwmMotorSettingList = D_eventSettingChose["pwm_motor_list"].as<JsonArray>();
-              while (Machine_Ctrl.TASK__PWM_MOTOR != NULL) {
-                vTaskDelay(100);
-              }
-              Machine_Ctrl.RUN__PWMMotorEvent(L_pwmMotorSettingList);
-
-              while (Machine_Ctrl.TASK__PWM_MOTOR != NULL) {
-                vTaskDelay(100);
-              }
-            } else if (D_eventSettingChose.containsKey("peristaltic_motor_list")) {
-              JsonArray L_peristalticMotorSettingList = D_eventSettingChose["peristaltic_motor_list"].as<JsonArray>();
-              while (Machine_Ctrl.TASK__Peristaltic_MOTOR != NULL) {
-                vTaskDelay(100);
-              }
-
-              
-              while (Machine_Ctrl.TASK__Peristaltic_MOTOR != NULL) {
-                vTaskDelay(100);
-              }
-            } else if (D_eventSettingChose.containsKey("wait")) {
-              
-            }
-            L_eventRunHistory[eventCount]["end_time"] = now();
-            Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-            ////////////
-            wsSendStepStatus();
-            ////////////
-            ESP_LOGI("HISTORY", "   * 執行步驟 %d-%d 完畢，耗時 %d 秒", eventGroupCount, eventCount+1, 
-              L_eventRunHistory[eventCount]["end_time"].as<time_t>() - L_eventRunHistory[eventCount]["active_time"].as<time_t>()
-            );
-          }
-          
-          D_eventGroupRunHistory["end_time"] = now();
-          Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-          ////////////
-          DynamicJsonDocument json_doc = Machine_Ctrl.BackendServer.GetBaseWSReturnData("RunHistory");
-          json_doc["parameter"]["message"].set("update");
-          String returnString;
-          serializeJsonPretty(json_doc, returnString);
-          Machine_Ctrl.BackendServer.ws_->binaryAll(returnString);
-          ////////////
-          ESP_LOGI("HISTORY", " - 執行步驟 %02d %s 完畢，耗時 %d 秒", eventGroupCount, S_eventGroupID.c_str(), 
-            D_eventGroupRunHistory["end_time"].as<time_t>() - D_eventGroupRunHistory["active_time"].as<time_t>()
-          );
-        } else {
-          ESP_LOGE("HISTORY","找不到事件組設定 :\t%s", S_eventGroupID.c_str());
-        }
-      }
-
-      D_history["end_time"] = now();
-      Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-      ////////////
-      DynamicJsonDocument json_doc = Machine_Ctrl.BackendServer.GetBaseWSReturnData("RunHistory");
-      json_doc["parameter"]["message"].set("update");
-      String returnString;
-      serializeJsonPretty(json_doc, returnString);
-      Machine_Ctrl.BackendServer.ws_->binaryAll(returnString);
-      ////////////
-      ESP_LOGI("HISTORY","執行流程:\t%s 完畢", S_step_id.c_str());
-      ESP_LOGI("HISTORY","耗時總時長:\t%d 秒", D_history["end_time"].as<time_t>() - D_history["first_active_time"].as<time_t>());
-
-    } else {
-      ESP_LOGE("HISTORY","找不到設定 step_id:\t%s", S_step_id.c_str());
-    }
-    // String printString;
-    // serializeJsonPretty(D_history, printString);
-    // Serial.println(printString);
-  } else {
-    ESP_LOGE("HISTORY","找不到歷史紀錄");
-  }
-  Machine_Ctrl.TASK__History = NULL;
-  vTaskDelete(NULL);
-}
-EVENT_RESULT SMachine_Ctrl::RUN__History() {
-  EVENT_RESULT returnData;
-  eTaskState taskState = eTaskGetState(&TASK__History);
-  returnData.status = taskState;
-  if (TASK__History == NULL | taskState == eDeleted) {
-    ESP_LOGW("RUN__History","START");
-    xTaskCreate(
-      RunHistory, "TASK_RUN",
-      10000, NULL, 1, &TASK__History
-    );
-    returnData.message = "OK";
-  } else {
-    switch (taskState) {
-      case eRunning:
-        returnData.message = "eRunning";ESP_LOGW("Build_SwitchMotorScan","eRunning");break;
-      case eReady: // 任務已經被排程但還沒有執行
-        returnData.message = "eReady";ESP_LOGW("Build_SwitchMotorScan","eReady");break;
-      case eBlocked: // 任務正在等待某些事件的發生
-        returnData.message = "eBlocked";ESP_LOGW("Build_SwitchMotorScan","eBlocked");break;
-      case eSuspended: // 任務已經被暫停
-        returnData.message = "eSuspended";ESP_LOGW("Build_SwitchMotorScan","eSuspended");break;
-      default: // 未知的狀態
-        returnData.message = "unknow";ESP_LOGW("Build_SwitchMotorScan","unknow");break;
-    }
-  } 
-  return returnData;
-}
 
 void SMachine_Ctrl::STOP_AllTask() 
 {
@@ -897,13 +508,96 @@ void SMachine_Ctrl::Stop_AllPeristalticMotor()
   }
 }
 
-////////////////////////////////////////////////////
-// For 不間斷監聽
-////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////
 // For 互動相關
 ////////////////////////////////////////////////////
+
+/**
+ * @brief 
+ * 
+ * @param Level 0: DEBUG, 1: ERROR, 2: WARNING, 3: INFO, 4: DETAIL, 5: SUCCESS, 6: FAIL
+ * @param Title 
+ * @param description 
+ * @param wsBroadcast 
+ * @return DynamicJsonDocument 
+ */
+DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String description, AsyncWebSocket *server, AsyncWebSocketClient *client)
+{
+  DynamicJsonDocument logItem(500);
+  logItem["level"].set(Level);
+  logItem["time"].set(GetNowTimeString());
+  logItem["title"].set(Title);
+  logItem["description"].set(description);
+  logArray.add(logItem);
+  if (logArray.size() > 100) {
+    logArray.remove(0);
+  }
+  if (server != NULL or client != NULL) {
+    DynamicJsonDocument D_baseInfo = BackendServer.GetBaseWSReturnData("LOG");
+    D_baseInfo["cmd"].set("log");
+    D_baseInfo["status"].set("OK");
+    D_baseInfo["action"]["target"].set("Log");
+    switch (Level)
+    {
+      case 0:
+        D_baseInfo["action"]["method"].set("DEBUG");
+        break;
+      case 1:
+        D_baseInfo["action"]["method"].set("ERROR");
+        D_baseInfo["action"]["status"].set("FAIL");
+        break;
+      case 2:
+        D_baseInfo["action"]["method"].set("WARNING");
+        break;
+      case 3:
+        D_baseInfo["action"]["method"].set("INFO");
+        break;
+      case 4:
+        D_baseInfo["action"]["method"].set("DETAIL");
+        break;
+      case 5:
+        D_baseInfo["action"]["method"].set("SUCCESS");
+        break;
+      case 6:
+        D_baseInfo["action"]["method"].set("FAIL");
+        D_baseInfo["action"]["status"].set("FAIL");
+        break;
+      default:
+        D_baseInfo["action"]["method"].set("INFO");
+        break;
+    }
+    D_baseInfo["action"]["message"].set(Title);
+    D_baseInfo["action"]["description"].set(description);
+    D_baseInfo["action"]["status"].set("OK");
+    String returnString;
+    serializeJsonPretty(D_baseInfo, returnString);
+    if (server != NULL) {
+      server->binaryAll(returnString);
+    }
+    if (client != NULL) {
+      client->binary(returnString);
+    }
+    D_baseInfo.clear();
+  }
+  return logItem;
+}
+
+//* 廣播指定池的感測器資料出去
+//!! 注意，這個廣撥出去的資料是會進資料庫的
+void SMachine_Ctrl::BroadcastNewPoolData(String poolID)
+{
+  DynamicJsonDocument D_baseInfo = BackendServer.GetBaseWSReturnData("");
+  D_baseInfo["cmd"].set("poolData");
+  D_baseInfo["action"]["message"].set("NewData");
+  D_baseInfo["action"]["target"].set("PoolData");
+  D_baseInfo["action"]["method"].set("Update");
+  D_baseInfo["action"]["status"].set("OK");
+  D_baseInfo["parameter"][poolID].set((*sensorDataSave)[poolID]);
+  String AfterSensorData;
+  serializeJsonPretty(D_baseInfo, AfterSensorData);
+  BackendServer.ws_->binaryAll(AfterSensorData);
+}
 
 ////////////////////////////////////////////////////
 // For 基礎行為
@@ -955,6 +649,18 @@ void SMachine_Ctrl::LoadStepToRunHistoryItem(String StepID, String TrigerBy)
   spiffs.ReWriteDeviceSetting();
 }
 
+String SMachine_Ctrl::GetNowTimeString()
+{
+  char datetimeChar[30];
+  time_t nowTime = now();
+  sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
+    year(nowTime), month(nowTime), day(nowTime),
+    hour(nowTime), minute(nowTime), second(nowTime)
+  );
+
+  return String(datetimeChar);
+}
+
 ////////////////////////////////////////////////////
 // For 組合行為
 ////////////////////////////////////////////////////
@@ -965,7 +671,31 @@ void SMachine_Ctrl::LoadStepToRunHistoryItem(String StepID, String TrigerBy)
 
 void SMachine_Ctrl::UpdateAllPoolsDataRandom()
 {
-  poolsCtrl.UpdateAllPoolsDataRandom();
+  JsonObject D_pools = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pools"];
+  for (JsonPair D_poolItem : D_pools) {
+    (*sensorDataSave)[D_poolItem.key()]["Data_datetime"].set(Machine_Ctrl.GetNowTimeString());
+
+    (*sensorDataSave)[D_poolItem.key()]["NO2_wash_volt"].set(3.5 + (double)((esp_random() % 100)/1000.));
+    (*sensorDataSave)[D_poolItem.key()]["NO2_test_volt"].set(
+      (*sensorDataSave)[D_poolItem.key()]["NO2_wash_volt"].as<double>() - (double)((esp_random() % 1000)/1000.)
+    );
+    (*sensorDataSave)[D_poolItem.key()]["NO2"].set(
+      (*sensorDataSave)[D_poolItem.key()]["NO2_test_volt"].as<double>() + 1.5 - (double)((esp_random() % 200)/1000.)
+    );
+    (*sensorDataSave)[D_poolItem.key()]["NH4_wash_volt"].set(3.5 + (double)((esp_random() % 100)/1000.));
+    (*sensorDataSave)[D_poolItem.key()]["NH4_test_volt"].set(
+      (*sensorDataSave)[D_poolItem.key()]["NH4_wash_volt"].as<double>() - (double)((esp_random() % 1000)/1000.) 
+    );
+    (*sensorDataSave)[D_poolItem.key()]["NH4"].set(
+      (*sensorDataSave)[D_poolItem.key()]["NH4_test_volt"].as<double>() - (double)((esp_random() % 200)/1000.)
+    );
+    (*sensorDataSave)[D_poolItem.key()]["pH_volt"].set(
+      4 - (double)((esp_random() % 1000)/1000.)
+    );
+    (*sensorDataSave)[D_poolItem.key()]["pH"].set(
+      (*sensorDataSave)[D_poolItem.key()]["pH_volt"].as<double>() + 3 - (double)((esp_random() % 500)/1000.)
+    );
+  }
 };
 
 void SMachine_Ctrl::LoopTest()

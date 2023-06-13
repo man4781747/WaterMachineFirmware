@@ -1,4 +1,5 @@
 #include "Wifi_Ctrl.h"
+#include <codecvt>
 #include <WiFi.h>
 #include <SPI.h>
 #include "AsyncTCP.h"
@@ -68,9 +69,19 @@ OTAByFileStatus nowOTAByFileStatus = OTAByFileStatus::OTAByFileStatusNO;
 // For 處理資料
 ////////////////////////////////////////////////////
 
+std::string remove_non_utf8(const std::string& str) {
+  std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
+  std::wstring wstr = conv.from_bytes(str);
+  std::wstring::iterator it = std::remove_if(wstr.begin(), wstr.end(), [](wchar_t c) {
+      return (c < 0 || c > 0x10FFFF || (c >= 0xD800 && c <= 0xDFFF));
+  });
+  wstr.erase(it, wstr.end());
+  return conv.to_bytes(wstr);
+}
+
 String removeNonUTF8Characters(const String& input) {
   // 正则表达式模式，匹配非 UTF-8 字符
-  std::regex pattern("[^\\x20-\\x7E]+");
+  std::regex pattern("[^\\x20-\\x9F]+");
   
   std::string inputString_STD = std::string(input.c_str());
   // 使用空字符串替换非 UTF-8 字符
@@ -114,12 +125,12 @@ DynamicJsonDocument CWIFI_Ctrler::GetBaseWSReturnData(String MessageString)
 {
   DynamicJsonDocument BaseWSReturnData(500000);
   BaseWSReturnData.set(*(Machine_Ctrl.spiffs.DeviceBaseInfo));
-  time_t nowTime = now();
-  char datetimeChar[30];
-  sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
-    year(nowTime), month(nowTime), day(nowTime),
-    hour(nowTime), minute(nowTime), second(nowTime)
-  );
+  // time_t nowTime = now();
+  // char datetimeChar[30];
+  // sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
+  //   year(nowTime), month(nowTime), day(nowTime),
+  //   hour(nowTime), minute(nowTime), second(nowTime)
+  // );
   BaseWSReturnData["firmware_version"].set(FIRMWARE_VERSION);
 
   int startIndex = MessageString.indexOf("/", 0);
@@ -133,7 +144,7 @@ DynamicJsonDocument CWIFI_Ctrler::GetBaseWSReturnData(String MessageString)
     BaseWSReturnData["cmd"].set(MessageString.substring(startIndex+1, endIndex));
   }
   BaseWSReturnData["internet"].set(Machine_Ctrl.BackendServer.GetWifiInfo());
-  BaseWSReturnData["time"] = datetimeChar;
+  BaseWSReturnData["time"].set(Machine_Ctrl.GetNowTimeString());
   BaseWSReturnData["utc"] = "+8";
   BaseWSReturnData["action"]["message"].set("看到這行代表API設定時忘記設定本項目了，請通知工程師修正，謝謝");
   BaseWSReturnData["action"]["status"].set("看到這行代表API設定時忘記設定本項目了，請通知工程師修正，謝謝");
@@ -243,86 +254,121 @@ void ws_OTAByURL(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJs
     D_baseInfoJSON["message"].set("FAIL");
     String returnString;
     serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    client->binary(returnString);
   }
 }
 
 void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
   if (type == WS_EVT_CONNECT) {
     Serial.println("WebSocket client connected");
-    DynamicJsonDocument D_baseInfo = Machine_Ctrl.BackendServer.GetBaseWSReturnData("PoolData");
-    D_baseInfo["action"]["message"].set("Connected");
-    ws_GetAllPoolData(server, client, &D_baseInfo, NULL, NULL, NULL);
+    DynamicJsonDocument D_baseInfo = Machine_Ctrl.BackendServer.GetBaseWSReturnData("");
+    D_baseInfo["cmd"].set("CONNECTED");
+    D_baseInfo["action"]["message"].set("OK");
+    String returnString;
+    serializeJsonPretty(D_baseInfo, returnString);
+    client->binary(returnString);
   } else if (type == WS_EVT_DISCONNECT) {
     Serial.println("WebSocket client disconnected");
   } else if (type == WS_EVT_DATA) {
-    String MessageString = removeNonUTF8Characters(String(((char *)data)));
+    ESP_LOGV("ws", "收到訊息");
+    vTaskDelay(10/portTICK_PERIOD_MS);
+    // String MessageString= String(remove_non_utf8(std::string((char *)data)).c_str());
+    String MessageString = String((char *)data);
+    int totalLen = MessageString.length();
 
+    size_t length = 0;
+    for (const uint8_t* p = data; *p; ++p) {
+        ++length;
+    }
+
+    ESP_LOGV("ws", "total len: %d, data* len: %d, String len: %d", len, length, totalLen);
+    MessageString = MessageString.substring(0, len);
     int commaIndex = MessageString.indexOf("]");
     String METHOD = MessageString.substring(1, commaIndex);
-    MessageString = MessageString.substring(commaIndex + 1);
+
+    bool dataFail = false;
+    if (METHOD == "PATCH" or METHOD == "POST") {
+      int paraLen = MessageString.length();
+      if (paraLen == 0) {
+        dataFail = true;
+      } else {
+        char lastChar = MessageString.charAt(paraLen-1);
+        if (lastChar != '\n') {
+          dataFail = true;
+        } else {
+          MessageString = MessageString.substring(commaIndex + 1, paraLen);
+        }
+      }
+    } else {
+      MessageString = MessageString.substring(commaIndex + 1);
+    }
+
     commaIndex = MessageString.indexOf("?");
     String Message_CMD = MessageString.substring(0, commaIndex);
     String QueryParameter = MessageString.substring(commaIndex + 1);
     DynamicJsonDocument D_QueryParameter = urlParamsToJSON(QueryParameter.c_str());
     DynamicJsonDocument D_FormData(10000);
-    DeserializationError error = deserializeJson(D_FormData, D_QueryParameter["data"].as<String>());
-    if (error) {
+    String dataString = D_QueryParameter["data"].as<String>();
+    DeserializationError error = deserializeJson(D_FormData, dataString);
+
+    if (error or dataFail) {
       DynamicJsonDocument D_errorbaseInfo = Machine_Ctrl.BackendServer.GetBaseWSReturnData("["+METHOD+"]"+Message_CMD);
       D_errorbaseInfo["message"] = "FAIL";
       D_errorbaseInfo["parameter"]["message"] = "API帶有的Data解析錯誤，參數格式錯誤?";
       String ErrorMessage;
       serializeJsonPretty(D_errorbaseInfo, ErrorMessage);
-      client->text(ErrorMessage);
+      client->binary(ErrorMessage);
       D_errorbaseInfo.clear();
     }
-    D_QueryParameter.remove("data");
-    std::string Message_CMD_std = std::string(Message_CMD.c_str());
-    std::string METHOD_std = std::string(METHOD.c_str());
-    DynamicJsonDocument D_baseInfo = Machine_Ctrl.BackendServer.GetBaseWSReturnData("["+String(METHOD_std.c_str())+"]"+String(Message_CMD_std.c_str()));
-    
-    bool IsFind = false;
-    for (auto it = Machine_Ctrl.BackendServer.websocketApiSetting.rbegin(); it != Machine_Ctrl.BackendServer.websocketApiSetting.rend(); ++it) {
-      std::regex reg(it->first.c_str());
-      std::smatch matches;
-      if (std::regex_match(Message_CMD_std, matches, reg)) {
-        std::map<int, String> UrlParameter;
-        IsFind = true;
-        if (it->second.count(METHOD_std)) {
-          DynamicJsonDocument D_PathParameter(1000);
-          int pathParameterIndex = -1;
-          for (auto matches_it = matches.begin(); matches_it != matches.end(); ++matches_it) {
-            if (pathParameterIndex == -1) {
-              pathParameterIndex++;
-              continue;
+    else {
+      D_QueryParameter.remove("data");
+      std::string Message_CMD_std = std::string(Message_CMD.c_str());
+      std::string METHOD_std = std::string(METHOD.c_str());
+      DynamicJsonDocument D_baseInfo = Machine_Ctrl.BackendServer.GetBaseWSReturnData("["+String(METHOD_std.c_str())+"]"+String(Message_CMD_std.c_str()));
+      
+      bool IsFind = false;
+      for (auto it = Machine_Ctrl.BackendServer.websocketApiSetting.rbegin(); it != Machine_Ctrl.BackendServer.websocketApiSetting.rend(); ++it) {
+        std::regex reg(it->first.c_str());
+        std::smatch matches;
+        if (std::regex_match(Message_CMD_std, matches, reg)) {
+          std::map<int, String> UrlParameter;
+          IsFind = true;
+          if (it->second.count(METHOD_std)) {
+            DynamicJsonDocument D_PathParameter(1000);
+            int pathParameterIndex = -1;
+            for (auto matches_it = matches.begin(); matches_it != matches.end(); ++matches_it) {
+              if (pathParameterIndex == -1) {
+                pathParameterIndex++;
+                continue;
+              }
+              if ((int)(it->second[METHOD_std]->pathParameterKeyMapList.size()) <= pathParameterIndex) {
+                break;
+              }
+              D_PathParameter[it->second[METHOD_std]->pathParameterKeyMapList[pathParameterIndex]] = String(matches_it->str().c_str());
             }
-            if ((int)(it->second[METHOD_std]->pathParameterKeyMapList.size()) <= pathParameterIndex) {
-              break;
-            }
-            D_PathParameter[it->second[METHOD_std]->pathParameterKeyMapList[pathParameterIndex]] = String(matches_it->str().c_str());
+            it->second[METHOD_std]->func(server, client, &D_baseInfo, &D_PathParameter, &D_QueryParameter, &D_FormData);
+          } else {
+            ESP_LOGE(LOG_TAG_WIFI, "API %s 並無設定 METHOD: %s", Message_CMD_std.c_str(), METHOD_std.c_str());
+            D_baseInfo["message"] = "FAIL";
+            D_baseInfo["parameter"]["message"] = "Not allow: "+String(METHOD_std.c_str());
+            String returnString;
+            serializeJsonPretty(D_baseInfo, returnString);
+            client->binary(returnString);
           }
-          it->second[METHOD_std]->func(server, client, &D_baseInfo, &D_PathParameter, &D_QueryParameter, &D_FormData);
-        } else {
-          ESP_LOGE(LOG_TAG_WIFI, "API %s 並無設定 METHOD: %s", Message_CMD_std.c_str(), METHOD_std.c_str());
-          D_baseInfo["message"] = "FAIL";
-          D_baseInfo["parameter"]["message"] = "Not allow: "+String(METHOD_std.c_str());
-          String returnString;
-          serializeJsonPretty(D_baseInfo, returnString);
-          client->text(returnString);
+          break;
         }
-        break;
       }
+      if (!IsFind) {
+        ESP_LOGE(LOG_TAG_WIFI, "找不到API: %s", Message_CMD_std.c_str());
+        D_baseInfo["parameter"]["message"] = "找不到API: "+String(Message_CMD_std.c_str());
+        D_baseInfo["action"]["status"] = "FAIL";
+        D_baseInfo["action"]["message"] = "找不到API: "+String(Message_CMD_std.c_str());
+        String returnString;
+        serializeJsonPretty(D_baseInfo, returnString);
+        client->binary(returnString);
+      }
+      D_baseInfo.clear();
     }
-    if (!IsFind) {
-      ESP_LOGE(LOG_TAG_WIFI, "找不到API: %s", Message_CMD_std.c_str());
-      D_baseInfo["parameter"]["message"] = "找不到API: "+String(Message_CMD_std.c_str());
-      D_baseInfo["action"]["status"] = "FAIL";
-      D_baseInfo["action"]["message"] = "找不到API: "+String(Message_CMD_std.c_str());
-      String returnString;
-      serializeJsonPretty(D_baseInfo, returnString);
-      client->text(returnString);
-    }
-    D_baseInfo.clear();
   }
 }
 
@@ -372,7 +418,7 @@ void CWIFI_Ctrler::ConnectToWifi()
   WiFi.mode(WIFI_AP_STA);
   JsonObject WifiConfigJSON = Machine_Ctrl.spiffs.WifiConfig->as<JsonObject>();
   ESP_LOGI(LOG_TAG_WIFI, "Start to connect to wifi");
-  StartWiFiConnecter();
+  // StartWiFiConnecter();
   CreateSoftAP();
   ConnectOtherWiFiAP(
     WifiConfigJSON["Remote"]["remote_Name"].as<String>(),
@@ -448,34 +494,9 @@ void CWIFI_Ctrler::UpdateMachineTimerByNTP()
 void CWIFI_Ctrler::ServerStart()
 {
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
-  // ESP32_W5500_onEvent();
-  // SPI.begin(12, 13, 11, 9);
-  // ETH.begin(13, 11, 12, 9, 10, SPI_CLOCK_MHZ, SPI1_HOST);
-  
-  // Ethernet.init(9);
-  // Ethernet.begin(ethernet_mac, ethernet_ip);
-  // if (Ethernet.hardwareStatus() == EthernetNoHardware) {
-  //   Serial.println("Ethernet shield was not found.  Sorry, can't run without hardware. :(");
-  //   while (true) {
-  //     delay(1); // do nothing, no point running without Ethernet hardware
-  //   }
-  // }
-  // if (Ethernet.linkStatus() == LinkOFF) {
-  //   Serial.println("Ethernet cable is not connected.");
-  // }
-  // Serial.println("------------------");
-  // Serial.println(Ethernet.localIP());
-  // Serial.println("------------------");
-
-  // ETH.config(myIP, myGW, mySN, myDNS);
-  // ESP32_W5500_waitForConnect();
   ws.onEvent(onWebSocketEvent);
   asyncServer.addHandler(&ws);
   asyncServer.begin();
-
-  // ethernet_server.addHandler(&ws);
-  // ethernet_server.begin();
-  
   createWebServer();
 }
 
@@ -517,7 +538,6 @@ void CWIFI_Ctrler::setAPIs()
     [&](AsyncWebServerRequest *request)
     {
       nowOTAByFileStatus = OTAByFileStatus::OTAByFileStatusING;
-      ESP_LOGI("POST", "TESTTEST");
       xTaskCreatePinnedToCore(
         UpdateByFileTask, "UpdateByFile",
         10000, NULL, 2, NULL, 1
@@ -645,7 +665,6 @@ void CWIFI_Ctrler::AddWebsocketAPI(String APIPath, String METHOD, void (*func)(A
 {
   C_WebsocketAPI *newAPI = new C_WebsocketAPI(APIPath, METHOD, func);
   std::unordered_map<std::string, C_WebsocketAPI*> sub_map;
-
   if (websocketApiSetting.count(std::string(newAPI->APIPath.c_str())) == 0) {
     sub_map[std::string(newAPI->METHOD.c_str())] = newAPI;
     websocketApiSetting.insert(

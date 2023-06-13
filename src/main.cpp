@@ -139,21 +139,27 @@ uint32_t delayMS;
 const char* LOG_TAG = "MAIN";
 SMachine_Ctrl Machine_Ctrl;
 
-const char* FIRMWARE_VERSION = "V2.23.52.0";
+const char* FIRMWARE_VERSION = "V2.23.62.0";
 
 
 
 
 void setup() {
+  pinMode(39, PULLUP);
+  
   Serial.begin(115200);
   Serial.println("START");
-
+  Serial.printf("Total heap: %d\n", ESP.getHeapSize());
+  Serial.printf("Free heap: %d\n", ESP.getFreeHeap());
+  Serial.printf("Total PSRAM: %d\n", ESP.getPsramSize());
+  Serial.printf("Free PSRAM: %d\n", ESP.getFreePsram());
   Machine_Ctrl.INIT_SPIFFS_config();
   Machine_Ctrl.INIT_I2C_Wires();
   Machine_Ctrl.INIT_PoolData();
   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
 
   Machine_Ctrl.peristalticMotorsCtrl.INIT_Motors(42,41,40,2);
+  Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
 
   Machine_Ctrl.motorCtrl.INIT_Motors(Machine_Ctrl.WireOne);
   Machine_Ctrl.BackendServer.ConnectToWifi();
@@ -209,7 +215,43 @@ void setup() {
 
 void loop() {
   // SEN0364Test();
+  // Machine_Ctrl.peristalticMotorsCtrl.ShowNowSetting();
+  // Machine_Ctrl.peristalticMotorsCtrl.OpenAllPin();
+  // delay(1000);
+  // Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
   delay(1000);
+  // Serial.println(0);
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(0);
+
+  // Machine_Ctrl.WireOne.beginTransmission(0x70);
+  // Machine_Ctrl.WireOne.write(1 << 0);
+  // Machine_Ctrl.WireOne.endTransmission();
+  // delay(100);
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_96X);
+  // ALS_01_Data_t test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  // Serial.printf("CH0: %d, CH1: %d\n", test.CH_0, test.CH_1);
+  // delay(1000);
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
+  // Serial.println(1);
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(1);
+  
+  // Machine_Ctrl.WireOne.beginTransmission(0x70);
+  // Machine_Ctrl.WireOne.write(1 << 1);
+  // Machine_Ctrl.WireOne.endTransmission();
+  // delay(100);
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_96X);
+  // test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  // Serial.printf("CH0: %d, CH1: %d\n", test.CH_0, test.CH_1);
+  // delay(1000);
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
+
+  // delay(1000*60);
+  // Machine_Ctrl.UpdateAllPoolsDataRandom();
+  // Machine_Ctrl.BroadcastNewPoolData("pool-1");
+  // Machine_Ctrl.BroadcastNewPoolData("pool-2");
+  // Machine_Ctrl.BroadcastNewPoolData("pool-3");
+  // Machine_Ctrl.BroadcastNewPoolData("pool-4");
+  // delay(1000*60*60*4 - 60*1000);
   // delay(delayMS);
   // // Get temperature event and print its value.
   // sensors_event_t event;

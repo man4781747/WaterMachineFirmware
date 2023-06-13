@@ -46,7 +46,7 @@ JsonObject BuildPeristalticMotorEventJSONItem(JsonArray peristalticMotorEventLis
     D_onePeristalticMotorSetItem["peristaltic_motor"]["description"].set(D_AllPeristalticMotorSetting[peristalticID]["description"].as<String>());
     D_onePeristalticMotorSetItem["finish_time"].set(-1);
     D_onePeristalticMotorSetItem["status"].set(peristalticMotorEventItem["status"].as<int>());
-    D_onePeristalticMotorSetItem["time"].set(peristalticMotorEventItem["time"].as<int>());
+    D_onePeristalticMotorSetItem["time"].set(peristalticMotorEventItem["time"].as<float>());
     D_onePeristalticMotorSetItem["until"].set(peristalticMotorEventItem["until"].as<String>());
     L_allPeristalticEventList.add(D_onePeristalticMotorSetItem);
   }
@@ -177,7 +177,7 @@ void ws_StopAllActionTask(AsyncWebSocket *server, AsyncWebSocketClient *client, 
   D_baseInfoJSON["parameter"]["message"].set("強制停止機器的所有動作，回歸待機狀態");
   String returnString;
   serializeJsonPretty(D_baseInfoJSON, returnString);
-  server->textAll(returnString);
+  server->binaryAll(returnString);
 }
 
 
@@ -193,7 +193,7 @@ void ws_GetDeiveConfig(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
   D_baseInfoJSON["parameter"].set(Machine_Ctrl.spiffs.DeviceBaseInfo->as<JsonObject>());
   String returnString;
   serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
+  client->binary(returnString);
 }
 
 void ws_PatchDeiveConfig(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
@@ -212,7 +212,7 @@ void ws_PatchDeiveConfig(AsyncWebSocket *server, AsyncWebSocketClient *client, D
   D_baseInfoJSON["parameter"].set(D_oldConfig);
   String returnString;
   serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
+  client->binary(returnString);
 }
 
 
@@ -226,7 +226,7 @@ void ws_GetNowStatus(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynam
   D_baseInfoJSON["parameter"]["message"].set("OK");
   String returnString;
   serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
+  client->binary(returnString);
 }
 
 
@@ -254,6 +254,7 @@ void ws_GetAllPoolData(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
   (*D_baseInfo)["cmd"].set("poolData");
   (*D_baseInfo)["action"]["target"].set("PoolData");
   (*D_baseInfo)["action"]["method"].set("Update");
+  (*D_baseInfo)["action"]["message"].set("OK");
   (*D_baseInfo)["action"]["status"].set("OK");
   if (!(*D_baseInfo)["action"].containsKey("message")) {
     (*D_baseInfo)["action"]["message"].set("獲得各蝦池最新感測器資料");
@@ -294,17 +295,21 @@ void ws_PatchPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyna
     D_baseInfoJSON["action"]["method"].set("Update");
     String returnString;
     serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
+    server->binaryAll(returnString);
+    Machine_Ctrl.SetLog(
+      5,
+      "更新事件組設定完畢",
+      "事件組名稱: " + D_oldConfig["title"].as<String>(),
+      server, NULL
+    );
     Machine_Ctrl.spiffs.ReWriteDeviceSetting();
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("更新蝦池設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到蝦池設定: " + TargetName;
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "更新蝦池設定失敗",
+      "找不到蝦池設定: " + TargetName,
+      NULL, client
+    );
   }
 
 }
@@ -324,17 +329,21 @@ void ws_DeletePoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
     D_baseInfoJSON["parameter"]["delete_id"] = TargetName;
     String returnString;
     serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
+    server->binaryAll(returnString);
+    Machine_Ctrl.SetLog(
+      5,
+      "刪除蝦池設定完畢",
+      "蝦池設定ID: " + TargetName,
+      server, NULL
+    );
     Machine_Ctrl.spiffs.ReWriteDeviceSetting();
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("刪除蝦池設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到蝦池設定: " + TargetName;
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "更新蝦池設定失敗",
+      "找不到蝦池設定: " + TargetName,
+      NULL, client
+    );
   }
 }
 
@@ -348,18 +357,19 @@ void ws_GetPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynami
     D_baseInfoJSON["action"]["status"].set("OK");
     D_baseInfoJSON["action"]["message"].set("查詢蝦池設定完畢");
     D_baseInfoJSON["action"]["target"].set("Pool");
-    D_baseInfoJSON["action"]["method"].set("Update");
+    D_baseInfoJSON["action"]["method"].set("Get");
     D_baseInfoJSON["parameter"][TargetName].set(D_pools[TargetName]);
+    String returnString;
+    serializeJsonPretty(D_baseInfoJSON, returnString);
+    client->binary(returnString);
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("查詢蝦池設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到蝦池設定: " + TargetName;
+    Machine_Ctrl.SetLog(
+      1,
+      "查詢蝦池設定失敗",
+      "找不到蝦池設定: " + TargetName,
+      NULL, client
+    );
   }
-  String returnString;
-  serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
 }
 
 void ws_GetAllPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
@@ -374,7 +384,7 @@ void ws_GetAllPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
   D_baseInfoJSON["action"]["method"].set("Update");
   String returnString;
   serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
+  client->binary(returnString);
 }
 
 void ws_AddNewPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
@@ -382,11 +392,12 @@ void ws_AddNewPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
   JsonObject D_newConfig = D_FormData->as<JsonObject>();
   if (!D_newConfig.containsKey("title")) {
-    D_baseInfoJSON["status"].set("FAIL");
-    D_baseInfoJSON["parameter"]["message"] = "title 參數為必要項目";
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "新增蝦池設定失敗",
+      "title 參數為必要項目",
+      NULL, client
+    );
   } else {
     char random_name[16];
     uint8_t random_bytes[8];
@@ -403,7 +414,13 @@ void ws_AddNewPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
     D_baseInfoJSON["parameter"][String(random_name)].set(D_pools[String(random_name)]);
     String returnString;
     serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
+    server->binaryAll(returnString);
+    Machine_Ctrl.SetLog(
+      5,
+      "新增蝦池設定: "+D_newConfig["title"].as<String>(),
+      "說明: " + D_newConfig["description"].as<String>(),
+      server, NULL
+    );
     Machine_Ctrl.spiffs.ReWriteDeviceSetting();
   }
 }
@@ -418,14 +435,12 @@ void ws_TestSpectrophotometer(AsyncWebSocket *server, AsyncWebSocketClient *clie
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
   JsonObject D_spectrophotometer = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["spectrophotometer"];
   if (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("測試分光光度計設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"].set("儀器忙碌中，請稍後再試");
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      2,
+      "測試分光光度計設定失敗",
+      "儀器忙碌中，請稍後再試",
+      NULL, client
+    );
   }
   else if (D_spectrophotometer.containsKey(TargetName)) {
     DynamicJsonDocument actionItem(10000);
@@ -534,26 +549,14 @@ void ws_TestSpectrophotometer(AsyncWebSocket *server, AsyncWebSocketClient *clie
     actionItem.clear();
     Machine_Ctrl.LOAD__ACTION(settingString);
     Machine_Ctrl.RUN__LOADED_ACTION();
-
-    D_baseInfoJSON["device_status"].set("Busy");
-    D_baseInfoJSON["action"]["status"].set("OK");
-    D_baseInfoJSON["action"]["message"].set("啟動分光光度計設定測試完畢");
-    D_baseInfoJSON["action"]["target"].set("Spectrophotometer");
-    D_baseInfoJSON["action"]["method"].set("Test");
-    D_baseInfoJSON["parameter"]["motor_id"].set(TargetName);
-    D_baseInfoJSON["parameter"]["detail_message"].set("分光光度計: " + TargetName+" 開始測試");
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("測試分光光度計設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到分光光度計設定: " + TargetName;
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "測試分光光度計設定失敗",
+      "找不到分光光度計設定: " + TargetName,
+      NULL, client
+    );
+
   }
 
 }
@@ -573,17 +576,21 @@ void ws_DeleteSpectrophotometerInfo(AsyncWebSocket *server, AsyncWebSocketClient
     D_baseInfoJSON["parameter"]["delete_id"] = TargetName;
     String returnString;
     serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
+    server->binaryAll(returnString);
+    Machine_Ctrl.SetLog(
+      5,
+      "刪除分光光度計設定完畢",
+      "分光光度計設定ID: " + TargetName,
+      server, NULL
+    );
     Machine_Ctrl.spiffs.ReWriteDeviceSetting();
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("刪除分光光度計設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到分光光度計設定: " + TargetName;
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "刪除分光光度計設定失敗",
+      "找不到分光光度計設定: " + TargetName,
+      NULL, client
+    );
   }
 
 }
@@ -605,22 +612,26 @@ void ws_PatchSpectrophotometerInfo(AsyncWebSocket *server, AsyncWebSocketClient 
     D_baseInfoJSON["parameter"][TargetName].set(D_oldConfig);
 
     D_baseInfoJSON["action"]["status"].set("OK");
-    D_baseInfoJSON["action"]["message"].set("更新事件組設定完畢");
+    D_baseInfoJSON["action"]["message"].set("更新分光光度計設定完畢");
     D_baseInfoJSON["action"]["target"].set("Spectrophotometer");
     D_baseInfoJSON["action"]["method"].set("Update");
     String returnString;
     serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
+    server->binaryAll(returnString);
+    Machine_Ctrl.SetLog(
+      5,
+      "更新分光光度計設定完畢",
+      "分光光度計設定名稱: " + D_oldConfig["title"].as<String>(),
+      server, NULL
+    );
     Machine_Ctrl.spiffs.ReWriteDeviceSetting();
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("更新分光光度計設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到分光光度計設定: " + TargetName;
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "更新分光光度計設定失敗",
+      "找不到分光光度計設定: " + TargetName,
+      NULL, client
+    );
   }
 }
 
@@ -636,16 +647,17 @@ void ws_GetSpectrophotometerInfo(AsyncWebSocket *server, AsyncWebSocketClient *c
     D_baseInfoJSON["action"]["target"].set("Spectrophotometer");
     D_baseInfoJSON["action"]["method"].set("Update");
     D_baseInfoJSON["parameter"][TargetName].set(D_spectrophotometer[TargetName]);
+    String returnString;
+    serializeJsonPretty(D_baseInfoJSON, returnString);
+    client->binary(returnString);
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("查詢分光光度計設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到分光光度計設定: " + TargetName;
+    Machine_Ctrl.SetLog(
+      1,
+      "查詢分光光度計設定失敗",
+      "找不到分光光度計設定: " + TargetName,
+      NULL, client
+    );
   }
-  String returnString;
-  serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
 }
 
 void ws_GetAllSpectrophotometerInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
@@ -659,7 +671,7 @@ void ws_GetAllSpectrophotometerInfo(AsyncWebSocket *server, AsyncWebSocketClient
   D_baseInfoJSON["parameter"].set(D_spectrophotometer);
   String returnString;
   serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
+  client->binary(returnString);
 }
 
 void ws_AddNewSpectrophotometerInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
@@ -667,19 +679,21 @@ void ws_AddNewSpectrophotometerInfo(AsyncWebSocket *server, AsyncWebSocketClient
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
   JsonObject D_newConfig = D_FormData->as<JsonObject>();
   if (!D_newConfig.containsKey("index") | !D_newConfig.containsKey("title")) {
-    D_baseInfoJSON["status"].set("FAIL");
-    D_baseInfoJSON["parameter"]["message"] = "index 與 title 參數為必要項目";
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "新增分光光度計失敗",
+      "index 與 title 參數為必要項目",
+      NULL, client
+    );
   } else {
     int newIndex = D_newConfig["index"].as<int>();
     if (newIndex<0 | newIndex>3) {
-      D_baseInfoJSON["status"].set("FAIL");
-      D_baseInfoJSON["parameter"]["message"] = "index需介於0~3(含)";
-      String returnString;
-      serializeJsonPretty(D_baseInfoJSON, returnString);
-      client->text(returnString);
+      Machine_Ctrl.SetLog(
+        1,
+        "新增分光光度計失敗",
+        "index需介於0~3(含)",
+        NULL, client
+      );
     } else {
       char random_name[16];
       uint8_t random_bytes[8];
@@ -698,7 +712,15 @@ void ws_AddNewSpectrophotometerInfo(AsyncWebSocket *server, AsyncWebSocketClient
       D_baseInfoJSON["parameter"][String(random_name)].set(D_spectrophotometer[String(random_name)]);
       String returnString;
       serializeJsonPretty(D_baseInfoJSON, returnString);
-      server->textAll(returnString);
+      server->binaryAll(returnString);
+
+      Machine_Ctrl.SetLog(
+        5,
+        "新增分光光度計設定: "+D_newConfig["title"].as<String>(),
+        "說明: " + D_newConfig["description"].as<String>(),
+        server, NULL
+      );
+
       Machine_Ctrl.spiffs.ReWriteDeviceSetting();
     }
   }
@@ -714,14 +736,12 @@ void ws_TestPeristalticMotor(AsyncWebSocket *server, AsyncWebSocketClient *clien
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
   JsonObject D_peristaltic_motor = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["peristaltic_motor"];
   if (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("測試蠕動馬達設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"].set("儀器忙碌中，請稍後再試");
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      2,
+      "測試蠕動馬達設定失敗",
+      "儀器忙碌中，請稍後再試",
+      NULL, client
+    );
   }
   else if (D_peristaltic_motor.containsKey(TargetName)) {
     DynamicJsonDocument actionItem(10000);
@@ -793,26 +813,13 @@ void ws_TestPeristalticMotor(AsyncWebSocket *server, AsyncWebSocketClient *clien
     actionItem.clear();
     Machine_Ctrl.LOAD__ACTION(settingString);
     Machine_Ctrl.RUN__LOADED_ACTION();
-
-    D_baseInfoJSON["device_status"].set("Busy");
-    D_baseInfoJSON["action"]["status"].set("OK");
-    D_baseInfoJSON["action"]["message"].set("啟動蠕動馬達設定測試完畢");
-    D_baseInfoJSON["action"]["target"].set("PeristalticMotor");
-    D_baseInfoJSON["action"]["method"].set("Test");
-    D_baseInfoJSON["parameter"]["motor_id"].set(TargetName);
-    D_baseInfoJSON["parameter"]["detail_message"].set("蠕動馬達: " + TargetName+" 開始測試");
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("測試蠕動馬達設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到蠕動馬達設定: " + TargetName;
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "測試蠕動馬達設定失敗",
+      "找不到蠕動馬達設定: " + TargetName,
+      NULL, client
+    );
   }
 
 }
@@ -829,16 +836,17 @@ void ws_GetPeristalticMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *cl
     D_baseInfoJSON["action"]["target"].set("PeristalticMotor");
     D_baseInfoJSON["action"]["method"].set("Update");
     D_baseInfoJSON["parameter"][TargetName].set(D_steps_group[TargetName]);
+    String returnString;
+    serializeJsonPretty(D_baseInfoJSON, returnString);
+    client->binary(returnString);
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("查詢蠕動馬達設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到蠕動馬達設定: " + TargetName;
+    Machine_Ctrl.SetLog(
+      1,
+      "查詢蠕動馬達設定失敗",
+      "找不到蠕動馬達設定: " + TargetName,
+      NULL, client
+    );
   }
-  String returnString;
-  serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
 }
 
 void ws_PatchPeristalticMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
@@ -863,17 +871,21 @@ void ws_PatchPeristalticMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *
     D_baseInfoJSON["action"]["method"].set("Update");
     String returnString;
     serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
+    server->binaryAll(returnString);
+    Machine_Ctrl.SetLog(
+      5,
+      "更新事件組設定完畢",
+      "事件組設定名稱: " + D_oldConfig["title"].as<String>(),
+      server, NULL
+    );
     Machine_Ctrl.spiffs.ReWriteDeviceSetting();
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("更新蠕動馬達設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到蠕動馬達設定: " + TargetName;
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "更新蠕動馬達設定失敗",
+      "找不到蠕動馬達設定: " + TargetName,
+      NULL, client
+    );
   }
 
 }
@@ -893,17 +905,21 @@ void ws_DeletePeristalticMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient 
     D_baseInfoJSON["parameter"]["delete_id"] = TargetName;
     String returnString;
     serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
+    server->binaryAll(returnString);
+    Machine_Ctrl.SetLog(
+      5,
+      "刪除蠕動馬達設定完畢",
+      "蠕動馬達設定ID: " + TargetName,
+      server, NULL
+    );
     Machine_Ctrl.spiffs.ReWriteDeviceSetting();
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("刪除蠕動馬達設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到蠕動馬達設定: " + TargetName;
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      2,
+      "刪除蠕動馬達設定失敗",
+      "找不到蠕動馬達設定: " + TargetName,
+      NULL, client
+    );
   }
 }
 
@@ -918,7 +934,7 @@ void ws_GetAllPeristalticMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient 
   D_baseInfoJSON["parameter"].set(D_peristaltic_motor);
   String returnString;
   serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
+  client->binary(returnString);
 }
 
 void ws_AddNewPeristalticMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
@@ -926,19 +942,21 @@ void ws_AddNewPeristalticMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient 
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
   JsonObject D_newConfig = D_FormData->as<JsonObject>();
   if (!D_newConfig.containsKey("index") | !D_newConfig.containsKey("title")) {
-    D_baseInfoJSON["status"].set("FAIL");
-    D_baseInfoJSON["parameter"]["message"] = "index 與 title 參數為必要項目";
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      2,
+      "新增蠕動馬達失敗",
+      "index 與 title 參數為必要項目",
+      NULL, client
+    );
   } else {
     int newIndex = D_newConfig["index"].as<int>();
     if (newIndex<0 | newIndex>7) {
-      D_baseInfoJSON["status"].set("FAIL");
-      D_baseInfoJSON["parameter"]["message"] = "index需介於0~7(含)";
-      String returnString;
-      serializeJsonPretty(D_baseInfoJSON, returnString);
-      client->text(returnString);
+      Machine_Ctrl.SetLog(
+        2,
+        "新增蠕動馬達失敗",
+        "index需介於0~7(含)",
+        NULL, client
+      );
     } else {
       char random_name[16];
       uint8_t random_bytes[8];
@@ -957,7 +975,15 @@ void ws_AddNewPeristalticMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient 
       D_baseInfoJSON["parameter"][String(random_name)].set(D_peristaltic_motor[String(random_name)]);
       String returnString;
       serializeJsonPretty(D_baseInfoJSON, returnString);
-      server->textAll(returnString);
+      server->binaryAll(returnString);
+
+      Machine_Ctrl.SetLog(
+        5,
+        "新增蠕動馬達設定: "+D_newConfig["title"].as<String>(),
+        "說明: " + D_newConfig["description"].as<String>(),
+        server, NULL
+      );
+
       Machine_Ctrl.spiffs.ReWriteDeviceSetting();
     }
   }
@@ -973,14 +999,12 @@ void ws_TestPwmMotor(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynam
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
   JsonObject D_pwm_motor = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pwm_motor"];
   if (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("測試伺服馬達設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"].set("儀器忙碌中，請稍後再試");
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      2,
+      "測試伺服馬達設定失敗",
+      "儀器忙碌中，請稍後再試",
+      NULL, client
+    );
   }
   else if (D_pwm_motor.containsKey(TargetName)) {
     DynamicJsonDocument actionItem(10000);
@@ -1055,31 +1079,21 @@ void ws_TestPwmMotor(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynam
     L_eventGroupList.add(eventGroupItem);
     L_stepList.add(stepItem);
 
-    String settingString;
-    serializeJson(actionItem,settingString);
-    actionItem.clear();
-    Machine_Ctrl.LOAD__ACTION(settingString);
-    Machine_Ctrl.RUN__LOADED_ACTION();
+    // String settingString;
+    // serializeJson(actionItem,settingString);
+    // actionItem.clear();
+    // Machine_Ctrl.LOAD__ACTION(settingString);
+    // Machine_Ctrl.RUN__LOADED_ACTION();
 
-    D_baseInfoJSON["device_status"].set("Busy");
-    D_baseInfoJSON["action"]["status"].set("OK");
-    D_baseInfoJSON["action"]["message"].set("啟動伺服馬達設定測試完畢");
-    D_baseInfoJSON["action"]["target"].set("PwmMotor");
-    D_baseInfoJSON["action"]["method"].set("Test");
-    D_baseInfoJSON["parameter"]["motor_id"].set(TargetName);
-    D_baseInfoJSON["parameter"]["detail_message"].set("伺服馬達: " + TargetName+" 開始測試");
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
+    Machine_Ctrl.LOAD__ACTION(actionItem.as<JsonObject>());
+    Machine_Ctrl.RUN__LOADED_ACTION();
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("測試伺服馬達設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到伺服馬達設定: " + TargetName;
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "測試伺服馬達設定失敗",
+      "找不到伺服馬達設定: " + TargetName,
+      NULL, client
+    );
   }
 
 }
@@ -1096,16 +1110,17 @@ void ws_GetPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dy
     D_baseInfoJSON["action"]["target"].set("PwmMotor");
     D_baseInfoJSON["action"]["method"].set("Update");
     D_baseInfoJSON["parameter"][TargetName].set(D_steps_group[TargetName]);
+    String returnString;
+    serializeJsonPretty(D_baseInfoJSON, returnString);
+    client->binary(returnString);
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("查詢伺服馬達設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到伺服馬達設定: " + TargetName;
+    Machine_Ctrl.SetLog(
+      1,
+      "查詢伺服馬達設定失敗",
+      "找不到伺服馬達設定: " + TargetName,
+      NULL, client
+    );
   }
-  String returnString;
-  serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
 }
 
 void ws_PatchPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
@@ -1125,22 +1140,26 @@ void ws_PatchPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, 
     D_baseInfoJSON["parameter"][TargetName].set(D_oldConfig);
 
     D_baseInfoJSON["action"]["status"].set("OK");
-    D_baseInfoJSON["action"]["message"].set("更新事件組設定完畢");
+    D_baseInfoJSON["action"]["message"].set("更新伺服馬達設定完畢");
     D_baseInfoJSON["action"]["target"].set("PwmMotor");
     D_baseInfoJSON["action"]["method"].set("Update");
     String returnString;
     serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
+    server->binaryAll(returnString);
+    Machine_Ctrl.SetLog(
+      5,
+      "更新伺服馬達設定完畢",
+      "伺服馬達設定名稱: " + D_oldConfig["title"].as<String>(),
+      server, NULL
+    );
     Machine_Ctrl.spiffs.ReWriteDeviceSetting();
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("更新伺服馬達設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到伺服馬達設定: " + TargetName;
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "更新伺服馬達設定失敗",
+      "找不到伺服馬達設定: " + TargetName,
+      NULL, client
+    );
   }
 
 }
@@ -1160,17 +1179,21 @@ void ws_DeletePwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
     D_baseInfoJSON["parameter"]["delete_id"] = TargetName;
     String returnString;
     serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
+    server->binaryAll(returnString);
+    Machine_Ctrl.SetLog(
+      5,
+      "刪除伺服馬達設定完畢",
+      "伺服馬達設定ID: " + TargetName,
+      server, NULL
+    );
     Machine_Ctrl.spiffs.ReWriteDeviceSetting();
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("刪除伺服馬達設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到伺服馬達設定: " + TargetName;
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "刪除伺服馬達設定失敗",
+      "找不到伺服馬達設定: " + TargetName,
+      NULL, client
+    );
   }
 }
 
@@ -1179,19 +1202,21 @@ void ws_AddNewPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
   JsonObject D_newConfig = D_FormData->as<JsonObject>();
   if (!D_newConfig.containsKey("index") | !D_newConfig.containsKey("title")) {
-    D_baseInfoJSON["status"].set("FAIL");
-    D_baseInfoJSON["parameter"]["message"] = "index 與 title 參數為必要項目";
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "新增伺服馬達設定失敗",
+      "index 與 title 參數為必要項目",
+        NULL, client
+    );
   } else {
     int newIndex = D_newConfig["index"].as<int>();
     if (newIndex<0 | newIndex>32) {
-      D_baseInfoJSON["status"].set("FAIL");
-      D_baseInfoJSON["parameter"]["message"] = "index需介於0~31(含)";
-      String returnString;
-      serializeJsonPretty(D_baseInfoJSON, returnString);
-      client->text(returnString);
+      Machine_Ctrl.SetLog(
+        1,
+        "新增伺服馬達設定失敗",
+        "index需介於0~31(含)",
+        NULL, client
+      );
     } else {
       char random_name[16];
       uint8_t random_bytes[8];
@@ -1210,7 +1235,13 @@ void ws_AddNewPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
       D_baseInfoJSON["parameter"][String(random_name)].set(D_pwm_motor[String(random_name)]);
       String returnString;
       serializeJsonPretty(D_baseInfoJSON, returnString);
-      server->textAll(returnString);
+      server->binaryAll(returnString);
+      Machine_Ctrl.SetLog(
+        5,
+        "新增伺服馬達設定: "+D_newConfig["title"].as<String>(),
+        "說明: " + D_newConfig["description"].as<String>(),
+        server, NULL
+      );
       Machine_Ctrl.spiffs.ReWriteDeviceSetting();
     }
   }
@@ -1227,7 +1258,7 @@ void ws_GetAllPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
   D_baseInfoJSON["parameter"].set(D_pwm_motor);
   String returnString;
   serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
+  client->binary(returnString);
 }
 
 
@@ -1240,14 +1271,12 @@ void ws_TestEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJ
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
   JsonObject D_pwm_motor = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["event_group"];
   if (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("測試事件組設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"].set("儀器忙碌中，請稍後再試");
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      2,
+      "測試事件組設定失敗",
+      "儀器忙碌中，請稍後再試",
+        NULL, client
+    );
   }
   else if (D_pwm_motor.containsKey(TargetName)) {
     DynamicJsonDocument actionItem(100000);
@@ -1284,30 +1313,16 @@ void ws_TestEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJ
 
     String settingString;
     serializeJson(actionItem,settingString);
-    serializeJsonPretty(actionItem, Serial);
     actionItem.clear();
     Machine_Ctrl.LOAD__ACTION(settingString);
     Machine_Ctrl.RUN__LOADED_ACTION();
-
-    D_baseInfoJSON["device_status"].set("Busy");
-    D_baseInfoJSON["action"]["status"].set("OK");
-    D_baseInfoJSON["action"]["message"].set("啟動事件組設定測試完畢");
-    D_baseInfoJSON["action"]["target"].set("Event");
-    D_baseInfoJSON["action"]["method"].set("Test");
-    D_baseInfoJSON["parameter"]["event_id"].set(TargetName);
-    D_baseInfoJSON["parameter"]["detail_message"].set("事件組: " + TargetName+" 開始測試");
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("測試事件組設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到事件組設定: " + TargetName;
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "測試事件組設定失敗",
+      "找不到事件組設定: " + TargetName,
+        NULL, client
+    );
   }
 
 }
@@ -1323,7 +1338,7 @@ void ws_GetAllEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dy
   D_baseInfoJSON["parameter"].set(D_event_group);
   String returnString;
   serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
+  client->binary(returnString);
 }
 
 void ws_GetEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
@@ -1338,16 +1353,17 @@ void ws_GetEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynam
     D_baseInfoJSON["action"]["target"].set("Event");
     D_baseInfoJSON["action"]["method"].set("Update");
     D_baseInfoJSON["parameter"][TargetName].set(D_event_group[TargetName]);
+    String returnString;
+    serializeJsonPretty(D_baseInfoJSON, returnString);
+    client->binary(returnString);
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("查詢事件組設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到事件組設定: " + TargetName;
+    Machine_Ctrl.SetLog(
+      1,
+      "查詢事件組設定失敗",
+      "找不到事件組設定: " + TargetName,
+        NULL, client
+    );
   }
-  String returnString;
-  serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
 }
 
 void ws_PatchEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
@@ -1359,8 +1375,6 @@ void ws_PatchEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
   if (D_event_group.containsKey(TargetName)) {
     JsonObject D_newConfig = D_FormData->as<JsonObject>();
     JsonObject D_oldConfig = D_event_group[TargetName];
-
-
     if (D_oldConfig["title"].as<String>() != D_newConfig["title"].as<String>()) {
       D_oldConfig["title"] = D_newConfig["title"].as<String>();
     }
@@ -1378,18 +1392,21 @@ void ws_PatchEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
     D_baseInfoJSON["action"]["method"].set("Update");
     String returnString;
     serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
+    server->binaryAll(returnString);
+    Machine_Ctrl.SetLog(
+      5,
+      "更新事件組設定完畢",
+      "事件組設定名稱: " + D_oldConfig["title"].as<String>(),
+      server, NULL
+    );
     Machine_Ctrl.spiffs.ReWriteDeviceSetting();
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("更新事件組設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到事件組設定: " + TargetName;
-    
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "更新事件組設定失敗",
+      "找不到事件組設定: " + TargetName,
+        NULL, client
+    );
   }
 }
 
@@ -1408,17 +1425,21 @@ void ws_DeleteEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dy
     D_baseInfoJSON["parameter"]["delete_id"] = TargetName;
     String returnString;
     serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
+    server->binaryAll(returnString);
+    Machine_Ctrl.SetLog(
+      5,
+      "刪除事件組設定完畢",
+      "事件組設定ID: " + TargetName,
+      server, NULL
+    );
     Machine_Ctrl.spiffs.ReWriteDeviceSetting();
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("刪除流程設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到事件組設定: " + TargetName;
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "刪除事件組設定失敗",
+      "找不到事件組設定: " + TargetName,
+        NULL, client
+    );
   }
 }
 
@@ -1427,14 +1448,13 @@ void ws_AddNewEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dy
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
   JsonObject D_newConfig = D_FormData->as<JsonObject>();
   if (!D_newConfig.containsKey("title")) {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("新增事件組設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "title 參數為必要項目";
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "新增事件組設定失敗",
+      "title 參數為必要項目",
+        NULL, client
+    );
+
   } else {
     JsonObject D_event_group = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["event_group"];
     char random_name[16];
@@ -1456,7 +1476,15 @@ void ws_AddNewEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dy
     D_baseInfoJSON["action"]["method"].set("Update");
     String returnString;
     serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
+    server->binaryAll(returnString);
+
+    Machine_Ctrl.SetLog(
+      5,
+      "新增事件組設定: "+D_newConfig["title"].as<String>(),
+      "說明: " + D_newConfig["description"].as<String>(),
+      server, NULL
+    );
+
     Machine_Ctrl.spiffs.ReWriteDeviceSetting();
   }
 }
@@ -1471,14 +1499,12 @@ void ws_TestStep(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJs
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
   JsonObject D_steps_group = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["steps_group"];
   if (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("測試步驟設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"].set("儀器忙碌中，請稍後再試");
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      2,
+      "測試步驟設定失敗",
+      "儀器忙碌中，請稍後再試",
+        NULL, client
+    );
   }
   else if (D_steps_group.containsKey(TargetName)) {
     //? 流程設定
@@ -1506,25 +1532,13 @@ void ws_TestStep(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJs
     actionItem.clear();
     Machine_Ctrl.LOAD__ACTION(settingString);
     Machine_Ctrl.RUN__LOADED_ACTION();
-
-    D_baseInfoJSON["device_status"].set("Busy");
-    D_baseInfoJSON["action"]["status"].set("OK");
-    D_baseInfoJSON["action"]["message"].set("啟動步驟設定測試完畢");
-    D_baseInfoJSON["action"]["target"].set("Step");
-    D_baseInfoJSON["action"]["method"].set("Test");
-    D_baseInfoJSON["parameter"]["step_id"].set(TargetName);
-    D_baseInfoJSON["parameter"]["detail_message"].set("步驟: " + TargetName+" 開始測試");
-    String returnString;
-    server->textAll(returnString);
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("測試步驟設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"].set("找不到步驟設定 " + TargetName);
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "測試步驟設定失敗",
+      "找不到步驟設定: "+TargetName,
+        NULL, client
+    );
   }
 }
 
@@ -1541,7 +1555,7 @@ void ws_GetAllStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
 
   String returnString;
   serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
+  client->binary(returnString);
 }
 
 void ws_GetStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
@@ -1557,15 +1571,16 @@ void ws_GetStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynami
     D_baseInfoJSON["action"]["method"].set("Update");
     D_baseInfoJSON["parameter"][TargetName].set(D_steps_group[TargetName]);
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("查詢步驟設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到步驟設定: " + TargetName;
+    Machine_Ctrl.SetLog(
+      1,
+      "查詢步驟設定失敗",
+      "找不到步驟設定: "+TargetName,
+        NULL, client
+    );
   }
   String returnString;
   serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
+  client->binary(returnString);
 }
 
 void ws_DeleteStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
@@ -1583,17 +1598,23 @@ void ws_DeleteStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
     D_baseInfoJSON["parameter"]["delete_id"] = TargetName;
     String returnString;
     serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
+    server->binaryAll(returnString);
+
+    Machine_Ctrl.SetLog(
+      5,
+      "刪除步驟設定完畢",
+      "步驟ID: "+TargetName,
+        NULL, client
+    );
+
     Machine_Ctrl.spiffs.ReWriteDeviceSetting();
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("刪除步驟設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到步驟設定: " + TargetName;
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "刪除步驟設定失敗",
+      "找不到步驟設定: "+TargetName,
+        NULL, client
+    );
   }
 }
 
@@ -1624,17 +1645,23 @@ void ws_PatchStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyna
     D_baseInfoJSON["action"]["method"].set("Update");
     String returnString;
     serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
+    server->binaryAll(returnString);
+
+    Machine_Ctrl.SetLog(
+      5,
+      "修改步驟設定完畢",
+      "步驟名稱: "+D_newConfig["title"].as<String>(),
+        server, NULL
+    );
+
     Machine_Ctrl.spiffs.ReWriteDeviceSetting();
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("修改步驟設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到步驟設定: " + TargetName;
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "修改步驟設定失敗",
+      "找不到步驟設定: "+TargetName,
+      NULL, client
+    );
   }
 }
 
@@ -1643,14 +1670,12 @@ void ws_AddNewStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
   JsonObject D_newConfig = D_FormData->as<JsonObject>();
   if (!D_newConfig.containsKey("title")) {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("新增流程設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "title 參數為必要項目";
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "新增流程設定失敗",
+      "title 參數為必要項目",
+      NULL, client
+    );
   } else {
     JsonObject D_steps_group = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["steps_group"];
     char random_name[16];
@@ -1670,7 +1695,13 @@ void ws_AddNewStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
     D_baseInfoJSON["parameter"][NewIDString].set(D_steps_group[NewIDString]);
     String returnString;
     serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
+    server->binaryAll(returnString);
+    Machine_Ctrl.SetLog(
+      5,
+      "新增步驟設定完畢",
+      "名稱: "+D_steps_group[NewIDString]["title"].as<String>(),
+      server, NULL
+    );
     Machine_Ctrl.spiffs.ReWriteDeviceSetting();
   }
 }
@@ -1685,14 +1716,13 @@ void ws_RunPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynami
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
   JsonObject D_pipeline = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pipeline"];
   if (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("執行流程設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"].set("儀器忙碌中，請稍後再試");
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+
+    Machine_Ctrl.SetLog(
+      2,
+      "執行流程設定失敗",
+      "儀器忙碌中，請稍後再試",
+      NULL, client
+    );
   }
   else if (D_pipeline.containsKey(TargetName)) {
     //? 流程設定
@@ -1705,25 +1735,13 @@ void ws_RunPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynami
     PipelineItem.clear();
     Machine_Ctrl.LOAD__ACTION(settingString);
     Machine_Ctrl.RUN__LOADED_ACTION();
-
-    D_baseInfoJSON["device_status"].set("Busy");
-    D_baseInfoJSON["action"]["status"].set("OK");
-    D_baseInfoJSON["action"]["message"].set("開始執行流程");
-    D_baseInfoJSON["action"]["target"].set("Pipeline");
-    D_baseInfoJSON["action"]["method"].set("RUN");
-    D_baseInfoJSON["parameter"]["pipeline_id"].set(TargetName);
-    D_baseInfoJSON["parameter"]["detail_message"].set("流程: " + TargetName+" 開始執行");
-    String returnString;
-    server->textAll(returnString);
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("執行流程失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"].set("找不到流程設定 " + TargetName);
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "執行流程失敗",
+      "找不到流程設定: "+TargetName,
+      NULL, client
+    );
   }
 
 }
@@ -1735,45 +1753,32 @@ void ws_TestPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynam
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
   JsonObject D_pipeline = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pipeline"];
   if (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("測試流程設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"].set("儀器忙碌中，請稍後再試");
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      2,
+      "測試流程設定失敗",
+      "儀器忙碌中，請稍後再試",
+      NULL, client
+    );
   }
   else if (D_pipeline.containsKey(TargetName)) {
     //? 流程設定
-    DynamicJsonDocument PipelineItem(100000);
+    DynamicJsonDocument PipelineItem(1000000);
     JsonObject PipelineJSONItem = BuildPipelineJSONItem(TargetName, D_pipeline[TargetName].as<JsonObject>());
     PipelineItem.set(PipelineJSONItem);
     PipelineItem["data_type"] = String("TEST");
-    String settingString;
-    serializeJson(PipelineItem,settingString);
-    PipelineItem.clear();
-    Machine_Ctrl.LOAD__ACTION(settingString);
+    // String settingString;
+    // serializeJson(PipelineItem,settingString);
+    // PipelineItem.clear();
+    // Machine_Ctrl.LOAD__ACTION(settingString);
+    Machine_Ctrl.LOAD__ACTION(PipelineItem.as<JsonObject>());
     Machine_Ctrl.RUN__LOADED_ACTION();
-
-    D_baseInfoJSON["device_status"].set("Busy");
-    D_baseInfoJSON["action"]["status"].set("OK");
-    D_baseInfoJSON["action"]["message"].set("啟動流程設定測試完畢");
-    D_baseInfoJSON["action"]["target"].set("Pipeline");
-    D_baseInfoJSON["action"]["method"].set("Test");
-    D_baseInfoJSON["parameter"]["pipeline_id"].set(TargetName);
-    D_baseInfoJSON["parameter"]["detail_message"].set("流程: " + TargetName+" 開始測試");
-    String returnString;
-    server->textAll(returnString);
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("測試流程設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"].set("找不到流程設定 " + TargetName);
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "測試流程設定失敗",
+      "找不到流程設定ID: " + TargetName,
+      NULL, client
+    );
   }
 
 }
@@ -1790,16 +1795,17 @@ void ws_GetPipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dy
     D_baseInfoJSON["action"]["target"].set("Pipeline");
     D_baseInfoJSON["action"]["method"].set("Update");
     D_baseInfoJSON["parameter"][TargetName].set(D_pipeline[TargetName]);
+    String returnString;
+    serializeJsonPretty(D_baseInfoJSON, returnString);
+    client->binary(returnString);
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("查詢流程設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到流程設定: " + TargetName;
+    Machine_Ctrl.SetLog(
+      1,
+      "查詢流程設定失敗",
+      "找不到流程設定ID: " + TargetName,
+      NULL, client
+    );
   }
-  String returnString;
-  serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
 }
 
 void ws_PatchPipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
@@ -1831,17 +1837,23 @@ void ws_PatchPipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, 
     D_baseInfoJSON["action"]["method"].set("Update");
     String returnString;
     serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
+    server->binaryAll(returnString);
+
+    Machine_Ctrl.SetLog(
+      5,
+      "更新流程設定完畢",
+      "流程名稱: " + D_oldConfig["title"].as<String>(),
+      server, NULL
+    );
+
     Machine_Ctrl.spiffs.ReWriteDeviceSetting();
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("更新流程設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到流程設定: " + TargetName;
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "更新流程設定失敗",
+      "找不到流程設定: " + TargetName,
+      NULL, client
+    );
   }
 }
 
@@ -1860,17 +1872,23 @@ void ws_DeletePipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
     D_baseInfoJSON["parameter"]["delete_id"] = TargetName;
     String returnString;
     serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
+    server->binaryAll(returnString);
+
+    Machine_Ctrl.SetLog(
+      5,
+      "刪除流程設定完畢",
+      "流程設定名稱: " + TargetName,
+      server, NULL
+    );
+
     Machine_Ctrl.spiffs.ReWriteDeviceSetting();
   } else {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("刪除流程設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "找不到流程設定: " + TargetName;
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "刪除流程設定失敗",
+      "找不到流程設定: " + TargetName,
+      NULL, client
+    );
   }
 }
 
@@ -1885,7 +1903,7 @@ void ws_GetAllPipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
   D_baseInfoJSON["parameter"].set(D_pipeline);
   String returnString;
   serializeJsonPretty(D_baseInfoJSON, returnString);
-  client->text(returnString);
+  client->binary(returnString);
 }
 
 void ws_AddNewPipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
@@ -1893,14 +1911,12 @@ void ws_AddNewPipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
   JsonObject D_newConfig = D_FormData->as<JsonObject>();
   if (!D_newConfig.containsKey("title") | !D_newConfig.containsKey("pool")) {
-    D_baseInfoJSON["action"]["status"].set("FAIL");
-    D_baseInfoJSON["action"]["message"].set("新增流程設定失敗");
-    D_baseInfoJSON["action"]["target"].set("PopWindow");
-    D_baseInfoJSON["action"]["method"].set("Update");
-    D_baseInfoJSON["parameter"]["detail_message"] = "title 參數與 pool 參數為必要項目";
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    client->text(returnString);
+    Machine_Ctrl.SetLog(
+      1,
+      "新增流程設定失敗",
+      "title 參數與 pool 參數為必要項目",
+      NULL, client
+    );
   } else {
     JsonObject D_pipeline = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pipeline"];
     char random_name[16];
@@ -1920,10 +1936,18 @@ void ws_AddNewPipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
     D_baseInfoJSON["action"]["status"].set("OK");
     D_baseInfoJSON["action"]["message"].set("新增流程設定完畢");
     D_baseInfoJSON["action"]["target"].set("Pipeline");
-    D_baseInfoJSON["action"]["method"].set("Update");
+    D_baseInfoJSON["action"]["method"].set("New");
     String returnString;
     serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->textAll(returnString);
+    server->binaryAll(returnString);
+
+    Machine_Ctrl.SetLog(
+      5,
+      "新增流程設定: "+D_pipeline[NewIDString]["title"].as<String>(),
+      "說明: " + D_pipeline[NewIDString]["description"].as<String>(),
+      server, NULL
+    );
+
     Machine_Ctrl.spiffs.ReWriteDeviceSetting();
   }
 }

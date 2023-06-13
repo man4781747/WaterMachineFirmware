@@ -70,7 +70,7 @@ class C_Peristaltic_Motors_Ctrl
     void RunMotor(uint8_t *moduleDataList);
     void SetMotorStatus(int index, PeristalticMotorStatus status);
     void ShowNowSetting();
-
+    void OpenAllPin();
   private:
 };
 

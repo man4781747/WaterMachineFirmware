@@ -46,7 +46,9 @@ struct Peristaltic_task_config {
 class SMachine_Ctrl
 {
   public:
-    SMachine_Ctrl(void){};
+    SMachine_Ctrl(void){
+      logArray = DeviceLogSave->createNestedArray("Log");
+    };
 
     ////////////////////////////////////////////////////
     // For 初始化
@@ -55,30 +57,6 @@ class SMachine_Ctrl
     void INIT_SPIFFS_config();
     void INIT_I2C_Wires();
     void INIT_PoolData();
-
-    ////////////////////////////////////////////////////
-    // For 更新設定
-    ////////////////////////////////////////////////////
-
-    void UpdatePWMMotorSetting(JsonObject PWMMotorSetting);
-
-    void UpdatePeristalticMotorSetting(JsonObject PeristalticMotorSetting);
-
-    void UpdateEventGroupSetting(JsonObject EventListSetting);
-
-    void UpdateStepGroupSetting(JsonObject StepGroupSetting);
-
-    ////////////////////////////////////////////////////
-    // For 資訊獲得
-    ////////////////////////////////////////////////////  
-
-    void PrintAllPWNMotorSetting();
-
-    void PrintAllPeristalticMotorSetting();
-
-    void PrintAllEventSetting();
-
-    void PrintAllStepSetting();
 
 
     ////////////////////////////////////////////////////
@@ -96,16 +74,10 @@ class SMachine_Ctrl
     // EVENT_RESULT RUN__PWMMotorTestEvent(String motorID);
 
     void LOAD__ACTION(String actionJSONString);
+    void LOAD__ACTION(JsonObject actionJSON);
     void RUN__LOADED_ACTION();
 
-
-    EVENT_RESULT RUN__PWMMotorTestEvent(String motorID);
-    
-    EVENT_RESULT RUN__PWMMotorEvent(JsonArray PWMMotorEventList);
-
     EVENT_RESULT RUN__PeristalticMotorEvent(Peristaltic_task_config *config_);
-
-    EVENT_RESULT RUN__History();
 
     void STOP_AllTask();
 
@@ -114,19 +86,14 @@ class SMachine_Ctrl
     void Stop_AllPeristalticMotor();
 
     ////////////////////////////////////////////////////
-    // For 不間斷監聽
-    ////////////////////////////////////////////////////
-
-
-    ////////////////////////////////////////////////////
     // For 互動相關
     ////////////////////////////////////////////////////
 
-    DynamicJsonDocument GetDeviceInfos();
+    DynamicJsonDocument SetLog(int Level, String Title, String description, AsyncWebSocket *server=NULL, AsyncWebSocketClient *client=NULL);
 
-    String GetDeviceInfosString();
-
-    DynamicJsonDocument GetEventStatus();
+    //* 廣播指定池的感測器資料出去
+    //!! 注意，這個廣撥出去的資料是會進資料庫的
+    void BroadcastNewPoolData(String poolID);
 
     ////////////////////////////////////////////////////
     // For 基礎行為
@@ -134,10 +101,7 @@ class SMachine_Ctrl
 
     void LoadStepToRunHistoryItem(String StepID, String TrigerBy);
 
-    ////////////////////////////////////////////////////
-    // For 組合行為
-    ////////////////////////////////////////////////////
-
+    String GetNowTimeString();
 
     ////////////////////////////////////////////////////
     // For 測試
@@ -156,9 +120,11 @@ class SMachine_Ctrl
      * 
      */
     TaskHandle_t TASK__NOW_ACTION;
-    DynamicJsonDocument *loadedAction = new DynamicJsonDocument(500000);
+    DynamicJsonDocument *loadedAction = new DynamicJsonDocument(1000000);
 
     DynamicJsonDocument *sensorDataSave = new DynamicJsonDocument(50000);
+    DynamicJsonDocument *DeviceLogSave = new DynamicJsonDocument(50000);
+    JsonArray logArray;
 
     TaskHandle_t TASK__PWM_MOTOR;
     TaskHandle_t TASK__Peristaltic_MOTOR;

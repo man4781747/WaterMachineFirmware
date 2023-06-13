@@ -69,13 +69,18 @@ void Motor_Ctrl::AddNewMotor(int channelIndex_, String motorID_, String motorNam
 
 void Motor_Ctrl::SetMotorTo(int channelIndex_, int angle)
 {
-  ESP_LOGI("Motor","Motor %02d change to: %03d", channelIndex_, angle);
+  // ESP_LOGI("Motor","Motor %02d change to: %03d", channelIndex_, angle);
   int pulse_wide = map(angle, 0, 180, 500, 2500);
   int pulse_width = int((float)pulse_wide / 1000000.*50.*4096.);
   if (channelIndex_/16 == 1) {
     pwm_2->setPWM(channelIndex_%16, 0, pulse_width);
+    pwm_2->setPWM(channelIndex_%16, 0, pulse_width);
   } else {
     pwm_1->setPWM(channelIndex_%16, 0, pulse_width);
+    pwm_1->setPWM(channelIndex_%16, 0, pulse_width);
+    // Serial.println("test");
+    // Serial.println(channelIndex_%16);
+    // Serial.println(pulse_width);
   }
 }
 
@@ -149,6 +154,10 @@ void C_Peristaltic_Motors_Ctrl::RunMotor(uint8_t *moduleDataList)
 {
   digitalWrite(STCP, LOW);
   for (int index = moduleNum-1;index >= 0;index--) {
+    for (int i = 0; i <= 7; i++) {
+      Serial.print(((moduleDataList[index] >> i) & 1) ? '1' : '0');
+    }
+    Serial.println();
     shiftOut(DATA, SHCP, MSBFIRST, moduleDataList[index]);
   }
   digitalWrite(STCP, HIGH);
@@ -158,6 +167,12 @@ void C_Peristaltic_Motors_Ctrl::RunMotor(uint8_t *moduleDataList)
 void C_Peristaltic_Motors_Ctrl::SetAllMotorStop()
 {
   memset(moduleDataList, 0, moduleNum);
+  RunMotor(moduleDataList);
+}
+
+void C_Peristaltic_Motors_Ctrl::OpenAllPin()
+{
+  memset(moduleDataList, 0b11111111, moduleNum);
   RunMotor(moduleDataList);
 }
 

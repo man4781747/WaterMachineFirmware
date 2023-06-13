@@ -23,17 +23,7 @@ class SPOOL_DATA
     double           NH4 = 0;     // 氨氮濃度
 
     double       pH_volt = 0;     // 酸鹼電壓
-
     double            pH = 0;     // 酸鹼值
-    double salinity_volt = 0;     // 鹽度電壓
-    double      salinity = 0;     // 鹽度濃度
-    double   Temperature = 0;     // 溫度
-
-    double DO_percentage = 0;     // 溶氧百分比
-    double            DO = 0;     // 溶氧濃度
-    double residual_chlorine = 0; // 餘氯
-    double         ca_mg = 0;     // 鈣鎂離子濃度
-    double        vibrio = 0;     // 弧菌數
 };
 
 
