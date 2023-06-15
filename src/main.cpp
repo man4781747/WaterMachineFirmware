@@ -14,6 +14,8 @@
 #include <esp_log.h>
 #include <ArduinoJson.h>
 
+#include "CalcFunction.h"
+
 // #include "../lib/LTR_329ALS_01/src/LTR_329ALS_01.h"
 
 #include "Machine_Ctrl/src/Machine_Ctrl.h"
@@ -37,87 +39,6 @@ HTTPClient http;
 String PostString;
 time_t nowTime;
 char datetimeChar[30];
-/**
- * @brief 計算平均值
- * 
- * @param x 
- * @param len 
- * @return double 
- */
-double average(const uint16_t* x, int len)
-{
-  uint32_t sum = 0;
-  for (int i = 0; i < len; i++) {
-    sum += x[i];
-  }
-  double average = static_cast<double>(sum) / len;
-  return average;
-}
-
-/**
- * @brief 獲得方差
- * 
- * @param x 
- * @param len 
- * @return double 
- */
-double variance(const uint16_t* x, int len)
-{
-  double sum = 0;
-  double avg = average(x, len);
-  for (int i = 0; i < len; i++) {
-    double diff = static_cast<double>(x[i]) - avg;
-    sum += diff * diff;
-  }
-  double variance = static_cast<double>(sum) / len;
-  return variance;
-}
-
-/**
- * @brief 得到標準差
- * 
- * @param x 
- * @param len 
- * @return double 
- */
-double standardDev(const uint16_t* x, int len)
-{
-  double var = variance(x, len);
-  if (var == 0.) {
-    return 0.;
-  }
-  return sqrt(var);
-}
-
-/**
- * @brief 獲得過濾後的平均數值
- * 
- * @param x 
- * @param len 
- * @return double 
- * 
- * @note 計算標準差時，有可能遇到標準差算出來為0的狀況，
- * 此時平均值就為答案
- */
-double afterFilterValue(const uint16_t* x, int len)
-{
-  double standard = standardDev(x, len);
-  double avg = average(x, len);
-
-  if (standard == 0.) {
-    return avg;
-  }
-  uint32_t sum = 0;
-  double sumLen = 0.;
-
-  for (int i = 0; i < len; i++) {
-    if (abs((double)x[i]-avg) < standard*2) {
-      sum += x[i];
-      sumLen += 1;
-    }
-  }
-  return static_cast<double>(sum)/sumLen;
-}
 
 void sensorTest(int Index);
 long oneMinSave = 0;
@@ -230,29 +151,29 @@ void loop() {
   // Machine_Ctrl.WireOne.write(1 << 0);
   // Machine_Ctrl.WireOne.endTransmission();
   // delay(100);
-  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_1X);
-  ALS_01_Data_t test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
-  Serial.printf("%d,%d,", test.CH_0, test.CH_1);
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_1X);
+  // ALS_01_Data_t test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  // Serial.printf("%d,%d,", test.CH_0, test.CH_1);
 
-  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_2X);
-  test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
-  Serial.printf("%d,%d,", test.CH_0, test.CH_1);
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_2X);
+  // test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  // Serial.printf("%d,%d,", test.CH_0, test.CH_1);
 
-  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_4X);
-  test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
-  Serial.printf("%d,%d,", test.CH_0, test.CH_1);
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_4X);
+  // test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  // Serial.printf("%d,%d,", test.CH_0, test.CH_1);
 
-  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_8X);
-  test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
-  Serial.printf("%d,%d,", test.CH_0, test.CH_1);
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_8X);
+  // test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  // Serial.printf("%d,%d,", test.CH_0, test.CH_1);
 
-  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_48X);
-  test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
-  Serial.printf("%d,%d,", test.CH_0, test.CH_1);
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_48X);
+  // test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  // Serial.printf("%d,%d,", test.CH_0, test.CH_1);
 
-  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_96X);
-  test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
-  Serial.printf("%d,%d\n", test.CH_0, test.CH_1);
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_96X);
+  // test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  // Serial.printf("%d,%d\n", test.CH_0, test.CH_1);
   delay(1000);
   // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
   // Serial.println(1);

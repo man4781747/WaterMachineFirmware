@@ -857,9 +857,11 @@
     },
     "PH_Value_Get" : {
         "title": "PH值獲得",
-        "description": "此段Code尚未編寫，待材料到期後處裡",
+        "description": "獲得PH數值",
         "event": [
-            { "wait": 5 }
+          {"ph_meter": [
+            {"ph_meter_id": "A"}
+          ]}
         ]
     },
     "Clear_PH_Sensor" : {
@@ -913,7 +915,6 @@
             ]}
         ]
     },
-
 
     "Push_POOL2_Water_To_Sample_Liquid_Room": {
       "title": "抽取池2的水到檢體暫存水池",
@@ -1096,7 +1097,8 @@
         "NO2_Wash_Value_Get",
         "NO2_Test_Value_Get",
         "NH4_Wash_Value_Get",
-        "NH4_Test_Value_Get"
+        "NH4_Test_Value_Get",
+        "PH_Value_Get"
       ]
     }
   },

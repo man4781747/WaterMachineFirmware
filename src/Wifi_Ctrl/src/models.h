@@ -104,6 +104,15 @@ JsonObject BuildEventJSONItem(String S_thisEventKey, JsonObject D_thisEventSetti
       );
       L_eventList.add(SpectrophotometerEventItemJSON);
     }
+    //TODO 目前ph計只需一組，先以寫死方式運作
+    else if (eventItem.containsKey("ph_meter")) {
+      DynamicJsonDocument phMeterListItem(500);
+      JsonArray L_phMeterEventList = phMeterListItem.createNestedArray("ph_meter");
+      DynamicJsonDocument phMeterItem(200);
+      phMeterItem["ph_meter_id"].set("A");
+      L_phMeterEventList.add(phMeterItem);
+      L_eventList.add(phMeterListItem.as<JsonObject>());
+    }
   }
   return eventGroupItem.as<JsonObject>();
 }

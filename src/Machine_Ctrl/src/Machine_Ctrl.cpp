@@ -2,6 +2,8 @@
 #include <esp_log.h>
 #include "esp_random.h"
 
+#include "CalcFunction.h"
+
 #include <Wire.h>
 #include <ArduinoJson.h>
 #include <ESP32Servo.h>
@@ -182,6 +184,7 @@ void LOADED_ACTION(void* parameter)
           JsonObject D_eventGroupItemDetail = D_eventGroupItem_.value().as<JsonObject>();
           for (JsonVariant eventItem : D_eventGroupItemDetail["event_list"].as<JsonArray>()) {
             // time_t = now();
+            //! 伺服馬達控制設定
             if (eventItem.containsKey("pwm_motor_list")) {
               ESP_LOGI("LOADED_ACTION","      [%d-%d-%d]伺服馬達控制",stepCount,eventGroupCount,eventCount);
               for (JsonVariant pwmMotorItem : eventItem["pwm_motor_list"].as<JsonArray>()) {
@@ -194,7 +197,7 @@ void LOADED_ACTION(void* parameter)
               }
               vTaskDelay(2000/portTICK_PERIOD_MS);
             }
-
+            //! 蠕動馬達控制設定
             else if (eventItem.containsKey("peristaltic_motor_list")) {
               ESP_LOGI("LOADED_ACTION","      [%d-%d-%d]蠕動馬達控制",stepCount,eventGroupCount,eventCount);
               for (JsonVariant peristalticMotorItem : eventItem["peristaltic_motor_list"].as<JsonArray>()) {
@@ -218,22 +221,6 @@ void LOADED_ACTION(void* parameter)
                   config_.until = -1;
                 }
                 Machine_Ctrl.RUN__PeristalticMotorEvent(&config_);
-                // while (Machine_Ctrl.TASK__Peristaltic_MOTOR != NULL) {
-                //   vTaskDelay(10);
-                // }
-
-
-                // Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(
-                //   peristalticMotorItem["peristaltic_motor"]["index"].as<int>(), 
-                //   peristalticMotorItem["status"].as<int>() == 1 ? PeristalticMotorStatus::FORWARD : PeristalticMotorStatus::REVERSR
-                // );
-                // Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
-                // long timecheck = millis();
-                
-
-                // vTaskDelay(peristalticMotorItem["time"].as<float>()*1000/portTICK_PERIOD_MS);
-                // Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
-                // peristalticMotorItem["finish_time"].set(now());
               }
 
               vTaskDelay(1000/portTICK_PERIOD_MS);
@@ -254,7 +241,7 @@ void LOADED_ACTION(void* parameter)
               // peristalticMotorItem["finish_time"].set(now());
 
             }
-
+            //! 分光光度計控制設定
             else if (eventItem.containsKey("spectrophotometer_list")) {
               ESP_LOGI("LOADED_ACTION","      [%d-%d-%d]分光光度計控制",stepCount,eventGroupCount,eventCount);
               for (JsonVariant spectrophotometerItem : eventItem["spectrophotometer_list"].as<JsonArray>()) {
@@ -329,6 +316,54 @@ void LOADED_ACTION(void* parameter)
 
                 AnySensorData = true;
               }
+            }
+            //! PH計控制設定
+            //TODO 目前因為水質機只會有一個PH計，因此先以寫死的方式來做
+            else if (eventItem.containsKey("ph_meter")) {
+              ESP_LOGI("LOADED_ACTION","      [%d-%d-%d]PH計控制",stepCount,eventGroupCount,eventCount);
+              pinMode(14, INPUT);
+
+              uint16_t phValue[30];
+              for (int i=0;i<30;i++) {
+                phValue[i] = analogRead(14);
+              }
+              //* 原始電壓數值獲得
+              double PH_RowValue = afterFilterValue(phValue, 30);
+              //* 以溫度選取電壓toPH轉換參數
+              double  Temp = 25;
+              double  a=1., b=1.;
+              for (JsonVariant calibration_curve : (*Machine_Ctrl.spiffs.DeviceSetting)["PH_meter"]["A"]["calibration_curve"].as<JsonArray>()) {
+                if (calibration_curve[0].as<double>() < Temp and calibration_curve[1].as<double>() >= Temp) {
+                  a = calibration_curve[2].as<double>();
+                  b = calibration_curve[3].as<double>();
+                  break;
+                }
+              }
+              //* 計算ph數值
+              double pHValue = (PH_RowValue - b) / a;
+
+              if (D_loadedActionJSON["data_type"].as<String>() == "RUN") {
+                (*Machine_Ctrl.sensorDataSave)[poolID]["pH_volt"].set(PH_RowValue);
+                (*Machine_Ctrl.sensorDataSave)[poolID]["pH"].set(pHValue);
+                (*Machine_Ctrl.sensorDataSave)[poolID]["Data_datetime"].set(Machine_Ctrl.GetNowTimeString());
+              }
+              poolSensorData[poolID]["pH"]["pH_volt"].set(PH_RowValue);
+              poolSensorData[poolID]["pH"]["pH"].set(pHValue);
+              poolSensorData[poolID]["pH"]["Time"].set(Machine_Ctrl.GetNowTimeString());
+
+              Machine_Ctrl.SetLog(
+                3, 
+                "ph計獲得新量測值",
+                "電壓數值: "+String(PH_RowValue)+", 轉換後pH: "+String(pHValue),
+                Machine_Ctrl.BackendServer.ws_, NULL
+              );
+
+              AnySensorData = true;
+            }
+            //! 例外檢查
+            else {
+              ESP_LOGW("LOADED_ACTION","      [%d-%d-%d]未知的設定",stepCount,eventGroupCount,eventCount);
+              serializeJsonPretty(eventItem, Serial);
             }
             eventCount += 1;
             vTaskDelay(100/portTICK_PERIOD_MS);
@@ -602,52 +637,6 @@ void SMachine_Ctrl::BroadcastNewPoolData(String poolID)
 ////////////////////////////////////////////////////
 // For 基礎行為
 ////////////////////////////////////////////////////
-
-void SMachine_Ctrl::LoadStepToRunHistoryItem(String StepID, String TrigerBy)
-{
-  while (Machine_Ctrl.TASK__History != NULL) {
-    return;
-  }
-
-  JsonObject DeviceSetting = spiffs.DeviceSetting->as<JsonObject>();
-  JsonObject D_stepGroups = DeviceSetting["steps_group"];
-  JsonObject D_eventGroup =  DeviceSetting["event_group"];
-
-  DynamicJsonDocument D_runHistory(10000);
-  if (D_stepGroups.containsKey(StepID)) {
-    JsonObject D_stepGroupChose = D_stepGroups[StepID];
-    D_runHistory["step_id"] = StepID;
-    D_runHistory["triger_by"] = TrigerBy;
-    time_t NOW = now();
-    D_runHistory["create_time"] = NOW;
-    D_runHistory["first_active_time"] = -1;
-    D_runHistory["last_active_time"] = -1;
-    D_runHistory["end_time"] = -1;
-
-    JsonArray L_steps = D_stepGroupChose["steps"].as<JsonArray>();
-    JsonArray enent_group_list = D_runHistory.createNestedArray("enent_group_list");
-    for (JsonVariant step : L_steps) {
-      DynamicJsonDocument eventGroupItem(10000);
-      eventGroupItem["event_group_id"] = step.as<String>();
-      eventGroupItem["active_time"] = -1;
-      eventGroupItem["end_time"] = -1;
-      
-      JsonArray enent_list = eventGroupItem.createNestedArray("enent_list");
-      JsonObject D_eventGroupChose = D_eventGroup[step.as<String>()];
-      for (JsonVariant event : D_eventGroupChose["event"].as<JsonArray>()) {
-        DynamicJsonDocument eventItem(1000);
-        eventItem["active_time"] = -1;
-        eventItem["end_time"] = -1;
-        enent_list.add(eventItem);
-      }
-      enent_group_list.add(eventGroupItem);
-    }
-  } else {
-    ESP_LOGE("INFO","流程:\t%s\t不存在", StepID.c_str());
-  }
-  DeviceSetting["run_history"].set(D_runHistory);
-  spiffs.ReWriteDeviceSetting();
-}
 
 String SMachine_Ctrl::GetNowTimeString()
 {
