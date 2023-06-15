@@ -252,7 +252,7 @@ void ws_GetLogs(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJso
   D_baseInfoJSON["action"]["status"].set("OK");
   D_baseInfoJSON["action"]["target"].set("LogHistory");
   D_baseInfoJSON["action"]["method"].set("Update");
-  
+
   JsonArray logsArray = D_baseInfoJSON["parameter"].createNestedArray("logs");
   int logCount = 0;
   for (JsonVariant logItem : (*Machine_Ctrl.DeviceLogSave)["Log"].as<JsonArray>()) {
@@ -583,10 +583,11 @@ void ws_TestSpectrophotometer(AsyncWebSocket *server, AsyncWebSocketClient *clie
     L_eventGroupList.add(eventGroupItem);
     L_stepList.add(stepItem);
 
-    String settingString;
-    serializeJson(actionItem,settingString);
-    actionItem.clear();
-    Machine_Ctrl.LOAD__ACTION(settingString);
+    // String settingString;
+    // serializeJson(actionItem,settingString);
+    // actionItem.clear();
+    // Machine_Ctrl.LOAD__ACTION(settingString);
+    Machine_Ctrl.LOAD__ACTION(actionItem.as<JsonObject>());
     Machine_Ctrl.RUN__LOADED_ACTION();
   } else {
     Machine_Ctrl.SetLog(
@@ -847,10 +848,11 @@ void ws_TestPeristalticMotor(AsyncWebSocket *server, AsyncWebSocketClient *clien
     L_eventGroupList.add(eventGroupItem);
     L_stepList.add(stepItem);
 
-    String settingString;
-    serializeJson(actionItem,settingString);
-    actionItem.clear();
-    Machine_Ctrl.LOAD__ACTION(settingString);
+    // String settingString;
+    // serializeJson(actionItem,settingString);
+    // actionItem.clear();
+    // Machine_Ctrl.LOAD__ACTION(settingString);
+    Machine_Ctrl.LOAD__ACTION(actionItem.as<JsonObject>());
     Machine_Ctrl.RUN__LOADED_ACTION();
   } else {
     Machine_Ctrl.SetLog(
@@ -1350,10 +1352,11 @@ void ws_TestEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJ
     L_eventGroupList.add(eventGroupItemJSON);
     L_stepList.add(stepItem);
 
-    String settingString;
-    serializeJson(actionItem,settingString);
-    actionItem.clear();
-    Machine_Ctrl.LOAD__ACTION(settingString);
+    // String settingString;
+    // serializeJson(actionItem,settingString);
+    // actionItem.clear();
+    // Machine_Ctrl.LOAD__ACTION(settingString);
+    Machine_Ctrl.LOAD__ACTION(actionItem.as<JsonObject>());
     Machine_Ctrl.RUN__LOADED_ACTION();
   } else {
     Machine_Ctrl.SetLog(
@@ -1566,10 +1569,11 @@ void ws_TestStep(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJs
     JsonObject StepJSONItem = BuildStepJSONItem(TargetName, D_steps_group[TargetName].as<JsonObject>());
     L_stepList.add(StepJSONItem);
 
-    String settingString;
-    serializeJson(actionItem,settingString);
-    actionItem.clear();
-    Machine_Ctrl.LOAD__ACTION(settingString);
+    // String settingString;
+    // serializeJson(actionItem,settingString);
+    // actionItem.clear();
+    // Machine_Ctrl.LOAD__ACTION(settingString);
+    Machine_Ctrl.LOAD__ACTION(actionItem.as<JsonObject>());
     Machine_Ctrl.RUN__LOADED_ACTION();
   } else {
     Machine_Ctrl.SetLog(
@@ -1769,10 +1773,11 @@ void ws_RunPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynami
     JsonObject PipelineJSONItem = BuildPipelineJSONItem(TargetName, D_pipeline[TargetName].as<JsonObject>());
     PipelineItem.set(PipelineJSONItem);
     PipelineItem["data_type"] = String("RUN");
-    String settingString;
-    serializeJson(PipelineItem,settingString);
-    PipelineItem.clear();
-    Machine_Ctrl.LOAD__ACTION(settingString);
+    // String settingString;
+    // serializeJson(PipelineItem,settingString);
+    // PipelineItem.clear();
+    // Machine_Ctrl.LOAD__ACTION(settingString);
+    Machine_Ctrl.LOAD__ACTION(PipelineItem.as<JsonObject>());
     Machine_Ctrl.RUN__LOADED_ACTION();
   } else {
     Machine_Ctrl.SetLog(
