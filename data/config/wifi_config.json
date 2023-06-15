@@ -7,7 +7,9 @@
     "AP_Password": "12345678"
   },
   "Remote": {
-    "remote_IP": "127.0.0.1",
+    "remote_IP": "192.168.20.38",
+    "gateway": "192.168.20.0",
+    "subnet_mask": "255.255.255.0",
     "remote_Name": "IDWATER",
     "remote_Password": "56651588"
   }

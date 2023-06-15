@@ -17,6 +17,10 @@ void setAPI(CWIFI_Ctrler &WIFI_Ctrler)
 
   WIFI_Ctrler.AddWebsocketAPI("/api/GetState", "GET", &ws_GetNowStatus);
 
+  //!LOG相關API
+  WIFI_Ctrler.AddWebsocketAPI("/api/LOG", "GET", &ws_GetLogs);
+
+
   //!機器步驟執行相關API
 
   WIFI_Ctrler.AddWebsocketAPI("/api/RunHistory", "GET", &ws_GetNRunHistoryInfo);

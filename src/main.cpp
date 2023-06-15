@@ -16,11 +16,12 @@
 
 #include "CalcFunction.h"
 
-// #include "../lib/LTR_329ALS_01/src/LTR_329ALS_01.h"
-
 #include "Machine_Ctrl/src/Machine_Ctrl.h"
 
-/////////////////
+//TODO oled暫時這樣寫死
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+//TODO oled暫時這樣寫死
 
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
@@ -55,28 +56,35 @@ int Sensor_4_PIN = 22;
 #define DHTPIN 2
 DHT_Unified dht(DHTPIN, DHTTYPE);
 uint32_t delayMS;
-/////////////////////////
+
 
 const char* LOG_TAG = "MAIN";
 SMachine_Ctrl Machine_Ctrl;
 
 const char* FIRMWARE_VERSION = "V2.23.62.0";
 
+//TODO oled暫時這樣寫死
 
+Adafruit_SSD1306 display(128, 64, &Machine_Ctrl.WireOne, -1);
+// Adafruit_SH1106 display(Machine_Ctrl.WireOne_SDA, Machine_Ctrl.WireOne_SCL);
+//TODO oled暫時這樣寫死
 
+void scanI2C();
 
 void setup() {
   pinMode(39, PULLUP);
   
   Serial.begin(115200);
   Serial.println("START");
-  Serial.printf("Total heap: %d\n", ESP.getHeapSize());
-  Serial.printf("Free heap: %d\n", ESP.getFreeHeap());
-  Serial.printf("Total PSRAM: %d\n", ESP.getPsramSize());
-  Serial.printf("Free PSRAM: %d\n", ESP.getFreePsram());
+  // Serial.printf("Total heap: %d\n", ESP.getHeapSize());
+  // Serial.printf("Free heap: %d\n", ESP.getFreeHeap());
+  // Serial.printf("Total PSRAM: %d\n", ESP.getPsramSize());
+  // Serial.printf("Free PSRAM: %d\n", ESP.getFreePsram());
+
   Machine_Ctrl.INIT_SPIFFS_config();
   Machine_Ctrl.INIT_I2C_Wires();
   Machine_Ctrl.INIT_PoolData();
+
   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
 
   Machine_Ctrl.peristalticMotorsCtrl.INIT_Motors(42,41,40,2);
@@ -86,6 +94,17 @@ void setup() {
   Machine_Ctrl.BackendServer.ConnectToWifi();
   Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
   Machine_Ctrl.BackendServer.ServerStart();
+
+  //TODO oled暫時這樣寫死
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);  
+  display.setCursor(0, 0);
+  display.printf("%s",Machine_Ctrl.BackendServer.IP.c_str());
+  display.display();
+  Machine_Ctrl.INIT_I2C_Wires();
+  //TODO oled暫時這樣寫死
 
   // digitalWrite(Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.stcpPin, LOW);
   // shiftOut(
@@ -132,7 +151,7 @@ void setup() {
   // Serial.print  (F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F("%"));
   // Serial.println(F("------------------------------------"));
   // delayMS = sensor.min_delay / 1000;
-  pinMode(14, INPUT);
+  // pinMode(14, INPUT);
   
 }
 
@@ -174,6 +193,7 @@ void loop() {
   // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_96X);
   // test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
   // Serial.printf("%d,%d\n", test.CH_0, test.CH_1);
+  // scanI2C();
   delay(1000);
   // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
   // Serial.println(1);
@@ -307,27 +327,6 @@ void loop() {
   // PostData["CH1"] = afterFilterValue(CH1_Buff, 30);
 
 
-  // byte error, address;
-  // int devices = 0;
-  // for (address = 1; address < 127; address++) {
-  //   // Serial.printf("test %d\n",address);
-  //   Machine_Ctrl.WireOne.beginTransmission(address);
-  //   error = Machine_Ctrl.WireOne.endTransmission();
-  //   if (error == 0) {
-  //     Serial.print("I2C device found at address 0x");
-  //     if (address < 16) {
-  //       Serial.print("0");
-  //     }
-  //     Serial.println(address, HEX);
-
-  //     devices++;
-  //   }
-  // }
-  // if (devices == 0) {
-  //   Serial.println("No I2C devices found");
-  // }
-
-
   // if ( now()/(1*60) != oneMinSave) {
   //   oneMinSave = now()/(1*60);
   //   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(0);
@@ -372,6 +371,27 @@ void loop() {
 
   // ArduinoOTA.handle();
 
+}
+
+void scanI2C(){
+  byte error, address;
+  int devices = 0;
+  for (address = 1; address < 127; address++) {
+    Machine_Ctrl.WireOne.beginTransmission(address);
+    error = Machine_Ctrl.WireOne.endTransmission();
+    if (error == 0) {
+      Serial.print("I2C device found at address 0x");
+      if (address < 16) {
+        Serial.print("0");
+      }
+      Serial.println(address, HEX);
+
+      devices++;
+    }
+  }
+  if (devices == 0) {
+    Serial.println("No I2C devices found");
+  }
 }
 
 void sensorTest(int Index){

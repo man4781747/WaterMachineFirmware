@@ -238,6 +238,36 @@ void ws_GetNowStatus(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynam
   client->binary(returnString);
 }
 
+//!LOG相關API
+
+void ws_GetLogs(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
+{
+  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
+  int MaxLogNum = 10;
+  if ((*D_QueryParameter).containsKey("max")) {
+    MaxLogNum = (*D_QueryParameter)["max"].as<int>();
+  }
+  D_baseInfoJSON["status"].set("OK");
+  D_baseInfoJSON["action"]["message"].set("OK");
+  D_baseInfoJSON["action"]["status"].set("OK");
+  D_baseInfoJSON["action"]["target"].set("LogHistory");
+  D_baseInfoJSON["action"]["method"].set("Update");
+  
+  JsonArray logsArray = D_baseInfoJSON["parameter"].createNestedArray("logs");
+  int logCount = 0;
+  for (JsonVariant logItem : (*Machine_Ctrl.DeviceLogSave)["Log"].as<JsonArray>()) {
+    if (logCount >= MaxLogNum) {
+      break;
+    }
+    logsArray.add(
+      logItem.as<JsonObject>()
+    );
+    logCount ++;
+  }
+  String returnString;
+  serializeJsonPretty(D_baseInfoJSON, returnString);
+  client->binary(returnString);
+}
 
 //!機器步驟執行相關API
 

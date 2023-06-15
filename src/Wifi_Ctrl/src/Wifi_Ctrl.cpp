@@ -452,6 +452,17 @@ bool CWIFI_Ctrler::CreateSoftAP()
 void CWIFI_Ctrler::ConnectOtherWiFiAP(String SSID, String PW)
 {
   WiFi.disconnect();
+
+  //? IP由WIFI基地台統一發送管理，這邊的程式碼單純為計錄用
+  //// IPAddress STA_IP = IPAddress();
+  //// IPAddress STA_gateway = IPAddress();
+  //// IPAddress STA_subnet_mask = IPAddress();
+  //// IPAddress primaryDNS(8, 8, 8, 8);   //optional
+  //// IPAddress secondaryDNS(8, 8, 4, 4); //optional
+  //// STA_IP.fromString((*Machine_Ctrl.spiffs.WifiConfig)["Remote"]["remote_IP"].as<String>());
+  //// STA_gateway.fromString((*Machine_Ctrl.spiffs.WifiConfig)["Remote"]["gateway"].as<String>());
+  //// STA_subnet_mask.fromString((*Machine_Ctrl.spiffs.WifiConfig)["Remote"]["subnet_mask"].as<String>());
+  //// WiFi.config(STA_IP, STA_gateway, STA_subnet_mask, primaryDNS, secondaryDNS);
   WiFi.begin(SSID.c_str(),PW.c_str());
   time_t connectTimeout = now();
   while (!WiFi.isConnected() & now()-connectTimeout < 5) {
