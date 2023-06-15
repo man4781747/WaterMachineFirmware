@@ -211,15 +211,18 @@ void setup() {
   // Serial.print  (F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F("%"));
   // Serial.println(F("------------------------------------"));
   // delayMS = sensor.min_delay / 1000;
+  pinMode(14, INPUT);
+  
 }
 
 void loop() {
+  // Serial.printf("%d", analogRead(14));
   // SEN0364Test();
   // Machine_Ctrl.peristalticMotorsCtrl.ShowNowSetting();
   // Machine_Ctrl.peristalticMotorsCtrl.OpenAllPin();
   // delay(1000);
   // Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
-  delay(1000);
+  // delay(1000);
   // Serial.println(0);
   // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(0);
 
@@ -227,10 +230,30 @@ void loop() {
   // Machine_Ctrl.WireOne.write(1 << 0);
   // Machine_Ctrl.WireOne.endTransmission();
   // delay(100);
-  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_96X);
-  // ALS_01_Data_t test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
-  // Serial.printf("CH0: %d, CH1: %d\n", test.CH_0, test.CH_1);
-  // delay(1000);
+  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_1X);
+  ALS_01_Data_t test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  Serial.printf("%d,%d,", test.CH_0, test.CH_1);
+
+  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_2X);
+  test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  Serial.printf("%d,%d,", test.CH_0, test.CH_1);
+
+  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_4X);
+  test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  Serial.printf("%d,%d,", test.CH_0, test.CH_1);
+
+  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_8X);
+  test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  Serial.printf("%d,%d,", test.CH_0, test.CH_1);
+
+  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_48X);
+  test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  Serial.printf("%d,%d,", test.CH_0, test.CH_1);
+
+  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_96X);
+  test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  Serial.printf("%d,%d\n", test.CH_0, test.CH_1);
+  delay(1000);
   // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
   // Serial.println(1);
   // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(1);
