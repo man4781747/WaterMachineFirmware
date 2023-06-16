@@ -25,6 +25,7 @@
 TaskHandle_t TASK_SwitchMotorScan = NULL;
 TaskHandle_t TASK_PeristalticMotorScan = NULL;
 
+SemaphoreHandle_t MUTEX_Peristaltic_MOTOR = xSemaphoreCreateBinary();
 // extern AsyncWebSocket ws;
 
 ////////////////////////////////////////////////////
@@ -221,6 +222,7 @@ void LOADED_ACTION(void* parameter)
                   config_.until = -1;
                 }
                 Machine_Ctrl.RUN__PeristalticMotorEvent(&config_);
+                // vTaskDelay(100/portTICK_PERIOD_MS);
               }
 
               vTaskDelay(1000/portTICK_PERIOD_MS);
@@ -440,14 +442,22 @@ void SMachine_Ctrl::RUN__LOADED_ACTION()
 
 void PeristalticMotorEvent(void* parameter)
 {
-  ESP_LOGW("PeristalticMotorEvent","START");
+  ESP_LOGD("PeristalticMotorEvent","START");
   Peristaltic_task_config config_ = *((Peristaltic_task_config*) parameter);
   PeristalticMotorStatus status = (config_.status==1 ? PeristalticMotorStatus::FORWARD : PeristalticMotorStatus::REVERSR);
+
+  if (xSemaphoreTake(Machine_Ctrl.MUTEX_Peristaltic_MOTOR, portMAX_DELAY) == pdTRUE) {
+    ESP_LOGI("PeristalticMotorEvent","成功得到 xSemaphoreTake");
+  } else {
+    ESP_LOGI("PeristalticMotorEvent","得到 xSemaphoreTake 失敗");
+  }
   Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(
     config_.index, 
     status
   );
   Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
+  
+  xSemaphoreGive(Machine_Ctrl.MUTEX_Peristaltic_MOTOR);
   long timecheck = millis();
   long maxTime = (long)(config_.time*1000);
   // Serial.printf("config.time: %.2f, time: %d", config_.time, maxTime);
@@ -465,15 +475,17 @@ void PeristalticMotorEvent(void* parameter)
     }
     vTaskDelay(10);
   }
-
+  // xSemaphoreTake(Machine_Ctrl.MUTEX_Peristaltic_MOTOR, portMAX_DELAY);
   Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(
     config_.index, 
     PeristalticMotorStatus::STOP
   );
   Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
+  // xSemaphoreGive(Machine_Ctrl.MUTEX_Peristaltic_MOTOR);
   // Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
   // ESP_LOGW("PeristalticMotorEvent","END");
   // Machine_Ctrl.TASK__Peristaltic_MOTOR = NULL;
+  ESP_LOGD("PeristalticMotorEvent","END");
   vTaskDelete(NULL);
 }
 EVENT_RESULT SMachine_Ctrl::RUN__PeristalticMotorEvent(Peristaltic_task_config *config_)
@@ -505,29 +517,10 @@ void SMachine_Ctrl::STOP_AllTask()
     ESP_LOGW("STOP_AllTask","STOP TASK__History");
     vTaskSuspend(TASK__History);
   }
-  if (TASK__PWM_MOTOR != NULL) {
-    ESP_LOGW("STOP_AllTask","STOP TASK__PWM_MOTOR");
-    vTaskSuspend(TASK__PWM_MOTOR);
-  }
-  if (TASK__Peristaltic_MOTOR != NULL) {
-    ESP_LOGW("STOP_AllTask","STOP TASK__Peristaltic_MOTOR");
-    vTaskSuspend(TASK__Peristaltic_MOTOR);
-    LastSuspendTick = xTaskGetTickCount();
-    Stop_AllPeristalticMotor();
-  }
 }
 
 void SMachine_Ctrl::RESUME_AllTask()
 {
-  if (TASK__Peristaltic_MOTOR != NULL) {
-    ESP_LOGW("RESUME_AllTask","Resume TASK__Peristaltic_MOTOR");
-    TaskSuspendTimeSum += xTaskGetTickCount() - LastSuspendTick;
-    vTaskResume(TASK__Peristaltic_MOTOR);
-  }
-  if (TASK__PWM_MOTOR != NULL) {
-    ESP_LOGW("RESUME_AllTask","Resume TASK__PWM_MOTOR");
-    vTaskResume(TASK__PWM_MOTOR);
-  }
   if (TASK__History != NULL) {
     ESP_LOGW("RESUME_AllTask","Resume TASK__History");
     vTaskResume(TASK__History);

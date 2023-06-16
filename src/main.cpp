@@ -61,7 +61,7 @@ uint32_t delayMS;
 const char* LOG_TAG = "MAIN";
 SMachine_Ctrl Machine_Ctrl;
 
-const char* FIRMWARE_VERSION = "V2.23.62.0";
+const char* FIRMWARE_VERSION = "V2.23.63.0";
 
 //TODO oled暫時這樣寫死
 
@@ -102,6 +102,8 @@ void setup() {
   display.setTextColor(WHITE);  
   display.setCursor(0, 0);
   display.printf("%s",Machine_Ctrl.BackendServer.IP.c_str());
+  display.setCursor(0, 16);
+  display.printf("Ver: %s",FIRMWARE_VERSION);
   display.display();
   Machine_Ctrl.INIT_I2C_Wires();
   //TODO oled暫時這樣寫死

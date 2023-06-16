@@ -48,6 +48,7 @@ class SMachine_Ctrl
   public:
     SMachine_Ctrl(void){
       logArray = DeviceLogSave->createNestedArray("Log");
+      xSemaphoreGive(MUTEX_Peristaltic_MOTOR);
     };
 
     ////////////////////////////////////////////////////
@@ -124,8 +125,9 @@ class SMachine_Ctrl
     DynamicJsonDocument *DeviceLogSave = new DynamicJsonDocument(50000);
     JsonArray logArray;
 
-    TaskHandle_t TASK__PWM_MOTOR;
     TaskHandle_t TASK__Peristaltic_MOTOR;
+    //? 蠕動馬達Task的互斥鎖，確保蠕動馬達的 moduleDataList 內容不會被多個Task同時變動
+    SemaphoreHandle_t MUTEX_Peristaltic_MOTOR = xSemaphoreCreateBinary();
     TaskHandle_t TASK__History;
     
     TickType_t LastSuspendTick;
