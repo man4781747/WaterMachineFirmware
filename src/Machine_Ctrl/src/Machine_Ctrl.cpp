@@ -126,11 +126,38 @@ void SMachine_Ctrl::LOAD__ACTION(JsonObject actionJSON)
   ESP_LOGI("LOADED_ACTION","SET");
   loadedAction->set(actionJSON);
   ESP_LOGI("LOADED_ACTION","OK");
-  // serializeJsonPretty(*loadedAction, Serial);
-  // DeserializationError error = deserializeJson(*loadedAction, actionJSONString,  DeserializationOption::NestingLimit(20));
-  // if (error) {
-  //   Serial.print("deserializeJson() failed: ");
-  //   Serial.println(error.c_str());
+
+  //? 以下為測試用的code，可以得到排程資訊是否有正確讀取 
+  // String poolID = actionJSON["pool"].as<String>();
+  // ESP_LOGI("LOADED_ACTION","執行流程: %s", actionJSON["title"].as<String>().c_str());
+  // ESP_LOGI("LOADED_ACTION","流程說明: %s", actionJSON["description"].as<String>().c_str());
+  // ESP_LOGI("LOADED_ACTION","蝦池ID: %s", poolID.c_str());
+  // ESP_LOGI("LOADED_ACTION","是否為測試: %s", actionJSON["data_type"].as<String>() == String("TEST")? "是" : "否");
+  // int stepCount = 1;
+  // for (JsonVariant stepItem : actionJSON["step_list"].as<JsonArray>()) {
+  //   JsonObject D_stepItem = stepItem.as<JsonObject>();
+  //   for (JsonPair D_stepItem_ : D_stepItem) {
+  //     ESP_LOGI("LOADED_ACTION","  [%d]%s - %s",
+  //       stepCount, 
+  //       D_stepItem_.value()["title"].as<String>().c_str(),
+  //       D_stepItem_.value()["description"].as<String>().c_str()
+  //     );
+  //     vTaskDelay(10/portTICK_PERIOD_MS);
+  //     int eventGroupCount = 1;
+  //     for (JsonVariant eventGroupItem : D_stepItem_.value()["event_group_list"].as<JsonArray>()) {
+  //       JsonObject D_eventGroupItem = eventGroupItem.as<JsonObject>();
+  //       for (JsonPair D_eventGroupItem_ : D_eventGroupItem) {
+  //         ESP_LOGI("LOADED_ACTION","    [%d-%d]%s - %s", 
+  //           stepCount, eventGroupCount, 
+  //           D_eventGroupItem_.value()["title"].as<String>().c_str(),
+  //           D_eventGroupItem_.value()["description"].as<String>().c_str()
+  //         );
+  //         vTaskDelay(10/portTICK_PERIOD_MS);
+  //       }
+  //       eventGroupCount++;
+  //     }
+  //   }
+  //   stepCount++;
   // }
 }
 
@@ -302,11 +329,20 @@ void LOADED_ACTION(void* parameter)
                 if (D_loadedActionJSON["data_type"].as<String>() == "RUN") {
                   (*Machine_Ctrl.sensorDataSave)[poolID][value_name].set(testValue.CH_0);
                   (*Machine_Ctrl.sensorDataSave)[poolID]["Data_datetime"].set(datetimeChar);
+
+                  //TODO 目前還沒有正確的減量線修正公式，所以先給假值
+                  if (value_name == "NH4_test_volt") {
+                    (*Machine_Ctrl.sensorDataSave)[poolID]["NH4"].set(2);
+                  }
+                  if (value_name == "NO2_test_volt") {
+                    (*Machine_Ctrl.sensorDataSave)[poolID]["NO2"].set(2);
+                  }
                 }
                 poolSensorData[poolID][value_name]["Gain"].set(GainStr);
                 poolSensorData[poolID][value_name]["Value"]["CH0"].set(testValue.CH_0);
                 poolSensorData[poolID][value_name]["Value"]["CH1"].set(testValue.CH_1);
                 poolSensorData[poolID][value_name]["Time"].set(datetimeChar);
+
 
 
                 Machine_Ctrl.SetLog(

@@ -254,16 +254,28 @@ void ws_GetLogs(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJso
   D_baseInfoJSON["action"]["method"].set("Update");
 
   JsonArray logsArray = D_baseInfoJSON["parameter"].createNestedArray("logs");
-  int logCount = 0;
-  for (JsonVariant logItem : (*Machine_Ctrl.DeviceLogSave)["Log"].as<JsonArray>()) {
-    if (logCount >= MaxLogNum) {
-      break;
-    }
-    logsArray.add(
-      logItem.as<JsonObject>()
-    );
-    logCount ++;
+
+  JsonArray logSaves = (*Machine_Ctrl.DeviceLogSave)["Log"].as<JsonArray>();
+
+  int lastIndex = logSaves.size() - 1;
+  int startIndex = lastIndex - MaxLogNum;
+  if (startIndex < 0) {
+    startIndex = 0;
   }
+  for (int indexChose=startIndex;indexChose<lastIndex;indexChose++) {
+    logsArray.add(logSaves[indexChose].as<JsonObject>());
+  }
+
+  // int logCount = 0;
+  // for (JsonVariant logItem : (*Machine_Ctrl.DeviceLogSave)["Log"].as<JsonArray>()) {
+  //   if (logCount >= MaxLogNum) {
+  //     break;
+  //   }
+  //   logsArray.add(
+  //     logItem.as<JsonObject>()
+  //   );
+  //   logCount ++;
+  // }
   String returnString;
   serializeJsonPretty(D_baseInfoJSON, returnString);
   client->binary(returnString);
@@ -1752,6 +1764,83 @@ void ws_AddNewStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
 
 //!流程設定相關API
 
+void RunAllPoolDataGetTask(void* parameter) 
+{
+  DynamicJsonDocument PipelineItem(100000);
+  JsonObject PipelineJSONItem;
+  JsonObject D_pipeline = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pipeline"];
+
+  PipelineJSONItem = BuildPipelineJSONItem("pool_1_all_data_get", D_pipeline["pool_1_all_data_get"].as<JsonObject>());
+  PipelineItem.set(PipelineJSONItem);
+  PipelineItem["data_type"] = String("RUN");
+  Machine_Ctrl.LOAD__ACTION(PipelineItem.as<JsonObject>());
+  Machine_Ctrl.RUN__LOADED_ACTION();
+  while (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
+    vTaskDelay(100/portTICK_PERIOD_MS);
+  }
+  PipelineItem.clear();
+
+  PipelineJSONItem = BuildPipelineJSONItem("pool_2_all_data_get", D_pipeline["pool_2_all_data_get"].as<JsonObject>());
+  PipelineItem.set(PipelineJSONItem);
+  PipelineItem["data_type"] = String("RUN");
+  Machine_Ctrl.LOAD__ACTION(PipelineItem.as<JsonObject>());
+  Machine_Ctrl.RUN__LOADED_ACTION();
+  while (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
+    vTaskDelay(100/portTICK_PERIOD_MS);
+  }
+  PipelineItem.clear();
+
+  PipelineJSONItem = BuildPipelineJSONItem("pool_3_all_data_get", D_pipeline["pool_3_all_data_get"].as<JsonObject>());
+  PipelineItem.set(PipelineJSONItem);
+  PipelineItem["data_type"] = String("RUN");
+  Machine_Ctrl.LOAD__ACTION(PipelineItem.as<JsonObject>());
+  Machine_Ctrl.RUN__LOADED_ACTION();
+  while (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
+    vTaskDelay(100/portTICK_PERIOD_MS);
+  }
+  PipelineItem.clear();
+
+  PipelineJSONItem = BuildPipelineJSONItem("pool_4_all_data_get", D_pipeline["pool_4_all_data_get"].as<JsonObject>());
+  PipelineItem.set(PipelineJSONItem);
+  PipelineItem["data_type"] = String("RUN");
+  Machine_Ctrl.LOAD__ACTION(PipelineItem.as<JsonObject>());
+  Machine_Ctrl.RUN__LOADED_ACTION();
+
+  vTaskDelete(NULL);
+}
+
+//? [GET]/api/Pipeline/pool_all_data_get/RUN 這支API比較特別，目前是寫死的
+//? 目的在於執行時，他會依序執行所有池的資料，每池檢測完後丟出一次NewData
+void ws_RunAllPoolPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
+{
+  ESP_LOGD("websocket API", "執行所有檢測流程所需的排程");
+  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
+  
+  if (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
+    Machine_Ctrl.SetLog(
+      2,
+      "執行流程設定失敗",
+      "儀器忙碌中，請稍後再試",
+      NULL, client
+    );
+  }
+  else {
+    ESP_LOGI("ws_RunAllPoolPipeline","RUN");
+    xTaskCreate(
+      RunAllPoolDataGetTask, "ALL_DATA_GET",
+      10000, NULL, configMAX_PRIORITIES-1, NULL
+    );
+
+    //? 這邊的code試給NodeRed判斷用的，讓他知道他觸發的排程有正常被執行
+    D_baseInfoJSON["action"]["message"].set("觸發排程成功");
+    D_baseInfoJSON["action"]["status"].set("OK");
+    String returnString;
+    serializeJsonPretty(D_baseInfoJSON, returnString);
+    server->binaryAll(returnString);
+  }
+}
+
+
 void ws_RunPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
 {
   String TargetName = D_PathParameter->as<JsonObject>()["name"];
@@ -1773,12 +1862,16 @@ void ws_RunPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynami
     JsonObject PipelineJSONItem = BuildPipelineJSONItem(TargetName, D_pipeline[TargetName].as<JsonObject>());
     PipelineItem.set(PipelineJSONItem);
     PipelineItem["data_type"] = String("RUN");
-    // String settingString;
-    // serializeJson(PipelineItem,settingString);
-    // PipelineItem.clear();
-    // Machine_Ctrl.LOAD__ACTION(settingString);
     Machine_Ctrl.LOAD__ACTION(PipelineItem.as<JsonObject>());
     Machine_Ctrl.RUN__LOADED_ACTION();
+
+
+    //? 這邊的code試給NodeRed判斷用的，讓他知道他觸發的排程有正常被執行
+    D_baseInfoJSON["action"]["message"].set("觸發排程成功");
+    D_baseInfoJSON["action"]["status"].set("OK");
+    String returnString;
+    serializeJsonPretty(D_baseInfoJSON, returnString);
+    server->binaryAll(returnString);
   } else {
     Machine_Ctrl.SetLog(
       1,
