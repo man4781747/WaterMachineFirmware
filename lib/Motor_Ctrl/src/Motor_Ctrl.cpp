@@ -157,9 +157,9 @@ void C_Peristaltic_Motors_Ctrl::RunMotor(uint8_t *moduleDataList)
     for (int i = 0; i <= 7; i++) {
       Serial.print(((moduleDataList[index] >> i) & 1) ? '1' : '0');
     }
-    Serial.println();
     shiftOut(DATA, SHCP, MSBFIRST, moduleDataList[index]);
   }
+  Serial.println();
   digitalWrite(STCP, HIGH);
 }
 

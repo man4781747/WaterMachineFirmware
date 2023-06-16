@@ -222,7 +222,7 @@ void LOADED_ACTION(void* parameter)
                   config_.until = -1;
                 }
                 Machine_Ctrl.RUN__PeristalticMotorEvent(&config_);
-                // vTaskDelay(100/portTICK_PERIOD_MS);
+                vTaskDelay(100/portTICK_PERIOD_MS);
               }
 
               vTaskDelay(1000/portTICK_PERIOD_MS);
@@ -446,11 +446,12 @@ void PeristalticMotorEvent(void* parameter)
   Peristaltic_task_config config_ = *((Peristaltic_task_config*) parameter);
   PeristalticMotorStatus status = (config_.status==1 ? PeristalticMotorStatus::FORWARD : PeristalticMotorStatus::REVERSR);
 
-  if (xSemaphoreTake(Machine_Ctrl.MUTEX_Peristaltic_MOTOR, portMAX_DELAY) == pdTRUE) {
-    ESP_LOGI("PeristalticMotorEvent","成功得到 xSemaphoreTake");
-  } else {
-    ESP_LOGI("PeristalticMotorEvent","得到 xSemaphoreTake 失敗");
-  }
+  while (xSemaphoreTake(Machine_Ctrl.MUTEX_Peristaltic_MOTOR, portMAX_DELAY) != pdTRUE) {
+    ESP_LOGI("PeristalticMotorEvent","等待xSemaphoreTake釋放");
+  } 
+  // else {
+  //   ESP_LOGI("PeristalticMotorEvent","得到 xSemaphoreTake 失敗");
+  // }
   Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(
     config_.index, 
     status
@@ -475,13 +476,16 @@ void PeristalticMotorEvent(void* parameter)
     }
     vTaskDelay(10);
   }
+  while (xSemaphoreTake(Machine_Ctrl.MUTEX_Peristaltic_MOTOR, portMAX_DELAY) != pdTRUE) {
+    ESP_LOGI("PeristalticMotorEvent","等待xSemaphoreTake釋放");
+  } 
   // xSemaphoreTake(Machine_Ctrl.MUTEX_Peristaltic_MOTOR, portMAX_DELAY);
   Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(
     config_.index, 
     PeristalticMotorStatus::STOP
   );
   Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
-  // xSemaphoreGive(Machine_Ctrl.MUTEX_Peristaltic_MOTOR);
+  xSemaphoreGive(Machine_Ctrl.MUTEX_Peristaltic_MOTOR);
   // Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
   // ESP_LOGW("PeristalticMotorEvent","END");
   // Machine_Ctrl.TASK__Peristaltic_MOTOR = NULL;
