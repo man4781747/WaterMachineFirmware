@@ -1766,45 +1766,82 @@ void ws_AddNewStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
 
 void RunAllPoolDataGetTask(void* parameter) 
 {
+  String orderString = *((String*)parameter);
   DynamicJsonDocument PipelineItem(100000);
   JsonObject PipelineJSONItem;
   JsonObject D_pipeline = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pipeline"];
 
-  PipelineJSONItem = BuildPipelineJSONItem("pool_1_all_data_get", D_pipeline["pool_1_all_data_get"].as<JsonObject>());
-  PipelineItem.set(PipelineJSONItem);
-  PipelineItem["data_type"] = String("RUN");
-  Machine_Ctrl.LOAD__ACTION(PipelineItem.as<JsonObject>());
-  Machine_Ctrl.RUN__LOADED_ACTION();
-  while (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
-    vTaskDelay(100/portTICK_PERIOD_MS);
+  Serial.println("132: "+orderString);
+  int splitIndex = -1;
+  int prevSpliIndex = 0;
+  splitIndex = orderString.indexOf(',', prevSpliIndex);
+  String noInfoString = "";
+  while (splitIndex != -1) {
+    String poolChose = orderString.substring(prevSpliIndex, splitIndex);
+    if (D_pipeline.containsKey(poolChose)) {
+      PipelineJSONItem = BuildPipelineJSONItem(poolChose, D_pipeline[poolChose].as<JsonObject>());
+      PipelineItem.set(PipelineJSONItem);
+      PipelineItem["data_type"] = String("RUN");
+      Machine_Ctrl.LOAD__ACTION(PipelineItem.as<JsonObject>());
+      Machine_Ctrl.RUN__LOADED_ACTION();
+      while (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
+        vTaskDelay(100/portTICK_PERIOD_MS);
+      }
+      PipelineItem.clear();
+    }
+    prevSpliIndex = splitIndex + 1;
+    splitIndex = orderString.indexOf(',', prevSpliIndex);
   }
-  PipelineItem.clear();
-
-  PipelineJSONItem = BuildPipelineJSONItem("pool_2_all_data_get", D_pipeline["pool_2_all_data_get"].as<JsonObject>());
-  PipelineItem.set(PipelineJSONItem);
-  PipelineItem["data_type"] = String("RUN");
-  Machine_Ctrl.LOAD__ACTION(PipelineItem.as<JsonObject>());
-  Machine_Ctrl.RUN__LOADED_ACTION();
-  while (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
-    vTaskDelay(100/portTICK_PERIOD_MS);
+  String lastPool = orderString.substring(prevSpliIndex);
+  Serial.println("456: "+lastPool);
+  if (D_pipeline.containsKey(lastPool)) {
+    PipelineJSONItem = BuildPipelineJSONItem(lastPool, D_pipeline[lastPool].as<JsonObject>());
+    PipelineItem.set(PipelineJSONItem);
+    PipelineItem["data_type"] = String("RUN");
+    Machine_Ctrl.LOAD__ACTION(PipelineItem.as<JsonObject>());
+    Machine_Ctrl.RUN__LOADED_ACTION();
+    while (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
+      vTaskDelay(100/portTICK_PERIOD_MS);
+    }
+    PipelineItem.clear();
   }
-  PipelineItem.clear();
 
-  PipelineJSONItem = BuildPipelineJSONItem("pool_3_all_data_get", D_pipeline["pool_3_all_data_get"].as<JsonObject>());
-  PipelineItem.set(PipelineJSONItem);
-  PipelineItem["data_type"] = String("RUN");
-  Machine_Ctrl.LOAD__ACTION(PipelineItem.as<JsonObject>());
-  Machine_Ctrl.RUN__LOADED_ACTION();
-  while (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
-    vTaskDelay(100/portTICK_PERIOD_MS);
-  }
-  PipelineItem.clear();
 
-  PipelineJSONItem = BuildPipelineJSONItem("pool_4_all_data_get", D_pipeline["pool_4_all_data_get"].as<JsonObject>());
-  PipelineItem.set(PipelineJSONItem);
-  PipelineItem["data_type"] = String("RUN");
-  Machine_Ctrl.LOAD__ACTION(PipelineItem.as<JsonObject>());
-  Machine_Ctrl.RUN__LOADED_ACTION();
+  // PipelineJSONItem = BuildPipelineJSONItem("pool_1_all_data_get", D_pipeline["pool_1_all_data_get"].as<JsonObject>());
+  // PipelineItem.set(PipelineJSONItem);
+  // PipelineItem["data_type"] = String("RUN");
+  // Machine_Ctrl.LOAD__ACTION(PipelineItem.as<JsonObject>());
+  // Machine_Ctrl.RUN__LOADED_ACTION();
+  // while (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
+  //   vTaskDelay(100/portTICK_PERIOD_MS);
+  // }
+  // PipelineItem.clear();
+
+  // PipelineJSONItem = BuildPipelineJSONItem("pool_2_all_data_get", D_pipeline["pool_2_all_data_get"].as<JsonObject>());
+  // PipelineItem.set(PipelineJSONItem);
+  // PipelineItem["data_type"] = String("RUN");
+  // Machine_Ctrl.LOAD__ACTION(PipelineItem.as<JsonObject>());
+  // Machine_Ctrl.RUN__LOADED_ACTION();
+  // while (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
+  //   vTaskDelay(100/portTICK_PERIOD_MS);
+  // }
+  // PipelineItem.clear();
+
+  // PipelineJSONItem = BuildPipelineJSONItem("pool_3_all_data_get", D_pipeline["pool_3_all_data_get"].as<JsonObject>());
+  // PipelineItem.set(PipelineJSONItem);
+  // PipelineItem["data_type"] = String("RUN");
+  // Machine_Ctrl.LOAD__ACTION(PipelineItem.as<JsonObject>());
+  // Machine_Ctrl.RUN__LOADED_ACTION();
+  // while (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
+  //   vTaskDelay(100/portTICK_PERIOD_MS);
+  // }
+  // PipelineItem.clear();
+
+  // PipelineJSONItem = BuildPipelineJSONItem("pool_4_all_data_get", D_pipeline["pool_4_all_data_get"].as<JsonObject>());
+  // PipelineItem.set(PipelineJSONItem);
+  // PipelineItem["data_type"] = String("RUN");
+  // Machine_Ctrl.LOAD__ACTION(PipelineItem.as<JsonObject>());
+  // Machine_Ctrl.RUN__LOADED_ACTION();
 
   vTaskDelete(NULL);
 }
@@ -1826,17 +1863,66 @@ void ws_RunAllPoolPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client,
   }
   else {
     ESP_LOGI("ws_RunAllPoolPipeline","RUN");
-    xTaskCreate(
-      RunAllPoolDataGetTask, "ALL_DATA_GET",
-      10000, NULL, configMAX_PRIORITIES-1, NULL
-    );
 
-    //? 這邊的code試給NodeRed判斷用的，讓他知道他觸發的排程有正常被執行
-    D_baseInfoJSON["action"]["message"].set("觸發排程成功");
-    D_baseInfoJSON["action"]["status"].set("OK");
-    String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
-    server->binaryAll(returnString);
+    if ((*D_QueryParameter).containsKey("order")) {
+      String orderString = (*D_QueryParameter)["order"].as<String>();
+      if (orderString.length() == 0) {
+        Machine_Ctrl.SetLog(
+          1,
+          "執行蝦池數值檢測流程失敗",
+          "order參數不得為空",
+          NULL, client
+        );
+      } else {
+        //* 分割order文字
+        int splitIndex = -1;
+        int prevSpliIndex = 0;
+        splitIndex = orderString.indexOf(',', prevSpliIndex);
+        String noInfoString = "";
+        while (splitIndex != -1) {
+          String token = orderString.substring(prevSpliIndex, splitIndex);
+          Serial.println(token);
+          if (!(*Machine_Ctrl.spiffs.DeviceSetting)["pipeline"].containsKey(token)) {
+            noInfoString += token + ",";
+          }
+          prevSpliIndex = splitIndex + 1;
+          splitIndex = orderString.indexOf(',', prevSpliIndex);
+        }
+        String lastToken = orderString.substring(prevSpliIndex);
+        if (!(*Machine_Ctrl.spiffs.DeviceSetting)["pipeline"].containsKey(lastToken)) {
+          noInfoString += lastToken;
+        }
+
+        
+        if (noInfoString.length()!=0) {
+          Machine_Ctrl.SetLog(
+            1,
+            "執行蝦池數值檢測流程失敗",
+            "找不到以下設定: "+noInfoString,
+            NULL, client
+          );
+        } else {
+          xTaskCreate(
+            RunAllPoolDataGetTask, "ALL_DATA_GET",
+            10000, (void*)&orderString, configMAX_PRIORITIES-1, NULL
+          );
+
+          //? 這邊的code試給NodeRed判斷用的，讓他知道他觸發的排程有正常被執行
+          D_baseInfoJSON["action"]["message"].set("觸發排程成功");
+          D_baseInfoJSON["action"]["status"].set("OK");
+          String returnString;
+          serializeJsonPretty(D_baseInfoJSON, returnString);
+          server->binaryAll(returnString);
+        }
+      }
+    } else {
+      Machine_Ctrl.SetLog(
+        1,
+        "執行蝦池數值檢測流程失敗",
+        "API需要order參數",
+        NULL, client
+      );
+    }
   }
 }
 

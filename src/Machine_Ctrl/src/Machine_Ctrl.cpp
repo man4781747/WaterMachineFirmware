@@ -215,6 +215,8 @@ void LOADED_ACTION(void* parameter)
             //! 伺服馬達控制設定
             if (eventItem.containsKey("pwm_motor_list")) {
               ESP_LOGI("LOADED_ACTION","      [%d-%d-%d]伺服馬達控制",stepCount,eventGroupCount,eventCount);
+              pinMode(4, OUTPUT);
+              digitalWrite(4, HIGH);
               for (JsonVariant pwmMotorItem : eventItem["pwm_motor_list"].as<JsonArray>()) {
                 ESP_LOGI("LOADED_ACTION","       - %s(%d) 轉至 %d 度", 
                   pwmMotorItem["pwn_motor"]["title"].as<String>().c_str(), pwmMotorItem["pwn_motor"]["index"].as<int>(), 
@@ -224,6 +226,7 @@ void LOADED_ACTION(void* parameter)
                 pwmMotorItem["finish_time"].set(now());
               }
               vTaskDelay(2000/portTICK_PERIOD_MS);
+              digitalWrite(4, LOW);
             }
             //! 蠕動馬達控制設定
             else if (eventItem.containsKey("peristaltic_motor_list")) {
@@ -359,11 +362,13 @@ void LOADED_ACTION(void* parameter)
             //TODO 目前因為水質機只會有一個PH計，因此先以寫死的方式來做
             else if (eventItem.containsKey("ph_meter")) {
               ESP_LOGI("LOADED_ACTION","      [%d-%d-%d]PH計控制",stepCount,eventGroupCount,eventCount);
-              pinMode(14, INPUT);
-
+              pinMode(15, INPUT);
+              pinMode(7, OUTPUT);
+              digitalWrite(7, HIGH);
+              vTaskDelay(1000/portTICK_PERIOD_MS);
               uint16_t phValue[30];
               for (int i=0;i<30;i++) {
-                phValue[i] = analogRead(14);
+                phValue[i] = analogRead(15);
               }
               //* 原始電壓數值獲得
               double PH_RowValue = afterFilterValue(phValue, 30);
@@ -395,7 +400,7 @@ void LOADED_ACTION(void* parameter)
                 "電壓數值: "+String(PH_RowValue)+", 轉換後pH: "+String(pHValue),
                 Machine_Ctrl.BackendServer.ws_, NULL
               );
-
+              digitalWrite(7, LOW);
               AnySensorData = true;
             }
             //! 例外檢查
