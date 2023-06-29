@@ -194,8 +194,8 @@
       ]
     },
     "Test_All_PWM_Motor": {
-      "title": "測試所有的伺服馬達",
-      "description": "測試所有的伺服馬達，然後歸位",
+      "title": "[測試用] 測試所有的伺服馬達",
+      "description": "所有伺服馬達動作，然後歸位",
       "event": [
         {"pwm_motor_list": [
           {"pwm_motor_id": "S_B1","status": 0},
@@ -276,8 +276,8 @@
       ]
     },
     "Test_All_Peristaltic_Motor": {
-      "title": "測試所有的蠕動馬達",
-      "description": "測試所有的蠕動馬達，順轉1秒後反轉1秒",
+      "title": "[測試用] 測試所有的蠕動馬達",
+      "description": "所有蠕動馬達順轉1秒後反轉1秒",
       "event": [
         {"peristaltic_motor_list": [
           {"peristaltic_motor_id": "M1","status": 1,"time": 1,"until":"-"},
@@ -553,7 +553,6 @@
       ]
     },
 
-
     "Push_RO_Water_To_Sample_RO_Room": {
       "title": "抽取RO水到RO暫存水池",
       "description": "抽取RO水到RO暫存水池",
@@ -634,8 +633,8 @@
       ]
     },
     "FORNO3_Push_RO_Liquid_To_MixRoom" : {
-      "title": "[亞硝酸鹽檢測] 抽取試劑水/RO溶液至混合室",
-      "description": "[亞硝酸鹽檢測] 抽取試劑水/RO溶液 22.5秒 並傳輸至混合室",
+      "title": "[檢測-亞硝酸鹽] 抽取試劑水/RO溶液至混合室",
+      "description": "抽取試劑水/RO溶液 22.5秒 並傳輸至混合室",
       "event": [
           {"pwm_motor_list": [
               {"pwm_motor_id": "S_M0","status": 180},
@@ -659,8 +658,8 @@
       ]
     },
     "FORNH4_Push_RO_Liquid_To_MixRoom" : {
-      "title": "[氨氮檢測] 抽取試劑水/RO溶液至混合室",
-      "description": "[氨氮檢測] 抽取試劑水/RO溶液 25秒 並傳輸至混合室",
+      "title": "[檢測-氨氮] 抽取試劑水/RO溶液至混合室",
+      "description": "抽取試劑水/RO溶液 25秒 並傳輸至混合室",
       "event": [
           {"pwm_motor_list": [
               {"pwm_motor_id": "S_M0","status": 180},
@@ -684,7 +683,7 @@
       ]
     },
     "FOR_WASH_VALUE__Push_RO_Liquid_To_MixRoom" : {
-      "title": "[測清洗數值用] 抽取試劑水/RO溶液至混合室",
+      "title": "[檢測-清洗] 抽取試劑水/RO溶液至混合室",
       "description": "抽取''少量''試劑水/RO溶液，傳輸至混合室，量不需多",
       "event": [
           {"pwm_motor_list": [
@@ -710,7 +709,7 @@
     },
     "Push_Little_Sample_Liquid" : {
       "title": "[初始化] 抽取少許樣本水",
-      "description": "[初始化] 抽取少許樣本水，讓管道充滿溶液",
+      "description": "抽取少許樣本水，讓管道充滿溶液",
       "event": [
         {"pwm_motor_list": [
           {"pwm_motor_id": "S_M0","status": 90},
@@ -731,8 +730,8 @@
       ]
     },
     "FORNO3_Push_Sample_Liquid" : {
-      "title": "[亞硝酸鹽檢測] 抽取樣本水/池水 2.5秒 至混合室",
-      "description": "[亞硝酸鹽檢測] 抽取樣本水/池水 2.5秒 至混合室",
+      "title": "[檢測-亞硝酸鹽] 抽取樣本水/池水 2.5秒 至混合室",
+      "description": "抽取樣本水/池水 2.5秒 至混合室",
       "event": [
         {"pwm_motor_list": [
           {"pwm_motor_id": "S_M0","status": 90},
@@ -756,8 +755,8 @@
       ]
     },
     "FORNH4_Push_Sample_Liquid" : {
-      "title": "[氨氮檢測] 抽取樣本水/池水 0.5秒 至混合室",
-      "description": "[氨氮檢測] 抽取樣本水/池水 0.5秒 至混合室",
+      "title": "[檢測-氨氮] 抽取樣本水/池水 0.5秒 至混合室",
+      "description": "抽取樣本水/池水 0.5秒 至混合室",
       "event": [
         {"pwm_motor_list": [
           {"pwm_motor_id": "S_M0","status": 90},
@@ -781,8 +780,8 @@
       ]
     },
     "Push_NO2_Liquid_To_MixRoom" : {
-        "title": "[亞硝酸鹽檢測用] 抽取亞硝酸鹽 1秒 至混合室",
-        "description": "[亞硝酸鹽檢測用] 抽取亞硝酸鹽 1秒 至混合室",
+        "title": "[檢測-亞硝酸鹽] 抽取亞硝酸鹽試劑 1秒 至混合室",
+        "description": "抽取亞硝酸鹽試劑 1秒 至混合室",
         "event": [
           {"pwm_motor_list": [
             {"pwm_motor_id": "S_M0","status": 90},
@@ -806,8 +805,8 @@
         ]
     },
     "Push_Little_NO2_Liquid" : {
-      "title": "[初始化] 抽取少許亞硝酸鹽試劑",
-      "description": "[初始化] 抽取少許亞硝酸鹽試劑，讓管道充滿溶液",
+      "title": "[手動用] 抽取少許亞硝酸鹽試劑",
+      "description": "抽取少許亞硝酸鹽試劑，讓管道充滿溶液",
       "event": [
         {"pwm_motor_list": [
           {"pwm_motor_id": "S_M0","status": 90},
@@ -828,8 +827,8 @@
       ]
     },
     "Push_NH4R1_Liquid_To_MixRoom" : {
-        "title": "[氨氮檢測用] 抽取氨氮R1 0.75秒 至混合室",
-        "description": "[氨氮檢測用] 抽取氨氮R1 0.75秒 至混合室",
+        "title": "[檢測-氨氮] 抽取氨氮R1 0.75秒 至混合室",
+        "description": "抽取氨氮R1 0.75秒 至混合室",
         "event": [
           {"pwm_motor_list": [
             {"pwm_motor_id": "S_M0","status": 90},
@@ -853,8 +852,8 @@
         ]
     },
     "Push_Little_NH4R1_Liquid" : {
-      "title": "[初始化] 抽取少許氨氮R1試劑",
-      "description": "[初始化] 抽取少許氨氮R1試劑，讓管道充滿溶液",
+      "title": "[手動用] 抽取少許氨氮R1試劑",
+      "description": "抽取少許氨氮R1試劑，讓管道充滿溶液",
       "event": [
         {"pwm_motor_list": [
           {"pwm_motor_id": "S_M0","status": 90},
@@ -875,17 +874,17 @@
       ]
     },
     "Push_NH4R2_Liquid_To_MixRoom" : {
-        "title": "抽取氨氮R1至混合室",
-        "description": "抽取氨氮R1至混合室",
-        "event": [
-            {"peristaltic_motor_list": [
-                {"peristaltic_motor_id": "M6","status": 1,"time": 5,"until":"-"}
-            ]}
-        ]
+      "title": "[檢測-氨氮] 抽取氨氮R2至混合室",
+      "description": "抽取氨氮R2至混合室",
+      "event": [
+        {"peristaltic_motor_list": [
+          {"peristaltic_motor_id": "M6","status": 1,"time": 5,"until":"-"}
+        ]}
+      ]
     },
     "Push_Little_NH4R2_Liquid" : {
-      "title": "[初始化] 抽取少許氨氮R1試劑",
-      "description": "[初始化] 抽取少許氨氮R1試劑，讓管道充滿溶液",
+      "title": "[手動用] 抽取少許氨氮R1試劑",
+      "description": "抽取少許氨氮R1試劑，讓管道充滿溶液",
       "event": [
         {"peristaltic_motor_list": [
           {"peristaltic_motor_id": "M6","status": 1,"time": 5,"until":"-"}
@@ -956,7 +955,7 @@
         ]
     },
     "NO2_Wash_Value_Get" : {
-      "title": "亞硝酸鹽清洗數值獲得",
+      "title": "[檢測-清洗] 亞硝酸鹽清洗數值獲得",
       "description": "亞硝酸鹽清洗數值獲得",
       "event": [
         {"spectrophotometer_list": [
@@ -965,7 +964,7 @@
       ]
     },
     "NO2_Test_Value_Get" : {
-      "title": "亞硝酸鹽量測數值獲得",
+      "title": "[檢測-亞硝酸鹽] 亞硝酸鹽量測數值獲得",
       "description": "亞硝酸鹽量測數值獲得",
       "event": [
         {"spectrophotometer_list": [
@@ -974,7 +973,7 @@
       ]
     },
     "NH4_Wash_Value_Get" : {
-        "title": "氨氮清洗數值獲得",
+        "title": "[檢測-清洗] 氨氮清洗數值獲得",
         "description": "氨氮清洗數值獲得",
         "event": [
           {"spectrophotometer_list": [
@@ -983,7 +982,7 @@
         ]
     },
     "NH4_Test_Value_Get" : {
-      "title": "氨氮量測數值獲得",
+      "title": "[檢測-氨氮] 氨氮量測數值獲得",
       "description": "氨氮量測數值獲得",
       "event": [
         {"spectrophotometer_list": [
@@ -992,45 +991,13 @@
       ]
     },
     "PH_Value_Get" : {
-        "title": "PH值獲得",
+        "title": "[檢測-PH] PH值獲得",
         "description": "獲得PH數值",
         "event": [
           {"ph_meter": [
             {"ph_meter_id": "A"}
           ]}
         ]
-    },
-    "Clear_PH_Sensor_To_Sample_Pool" : {
-        "title": "清空PH檢測儀到檢暫存池",
-        "description": "清空PH檢測儀到檢暫存池",
-        "event": [
-          {"pwm_motor_list": [
-            {"pwm_motor_id": "S_M0","status": 90},
-            {"pwm_motor_id": "S_M1","status": 180},
-            {"pwm_motor_id": "S_M2","status": 0},
-            {"pwm_motor_id": "S_PH1","status": 0},
-            {"pwm_motor_id": "S_PH2","status": 180}
-          ]},
-          {"peristaltic_motor_list": [
-            {"peristaltic_motor_id": "M3","status": -1,"time": 35,"until":"-"}
-          ]}
-        ]
-    },
-    "Clear_PH_Sensor_To_RO_Pool" : {
-      "title": "清空PH檢測儀到RO暫存池",
-      "description": "清空PH檢測儀到RO暫存池",
-      "event": [
-        {"pwm_motor_list": [
-          {"pwm_motor_id": "S_M0","status": 180},
-          {"pwm_motor_id": "S_M1","status": 0},
-          {"pwm_motor_id": "S_M2","status": 90},
-          {"pwm_motor_id": "S_PH1","status": 0},
-          {"pwm_motor_id": "S_PH2","status": 180}
-        ]},
-        {"peristaltic_motor_list": [
-          {"peristaltic_motor_id": "M3","status": -1,"time": 35,"until":"-"}
-        ]}
-      ]
     },
     "Clear_PH_Sensor_To_MixRoom" : {
       "title": "清空PH檢測儀與混和室",
@@ -1057,7 +1024,7 @@
       ]
     },
     "Push_Sample_Liquid_To_PH_Sensor" : {
-        "title": "抽取檢體至PH檢測儀",
+        "title": "[檢測-PH] 抽取檢體至PH檢測儀",
         "description": "抽取檢體至PH檢測儀",
         "event": [
             {"pwm_motor_list": [
@@ -1073,7 +1040,7 @@
         ]
     },
     "Push_RO_Liquid_To_PH_Sensor" : {
-        "title": "抽取RO水至PH檢測儀",
+        "title": "[檢測-PH] 抽取RO水至PH檢測儀",
         "description": "抽取RO水至PH檢測儀",
         "event": [
             {"pwm_motor_list": [
@@ -1087,6 +1054,56 @@
                 {"peristaltic_motor_id": "M3","status": 1,"time": 25,"until":"-"}
             ]}
         ]
+    },
+    "FOR_Correction__Push_NO3_Sample_Liquid" : {
+      "title": "[校正用] 抽取亞硝酸鹽標準溶液到混和室(25秒)",
+      "description": "請先手動標標準液倒入池水試管，若亞硝酸鹽檢測流程有變，秒數請更改",
+      "event": [
+        {"pwm_motor_list": [
+          {"pwm_motor_id": "S_M0","status": 90},
+          {"pwm_motor_id": "S_M1","status": 90},
+          {"pwm_motor_id": "S_M2","status": 180},
+          {"pwm_motor_id": "S_M3","status": 90},
+          {"pwm_motor_id": "S_M4","status": 90},
+          {"pwm_motor_id": "S_M5","status": 90},
+          {"pwm_motor_id": "S_M6","status": 90},
+          {"pwm_motor_id": "S_M7","status": 90}
+        ]},
+        {"peristaltic_motor_list": [
+          {"peristaltic_motor_id": "M5","status": 1,"time": 25,"until":"-"}
+        ]},
+        {"pwm_motor_list": [
+          {"pwm_motor_id": "S_M2","status": 90}
+        ]},
+        {"peristaltic_motor_list": [
+          {"peristaltic_motor_id": "M5","status": 1,"time": 15,"until":"-"}
+        ]}
+      ]
+    },
+    "FOR_Correction__Push_NH4_Sample_Liquid" : {
+      "title": "[校正用] 抽取氨氮標準溶液到混和室(25.5秒)",
+      "description": "請先手動氨氮標標準液倒入池水試管，若氨氮檢測流程有變，秒數請更改",
+      "event": [
+        {"pwm_motor_list": [
+          {"pwm_motor_id": "S_M0","status": 90},
+          {"pwm_motor_id": "S_M1","status": 90},
+          {"pwm_motor_id": "S_M2","status": 180},
+          {"pwm_motor_id": "S_M3","status": 90},
+          {"pwm_motor_id": "S_M4","status": 90},
+          {"pwm_motor_id": "S_M5","status": 90},
+          {"pwm_motor_id": "S_M6","status": 90},
+          {"pwm_motor_id": "S_M7","status": 90}
+        ]},
+        {"peristaltic_motor_list": [
+          {"peristaltic_motor_id": "M5","status": 1,"time": 25.5,"until":"-"}
+        ]},
+        {"pwm_motor_list": [
+          {"pwm_motor_id": "S_M2","status": 90}
+        ]},
+        {"peristaltic_motor_list": [
+          {"peristaltic_motor_id": "M5","status": 1,"time": 15,"until":"-"}
+        ]}
+      ]
     }
   },
   "steps_group": {
@@ -1239,7 +1256,7 @@
     },
     "NO2_Sample_Value_Get": {
         "title": "亞硝酸鹽待測液檢測",
-        "description": "亞硝酸鹽待測液檢測", 
+        "description": "OR水(22.5s)、池水(2.5s)、試劑(1s)", 
         "steps": [
           "Reset_All_PWM_Motor",
           "FORNO3_Push_RO_Liquid_To_MixRoom", "FORNO3_Push_Sample_Liquid",
@@ -1259,16 +1276,16 @@
         ]
     },
     "NH4_Sample_Value_Get": {
-        "title": "氨氮試劑檢測",
-        "description": "氨氮試劑檢測", 
-        "steps": [
-          "Reset_All_PWM_Motor",
-          "FORNH4_Push_RO_Liquid_To_MixRoom", "FORNH4_Push_Sample_Liquid",
-          "Mix_Liquid_In_MixRoom", "Push_NH4R1_Liquid_To_MixRoom", "Mix_Liquid_In_MixRoom",  
-          "Wait_5_Min", "Push_MixRoom_To_NH4_SensorRoom", "NH4_Test_Value_Get", 
-          "Clear_NH4_SensorRoom_To_MixRoom", 
-          "Clear_MixRoom_40sec"
-        ]
+      "title": "氨氮試劑檢測",
+      "description": "OR水(25s)、池水(0.5s)、R1試劑(0.75s)、R2試劑(5s)", 
+      "steps": [
+        "Reset_All_PWM_Motor",
+        "FORNH4_Push_RO_Liquid_To_MixRoom", "FORNH4_Push_Sample_Liquid",
+        "Mix_Liquid_In_MixRoom", "Push_NH4R1_Liquid_To_MixRoom", "Mix_Liquid_In_MixRoom",  
+        "Wait_5_Min", "Push_MixRoom_To_NH4_SensorRoom", "NH4_Test_Value_Get", 
+        "Clear_NH4_SensorRoom_To_MixRoom", 
+        "Clear_MixRoom_40sec"
+      ]
     },
     "PH_Value_Get": {
         "title": "樣本PH數值獲得",
@@ -1290,6 +1307,29 @@
         "NH4_Wash_Value_Get",
         "NH4_Test_Value_Get",
         "PH_Value_Get"
+      ]
+    },
+    "FOR_Correction__NO3_Sample_Value_Get": {
+      "title": "[校正用] 亞硝酸鹽試劑檢測",
+      "description": "亞硝酸鹽試劑檢測", 
+      "steps": [
+        "Reset_All_PWM_Motor",
+        "FOR_Correction__Push_NO3_Sample_Liquid", 
+        "Push_NO2_Liquid_To_MixRoom", "Mix_Liquid_In_MixRoom", "Wait_5_Min", 
+        "Push_MixRoom_To_NO2_SensorRoom", "NO2_Test_Value_Get", "Clear_NO2_SensorRoom_To_MixRoom", 
+        "Clear_MixRoom_40sec"
+      ]
+    },
+    "FOR_Correction__NH4_Sample_Value_Get": {
+      "title": "[校正用] 氨氮試劑檢測",
+      "description": "氨氮試劑檢測", 
+      "steps": [
+        "Reset_All_PWM_Motor",
+        "FOR_Correction__Push_NH4_Sample_Liquid", 
+        "Push_NH4R1_Liquid_To_MixRoom", "Mix_Liquid_In_MixRoom",  
+        "Wait_5_Min", "Push_MixRoom_To_NH4_SensorRoom", "NH4_Test_Value_Get", 
+        "Clear_NH4_SensorRoom_To_MixRoom", 
+        "Clear_MixRoom_40sec"
       ]
     }
   },

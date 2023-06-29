@@ -59,6 +59,8 @@ class SMachine_Ctrl
     void INIT_I2C_Wires();
     void INIT_PoolData();
 
+    //? 緊急終止所有動作，並且回歸初始狀態
+    void StopDeviceAndINIT();
 
     ////////////////////////////////////////////////////
     // For 數值轉換

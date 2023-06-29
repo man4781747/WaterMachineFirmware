@@ -1391,8 +1391,9 @@ void ws_GetAllEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dy
   D_baseInfoJSON["action"]["method"].set("Update");
   D_baseInfoJSON["parameter"].set(D_event_group);
   String returnString;
-  serializeJsonPretty(D_baseInfoJSON, returnString);
+  serializeJson(D_baseInfoJSON, returnString);
   client->binary(returnString);
+  client->binary(String(returnString.length()));
 }
 
 void ws_GetEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
