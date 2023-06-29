@@ -91,15 +91,14 @@ void setup() {
   Machine_Ctrl.INIT_SPIFFS_config();
   Machine_Ctrl.INIT_I2C_Wires();
   Machine_Ctrl.INIT_PoolData();
-
-  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
-
+  
   Machine_Ctrl.peristalticMotorsCtrl.INIT_Motors(42,41,40,2);
-  Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
-  Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
-  Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
 
   Machine_Ctrl.motorCtrl.INIT_Motors(Machine_Ctrl.WireOne);
+
+  Machine_Ctrl.StopDeviceAndINIT();
+
+
   Machine_Ctrl.BackendServer.ConnectToWifi();
   Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
   Machine_Ctrl.BackendServer.ServerStart();
@@ -178,10 +177,10 @@ void setup() {
   // Serial.println(F("------------------------------------"));
   // delayMS = sensor.min_delay / 1000;
   // pinMode(14, INPUT);
-  Machine_Ctrl.WireOne.beginTransmission(0x70);
-  Machine_Ctrl.WireOne.write(1 << 0);
-  Machine_Ctrl.WireOne.endTransmission();
-  Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(0);
+  // Machine_Ctrl.WireOne.beginTransmission(0x70);
+  // Machine_Ctrl.WireOne.write(1 << 0);
+  // Machine_Ctrl.WireOne.endTransmission();
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(0);
 }
 
 void loop() {

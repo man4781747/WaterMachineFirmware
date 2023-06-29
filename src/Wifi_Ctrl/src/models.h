@@ -167,26 +167,13 @@ JsonObject BuildPipelineJSONItem(String S_thisPipelineKey, JsonObject D_thisPipe
  */
 void ws_StopAllActionTask(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
 {
-  if (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
-    vTaskSuspend(Machine_Ctrl.TASK__NOW_ACTION);
-    vTaskDelete(Machine_Ctrl.TASK__NOW_ACTION);
-  }
-
-  // vTaskSuspend(Machine_Ctrl.TASK__PWM_MOTOR);
-  // vTaskDelete(Machine_Ctrl.TASK__PWM_MOTOR);
-  // vTaskSuspend(Machine_Ctrl.TASK__Peristaltic_MOTOR);
-  // vTaskDelete(Machine_Ctrl.TASK__Peristaltic_MOTOR);
-  // vTaskSuspend(Machine_Ctrl.TASK__History);
-  // vTaskDelete(Machine_Ctrl.TASK__History);
-
-  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
-  D_baseInfoJSON["status"].set("OK");
-  D_baseInfoJSON["action"]["target"].set("System");
-  D_baseInfoJSON["action"]["method"].set("STOP");
-  D_baseInfoJSON["parameter"]["message"].set("強制停止機器的所有動作，回歸待機狀態");
-  String returnString;
-  serializeJsonPretty(D_baseInfoJSON, returnString);
-  server->binaryAll(returnString);
+  Machine_Ctrl.StopDeviceAndINIT();
+  Machine_Ctrl.SetLog(
+    2,
+    "儀器排程被強制停止",
+    "儀器排程被強制停止" ,
+    server, NULL
+  );
 }
 
 

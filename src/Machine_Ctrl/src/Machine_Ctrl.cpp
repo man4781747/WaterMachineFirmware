@@ -77,6 +77,22 @@ void SMachine_Ctrl::INIT_PoolData()
   }
 }
 
+void SMachine_Ctrl::StopDeviceAndINIT()
+{
+  if (TASK__NOW_ACTION != NULL) {
+    vTaskSuspend(TASK__NOW_ACTION);
+    vTaskDelete(TASK__NOW_ACTION);
+    TASK__NOW_ACTION = NULL;
+  }
+  if (TASK__Peristaltic_MOTOR != NULL) {
+    vTaskSuspend(TASK__Peristaltic_MOTOR);
+    vTaskDelete(TASK__Peristaltic_MOTOR);
+    TASK__Peristaltic_MOTOR = NULL;
+  }
+  Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
+  MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
+}
+
 ////////////////////////////////////////////////////
 // For 數值轉換
 ////////////////////////////////////////////////////  
