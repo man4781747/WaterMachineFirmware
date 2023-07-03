@@ -323,9 +323,9 @@ void LOADED_ACTION(void* parameter)
                 Machine_Ctrl.WireOne.beginTransmission(0x70);
                 Machine_Ctrl.WireOne.write(1 << spectrophotometerIndex);
                 Machine_Ctrl.WireOne.endTransmission();
-                vTaskDelay(100/portTICK_PERIOD_MS);
+                vTaskDelay(1000/portTICK_PERIOD_MS);
                 Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(spectrophotometerIndex);
-                vTaskDelay(100/portTICK_PERIOD_MS);
+                vTaskDelay(1000/portTICK_PERIOD_MS);
 
 
                 //? 依放大倍率設定調整
@@ -386,7 +386,7 @@ void LOADED_ACTION(void* parameter)
                       Serial.printf("%d:%d -> %d\r",i, sensorData.CH_1, targetLevel);
                       if (sensorData.CH_1 >= targetLevel) {
                         ESP_LOGI("LOADED_ACTION","      CH1 已將強度調整為:%d", sensorData.CH_1);
-                        (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"]["spectrophotometer_id"]["level"].set(i);
+                        (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["level"].set(i);
                         Machine_Ctrl.spiffs.ReWriteDeviceSetting();
                         break;
                       }

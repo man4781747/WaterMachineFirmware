@@ -1313,8 +1313,8 @@
         ]
     },
     "TEST__Update_All_Sensor_Data": {
-      "title": "(測試用)強制更新感測器數值",
-      "description": "(測試用)強制更新感測器數值", 
+      "title": "[測試用]強制更新感測器數值",
+      "description": "強制更新感測器數值", 
       "steps": [
         "NO2_Wash_Value_Get",
         "NO2_Test_Value_Get",
@@ -1429,8 +1429,8 @@
     },
 
     "pool_1_test": {
-      "title": "(測試用)強制更新池1感測器數值",
-      "description": "(測試用)強制更新感測器數值", 
+      "title": "[測試用]強制更新池1感測器數值",
+      "description": "強制更新感測器數值", 
       "pool": "pool-1",
       "steps": [
         "TEST__Update_All_Sensor_Data"
@@ -1438,8 +1438,8 @@
     },
 
     "pool_2_test": {
-      "title": "(測試用)強制更新池2感測器數值",
-      "description": "(測試用)強制更新感測器數值", 
+      "title": "[測試用]強制更新池2感測器數值",
+      "description": "強制更新感測器數值", 
       "pool": "pool-2",
       "steps": [
         "TEST__Update_All_Sensor_Data"
@@ -1447,8 +1447,8 @@
     },
 
     "pool_3_test": {
-      "title": "(測試用)強制更新池3感測器數值",
-      "description": "(測試用)強制更新感測器數值", 
+      "title": "[測試用]強制更新池3感測器數值",
+      "description": "強制更新感測器數值", 
       "pool": "pool-3",
       "steps": [
         "TEST__Update_All_Sensor_Data"
@@ -1456,8 +1456,8 @@
     },
 
     "pool_4_test": {
-      "title": "(測試用)強制更新池4感測器數值",
-      "description": "(測試用)強制更新感測器數值", 
+      "title": "[測試用]強制更新池4感測器數值",
+      "description": "強制更新感測器數值", 
       "pool": "pool-4",
       "steps": [
         "TEST__Update_All_Sensor_Data"

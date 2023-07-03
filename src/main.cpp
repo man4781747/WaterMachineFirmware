@@ -68,7 +68,7 @@ uint32_t delayMS;
 const char* LOG_TAG = "MAIN";
 SMachine_Ctrl Machine_Ctrl;
 
-const char* FIRMWARE_VERSION = "V2.23.65.0";
+const char* FIRMWARE_VERSION = "V2.23.71.0";
 
 //TODO oled暫時這樣寫死
 
@@ -182,15 +182,15 @@ void setup() {
 }
 
 void loop() {
-  display.clearDisplay();
-  display.setCursor(0, 0);
-  display.printf("%s",Machine_Ctrl.BackendServer.IP.c_str());
-  display.setCursor(0, 16);
-  display.printf("Ver: %s",FIRMWARE_VERSION);
-  // display.setCursor(0, 24);
-  // display.printf("%s",Machine_Ctrl.GetDatetimeString().c_str());
+  // display.clearDisplay();
+  // display.setCursor(0, 0);
+  // display.printf("%s",Machine_Ctrl.BackendServer.IP.c_str());
+  // display.setCursor(0, 16);
+  // display.printf("Ver: %s",FIRMWARE_VERSION);
+  // // display.setCursor(0, 24);
+  // // display.printf("%s",Machine_Ctrl.GetDatetimeString().c_str());
 
-  display.display();
+  // display.display();
 
 
   // Serial.printf("%d", analogRead(14));
