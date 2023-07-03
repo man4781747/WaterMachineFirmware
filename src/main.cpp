@@ -68,7 +68,7 @@ uint32_t delayMS;
 const char* LOG_TAG = "MAIN";
 SMachine_Ctrl Machine_Ctrl;
 
-const char* FIRMWARE_VERSION = "V2.23.64.0";
+const char* FIRMWARE_VERSION = "V2.23.65.0";
 
 //TODO oled暫時這樣寫死
 
@@ -87,7 +87,6 @@ void setup() {
   // Serial.printf("Free heap: %d\n", ESP.getFreeHeap());
   // Serial.printf("Total PSRAM: %d\n", ESP.getPsramSize());
   // Serial.printf("Free PSRAM: %d\n", ESP.getFreePsram());
-
   Machine_Ctrl.INIT_SPIFFS_config();
   Machine_Ctrl.INIT_I2C_Wires();
   Machine_Ctrl.INIT_PoolData();
@@ -97,7 +96,7 @@ void setup() {
   Machine_Ctrl.motorCtrl.INIT_Motors(Machine_Ctrl.WireOne);
 
   Machine_Ctrl.StopDeviceAndINIT();
-
+  Machine_Ctrl.INIT_SD_Card();
 
   Machine_Ctrl.BackendServer.ConnectToWifi();
   Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
@@ -107,15 +106,14 @@ void setup() {
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   display.clearDisplay();
   display.setTextSize(1);
-  display.setRotation(2);
+  display.setRotation(0);
   display.setTextColor(WHITE);  
   display.setCursor(0, 0);
   display.printf("%s",Machine_Ctrl.BackendServer.IP.c_str());
   display.setCursor(0, 16);
-  
   display.printf("Ver: %s",FIRMWARE_VERSION);
   display.display();
-  Machine_Ctrl.INIT_I2C_Wires();
+  //TODO oled暫時這樣寫死
 
   // if (!SD.begin(8)) {
   //   Serial.println("initialization failed!");
@@ -126,8 +124,8 @@ void setup() {
 
   //TODO oled暫時這樣寫死
 
-  mcp9808.begin();
-  mcp9808_other.begin();
+  // mcp9808.begin();
+  // mcp9808_other.begin();
   // tempsensor.begin(0x18);
   // tempsensor.setResolution(3);
 
@@ -184,6 +182,17 @@ void setup() {
 }
 
 void loop() {
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.printf("%s",Machine_Ctrl.BackendServer.IP.c_str());
+  display.setCursor(0, 16);
+  display.printf("Ver: %s",FIRMWARE_VERSION);
+  // display.setCursor(0, 24);
+  // display.printf("%s",Machine_Ctrl.GetDatetimeString().c_str());
+
+  display.display();
+
+
   // Serial.printf("%d", analogRead(14));
   // SEN0364Test();
   // Machine_Ctrl.peristalticMotorsCtrl.ShowNowSetting();

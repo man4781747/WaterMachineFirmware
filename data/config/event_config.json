@@ -37,15 +37,29 @@
     }
   },
   "spectrophotometer": {
-    "B": {
-      "index": 1,
-      "title": "(藍光)氨氮檢測",
-      "description": "(藍光)氨氮檢測"
-    },
     "A": {
       "index": 0,
+      "title": "(藍光)氨氮檢測",
+      "description": "0ppm 48X Ch0 訂為50000",
+      "level": 0,
+      "CalibrationParameters": {
+        "type": "logarithmic",
+        "slope": -2.592,
+        "logarithm": 2.7182818284,
+        "intercept": 28.698
+      }
+    },
+    "B": {
+      "index": 1,
       "title": "(綠光)亞硝酸鹽檢測",
-      "description": "(綠光)亞硝酸鹽檢測"
+      "description": "0ppm 96X Ch1 訂為50000",
+      "level": 0,
+      "CalibrationParameters": {
+        "type": "logarithmic",
+        "slope": -0.45,
+        "logarithm": 2.7182818284,
+        "intercept": 4.8364
+      }
     }
   },
   "pwm_motor": {
@@ -819,7 +833,7 @@
           {"pwm_motor_id": "S_M7","status": 90}
         ]},
         {"peristaltic_motor_list": [
-            {"peristaltic_motor_id": "M5","status": 1,"time": 3,"until":"-"}
+          {"peristaltic_motor_id": "M5","status": 1,"time": 3,"until":"-"}
         ]},
         {"pwm_motor_list": [
           {"pwm_motor_id": "S_M4","status": 90}
@@ -956,10 +970,10 @@
     },
     "NO2_Wash_Value_Get" : {
       "title": "[檢測-清洗] 亞硝酸鹽清洗數值獲得",
-      "description": "亞硝酸鹽清洗數值獲得",
+      "description": "測量純水光強度，並調整靠近50000",
       "event": [
         {"spectrophotometer_list": [
-          {"spectrophotometer_id": "B", "gain": "4X", "value_name": "NO2_wash_volt"}
+          {"spectrophotometer_id": "B", "gain": "96X", "channel":"CH1", "value_name": "NO2_wash_volt", "target": 50000}
         ]}
       ]
     },
@@ -968,16 +982,16 @@
       "description": "亞硝酸鹽量測數值獲得",
       "event": [
         {"spectrophotometer_list": [
-          {"spectrophotometer_id": "B", "gain": "4X", "value_name": "NO2_test_volt"}
+          {"spectrophotometer_id": "B", "gain": "96X", "channel":"CH1", "value_name": "NO2_test_volt", "target": -1}
         ]}
       ]
     },
     "NH4_Wash_Value_Get" : {
         "title": "[檢測-清洗] 氨氮清洗數值獲得",
-        "description": "氨氮清洗數值獲得",
+        "description": "測量純水光強度，並調整靠近50000",
         "event": [
           {"spectrophotometer_list": [
-            {"spectrophotometer_id": "A", "gain": "4X", "value_name": "NH4_wash_volt"}
+            {"spectrophotometer_id": "A", "gain": "48X", "channel":"CH0", "value_name": "NH4_wash_volt", "target": 50000}
           ]}
         ]
     },
@@ -986,7 +1000,7 @@
       "description": "氨氮量測數值獲得",
       "event": [
         {"spectrophotometer_list": [
-          {"spectrophotometer_id": "A", "gain": "4X", "value_name": "NH4_test_volt"}
+          {"spectrophotometer_id": "A", "gain": "48X", "channel":"CH0", "value_name": "NH4_test_volt", "target": -1}
         ]}
       ]
     },

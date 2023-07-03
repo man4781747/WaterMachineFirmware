@@ -211,7 +211,8 @@ DynamicJsonDocument* SPIFFS_Ctrl::GetDeviceSetting()
 void SPIFFS_Ctrl::ReWriteDeviceSetting()
 {
   String fileString;
-  serializeJsonPretty(*DeviceSetting, fileString);
+  serializeJson(*DeviceSetting, fileString);
+  // Serial.println(fileString);
   File fileTemp = SPIFFS.open("/config/config_temp.json", FILE_WRITE);
   fileTemp.print(fileString);
   fileTemp.close();

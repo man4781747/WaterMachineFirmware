@@ -270,7 +270,7 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
   } else if (type == WS_EVT_DISCONNECT) {
     Serial.println("WebSocket client disconnected");
   } else if (type == WS_EVT_DATA) {
-    ESP_LOGV("ws", "收到訊息");
+    // ESP_LOGV("ws", "收到訊息");
     vTaskDelay(10/portTICK_PERIOD_MS);
     // String MessageString= String(remove_non_utf8(std::string((char *)data)).c_str());
     String MessageString = String((char *)data);
@@ -281,7 +281,7 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
         ++length;
     }
 
-    ESP_LOGV("ws", "total len: %d, data* len: %d, String len: %d", len, length, totalLen);
+    // ESP_LOGV("ws", "total len: %d, data* len: %d, String len: %d", len, length, totalLen);
     MessageString = MessageString.substring(0, len);
     int commaIndex = MessageString.indexOf("]");
     String METHOD = MessageString.substring(1, commaIndex);
@@ -533,6 +533,12 @@ void CWIFI_Ctrler::setAPIs()
     AsyncWebServerResponse* response = request->beginResponse(SPIFFS, "/web/index.html", "text/html");
     SendHTTPesponse(request, response);
   });
+
+  asyncServer.serveStatic("/api/Setting/event_config.json", SPIFFS, "/config/event_config.json");
+  // asyncServer.on("/api/Setting", HTTP_GET, [&](AsyncWebServerRequest *request){
+  //   AsyncWebServerResponse* response = request->beginResponse(200, "application/json", "OK");
+  //   SendHTTPesponse(request, response);
+  // });
 
   asyncServer.on("/api/wifi/Connect", HTTP_POST, [&](AsyncWebServerRequest *request){
     AsyncWebServerResponse* response = request->beginResponse(200, "application/json", "OK");

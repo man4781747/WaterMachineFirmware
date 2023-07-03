@@ -62,13 +62,17 @@ JsonObject BuildSpectrophotometerEventJSONItem(JsonArray spectrophotometerEventL
     if (!D_AllSpectrophotometerSetting.containsKey(spectrophotometerID)) {
       continue;
     }
+    serializeJsonPretty(spectrophotometerEventItem,Serial);
     DynamicJsonDocument D_oneSpectrophotometerSetItem(500);
     D_oneSpectrophotometerSetItem["spectrophotometer"]["index"].set(D_AllSpectrophotometerSetting[spectrophotometerID]["index"].as<int>());
     D_oneSpectrophotometerSetItem["spectrophotometer"]["title"].set(D_AllSpectrophotometerSetting[spectrophotometerID]["title"].as<String>());
     D_oneSpectrophotometerSetItem["spectrophotometer"]["description"].set(D_AllSpectrophotometerSetting[spectrophotometerID]["description"].as<String>());
+    D_oneSpectrophotometerSetItem["spectrophotometer_id"].set(spectrophotometerEventItem["spectrophotometer_id"].as<String>());
     D_oneSpectrophotometerSetItem["finish_time"].set(-1);
     D_oneSpectrophotometerSetItem["gain"].set(spectrophotometerEventItem["gain"].as<String>());
     D_oneSpectrophotometerSetItem["value_name"].set(spectrophotometerEventItem["value_name"].as<String>());
+    D_oneSpectrophotometerSetItem["channel"].set(spectrophotometerEventItem["channel"].as<String>());
+    D_oneSpectrophotometerSetItem["target"].set(spectrophotometerEventItem["target"].as<int>());
     L_allSpectrophotometerEventList.add(D_oneSpectrophotometerSetItem);
   }
   return D_SpectrophotometerListItem.as<JsonObject>();
@@ -642,25 +646,26 @@ void ws_PatchSpectrophotometerInfo(AsyncWebSocket *server, AsyncWebSocketClient 
   JsonObject D_spectrophotometer = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["spectrophotometer"];
   if (D_spectrophotometer.containsKey(TargetName)) {
     JsonObject D_newConfig = D_FormData->as<JsonObject>();
-    JsonObject D_oldConfig = D_spectrophotometer[TargetName];
-    for (JsonPair newConfigItem : D_newConfig) {
-      if (D_oldConfig[newConfigItem.key()].as<String>() != newConfigItem.value().as<String>()) {
-        D_oldConfig[newConfigItem.key()].set(newConfigItem.value().as<String>());
-      }
-    }
-    D_baseInfoJSON["parameter"][TargetName].set(D_oldConfig);
+    D_spectrophotometer[TargetName].set(D_newConfig);
+    // JsonObject D_oldConfig = D_spectrophotometer[TargetName];
+    // for (JsonPair newConfigItem : D_newConfig) {
+    //   if (D_oldConfig[newConfigItem.key()].as<String>() != newConfigItem.value().as<String>()) {
+    //     D_oldConfig[newConfigItem.key()].set(newConfigItem.value().as<String>());
+    //   }
+    // }
+    D_baseInfoJSON["parameter"][TargetName].set(D_spectrophotometer[TargetName].as<JsonObject>());
 
     D_baseInfoJSON["action"]["status"].set("OK");
     D_baseInfoJSON["action"]["message"].set("更新分光光度計設定完畢");
     D_baseInfoJSON["action"]["target"].set("Spectrophotometer");
     D_baseInfoJSON["action"]["method"].set("Update");
     String returnString;
-    serializeJsonPretty(D_baseInfoJSON, returnString);
+    serializeJson(D_baseInfoJSON, returnString);
     server->binaryAll(returnString);
     Machine_Ctrl.SetLog(
       5,
       "更新分光光度計設定完畢",
-      "分光光度計設定名稱: " + D_oldConfig["title"].as<String>(),
+      "分光光度計設定名稱: " + D_spectrophotometer[TargetName]["title"].as<String>(),
       server, NULL
     );
     Machine_Ctrl.spiffs.ReWriteDeviceSetting();

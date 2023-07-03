@@ -4,6 +4,7 @@
 
 #include "CalcFunction.h"
 
+#include <SD.h>
 #include <Wire.h>
 #include <ArduinoJson.h>
 #include <ESP32Servo.h>
@@ -39,6 +40,18 @@ double getRandomNumber(double mean, double stddev) {
   // std::normal_distribution<double> dist(mean, stddev);
   // double sample = dist(gen); 
   return mean + (double)((esp_random() % 1000)/1000.);
+}
+
+void SMachine_Ctrl::INIT_SD_Card()
+{
+  if (!SD.begin(8)) {
+    Serial.println("initialization failed!");
+    // while (1);
+  } else {
+    Serial.println("initialization done.");
+  }
+  SD.mkdir("/sd/logs");
+
 }
 
 /**
@@ -297,16 +310,25 @@ void LOADED_ACTION(void* parameter)
                 String GainStr = spectrophotometerItem["gain"].as<String>();
                 String value_name = spectrophotometerItem["value_name"].as<String>();
                 String spectrophotometerName = spectrophotometerItem["spectrophotometer"]["title"].as<String>();
+                
+                String spectrophotometer_id = spectrophotometerItem["spectrophotometer_id"].as<String>();
+                
                 ESP_LOGI("LOADED_ACTION","       - %s(%d) %s 測量倍率，並紀錄為: %s", 
                   spectrophotometerName.c_str(), 
                   spectrophotometerIndex, 
                   GainStr.c_str(), value_name.c_str()
                 );
+
+                //? 開啟指定index模組
                 Machine_Ctrl.WireOne.beginTransmission(0x70);
                 Machine_Ctrl.WireOne.write(1 << spectrophotometerIndex);
                 Machine_Ctrl.WireOne.endTransmission();
                 vTaskDelay(100/portTICK_PERIOD_MS);
                 Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(spectrophotometerIndex);
+                vTaskDelay(100/portTICK_PERIOD_MS);
+
+
+                //? 依放大倍率設定調整
                 if (GainStr == "1X") {
                   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_1X);
                 }
@@ -325,8 +347,61 @@ void LOADED_ACTION(void* parameter)
                 else if (GainStr == "96X") {
                   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_96X);
                 }
-                ALS_01_Data_t testValue = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+
+                ALS_01_Data_t sensorData;
+                int targetLevel = spectrophotometerItem["target"].as<int>();
+                String targetChannel = spectrophotometerItem["channel"].as<String>();
+                //?  如果targetLevel不為-1 則代表為測量數值
+                if (targetLevel == -1) {
+                  Machine_Ctrl.WireOne.beginTransmission(0x2F);
+                  Machine_Ctrl.WireOne.write(0b00000000);
+                  Machine_Ctrl.WireOne.write((*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["level"].as<int>());
+                  Machine_Ctrl.WireOne.endTransmission();
+                  sensorData = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+                }
+                //? 反之，則為測量0ppm並將光強度調整至指定數值
+                else {
+                  Machine_Ctrl.SetLog(
+                    3, 
+                    "光度模組調整強度",
+                    "頻道: "+targetChannel+ ", 目標: "+String(targetLevel),
+                    Machine_Ctrl.BackendServer.ws_, NULL
+                  );
+                  for (int i=0;i<256;i++) {
+                    Machine_Ctrl.WireOne.beginTransmission(0x2F);
+                    Machine_Ctrl.WireOne.write(0b00000000);
+                    Machine_Ctrl.WireOne.write(i);
+                    Machine_Ctrl.WireOne.endTransmission();
+                    sensorData = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+                    if (targetChannel == "CH0") {
+                      Serial.printf("%d:%d -> %d\r",i, sensorData.CH_0, targetLevel);
+                      if (sensorData.CH_0 >= targetLevel) {
+                        ESP_LOGI("LOADED_ACTION","      CH0 已將強度調整為:%d", sensorData.CH_0);
+                        (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["level"].set(i);
+                        Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+                        break;
+                      }
+                    }
+                    else if (targetChannel == "CH1") {
+                      Serial.printf("%d:%d -> %d\r",i, sensorData.CH_1, targetLevel);
+                      if (sensorData.CH_1 >= targetLevel) {
+                        ESP_LOGI("LOADED_ACTION","      CH1 已將強度調整為:%d", sensorData.CH_1);
+                        (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"]["spectrophotometer_id"]["level"].set(i);
+                        Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+                        break;
+                      }
+                    }
+                  }
+                }
+
+
+
                 Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
+
+
+
+                // ALS_01_Data_t testValue = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+                // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
 
                 time_t nowTime = now();
                 spectrophotometerItem["finish_time"].set(now());
@@ -344,22 +419,39 @@ void LOADED_ACTION(void* parameter)
                  * 其收到的Sensor數值""不能""存入 Machine_Ctrl.sensorDataSave 中
                  * 
                  */
-                Serial.println(D_loadedActionJSON["data_type"].as<String>());
                 if (D_loadedActionJSON["data_type"].as<String>() == "RUN") {
-                  (*Machine_Ctrl.sensorDataSave)[poolID][value_name].set(testValue.CH_0);
+                  if (targetChannel == "CH0") {
+                    (*Machine_Ctrl.sensorDataSave)[poolID][value_name].set(sensorData.CH_0);
+                  } else if (targetChannel == "CH1") {
+                    (*Machine_Ctrl.sensorDataSave)[poolID][value_name].set(sensorData.CH_1);
+                  }
+                  
                   (*Machine_Ctrl.sensorDataSave)[poolID]["Data_datetime"].set(datetimeChar);
 
                   //TODO 目前還沒有正確的減量線修正公式，所以先給假值
                   if (value_name == "NH4_test_volt") {
-                    (*Machine_Ctrl.sensorDataSave)[poolID]["NH4"].set(2);
+                    // (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["CalibrationParameters"][]
+                    (*Machine_Ctrl.sensorDataSave)[poolID]["NH4"].set(
+                      getFixValueByLogarithmicFix(
+                        (*Machine_Ctrl.sensorDataSave)[poolID][value_name].as<double>(),
+                        (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["CalibrationParameters"]["slope"].as<double>(),
+                        (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["CalibrationParameters"]["logarithm"].as<double>(),
+                        (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["CalibrationParameters"]["intercept"].as<double>()
+                      )
+                    );
                   }
                   if (value_name == "NO2_test_volt") {
-                    (*Machine_Ctrl.sensorDataSave)[poolID]["NO2"].set(2);
+                    (*Machine_Ctrl.sensorDataSave)[poolID]["NO2"].set(getFixValueByLogarithmicFix(
+                      (*Machine_Ctrl.sensorDataSave)[poolID][value_name].as<double>(),
+                      (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["CalibrationParameters"]["slope"].as<double>(),
+                      (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["CalibrationParameters"]["logarithm"].as<double>(),
+                      (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["CalibrationParameters"]["intercept"].as<double>()
+                    ));
                   }
                 }
                 poolSensorData[poolID][value_name]["Gain"].set(GainStr);
-                poolSensorData[poolID][value_name]["Value"]["CH0"].set(testValue.CH_0);
-                poolSensorData[poolID][value_name]["Value"]["CH1"].set(testValue.CH_1);
+                poolSensorData[poolID][value_name]["Value"]["CH0"].set(sensorData.CH_0);
+                poolSensorData[poolID][value_name]["Value"]["CH1"].set(sensorData.CH_1);
                 poolSensorData[poolID][value_name]["Time"].set(datetimeChar);
 
 
@@ -367,7 +459,7 @@ void LOADED_ACTION(void* parameter)
                 Machine_Ctrl.SetLog(
                   3, 
                   "分光光度計: " + spectrophotometerName + "獲得新量測值",
-                  "資料名稱: "+value_name+"倍率: "+GainStr + ",CH0: "+String(testValue.CH_0)+",CH1: "+String(testValue.CH_1),
+                  "資料名稱: "+value_name+"倍率: "+GainStr + ",CH0: "+String(sensorData.CH_0)+",CH1: "+String(sensorData.CH_1),
                   Machine_Ctrl.BackendServer.ws_, NULL
                 );
 
@@ -614,10 +706,25 @@ void SMachine_Ctrl::Stop_AllPeristalticMotor()
 DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String description, AsyncWebSocket *server, AsyncWebSocketClient *client)
 {
   DynamicJsonDocument logItem(500);
+  String timeString = GetDatetimeString();
   logItem["level"].set(Level);
-  logItem["time"].set(GetNowTimeString());
+  logItem["time"].set(timeString);
   logItem["title"].set(Title);
   logItem["description"].set(description);
+  
+  String logFileFullPath = LogFolder + GetDateString("") + "_log.csv";
+  File logFile;
+  if (SD.exists(logFileFullPath)) {
+    logFile = SD.open(logFileFullPath, FILE_APPEND);
+  } else {
+    logFile = SD.open(logFileFullPath, FILE_WRITE);
+  }
+  logFile.printf("%d,%s,%s,%s\n",
+    Level, timeString.c_str(),
+    Title.c_str(), description.c_str()
+  );
+  logFile.close();
+
   logArray.add(logItem);
   if (logArray.size() > 100) {
     logArray.remove(0);
@@ -660,7 +767,7 @@ DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String descri
     D_baseInfo["action"]["description"].set(description);
     D_baseInfo["action"]["status"].set("OK");
     String returnString;
-    serializeJsonPretty(D_baseInfo, returnString);
+    serializeJson(D_baseInfo, returnString);
     if (server != NULL) {
       server->binaryAll(returnString);
     }
@@ -692,6 +799,8 @@ void SMachine_Ctrl::BroadcastNewPoolData(String poolID)
 // For 基礎行為
 ////////////////////////////////////////////////////
 
+//? 獲得當前儀器時間字串
+//? 
 String SMachine_Ctrl::GetNowTimeString()
 {
   char datetimeChar[30];
@@ -702,6 +811,33 @@ String SMachine_Ctrl::GetNowTimeString()
   );
 
   return String(datetimeChar);
+}
+
+
+
+String SMachine_Ctrl::GetDateString(String interval)
+{
+  time_t nowTime = now();
+  char date[11];
+  sprintf(date, "%04d%s%02d%s%02d",
+    year(nowTime), interval.c_str(), month(nowTime), interval.c_str(), day(nowTime)
+  );
+  return String(date);
+}
+
+String SMachine_Ctrl::GetTimeString(String interval)
+{
+  time_t nowTime = now();
+  char time_[11];
+  sprintf(time_, "%02d%s%02d%s%02d",
+    hour(nowTime), interval.c_str(), minute(nowTime), interval.c_str(), second(nowTime)
+  );
+  return String(time_);
+}
+
+String SMachine_Ctrl::GetDatetimeString(String interval_date, String interval_middle, String interval_time)
+{
+  return GetDateString(interval_date)+interval_middle+GetTimeString(interval_time);
 }
 
 ////////////////////////////////////////////////////

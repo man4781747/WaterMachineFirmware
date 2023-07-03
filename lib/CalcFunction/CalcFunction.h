@@ -83,4 +83,29 @@ inline double afterFilterValue(const uint16_t* x, int len)
   return static_cast<double>(sum)/sumLen;
 }
 
+inline double getFixValueByLinerFix(double x, double a, double b)
+{
+  double result;
+  result = a*x+b;
+  if (isnormal(result)) {
+    return result;
+  } 
+  else {
+    return -999.;
+  }
+}
+
+inline double getFixValueByLogarithmicFix(double x, double a, double logNum,double b)
+{
+  double result;
+  result = a*log(x)/log(logNum)+b;
+  if (isnormal(result)) {
+    return result;
+  } 
+  else {
+    return -999.;
+  }
+}
+
+
 #endif

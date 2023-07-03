@@ -56,6 +56,7 @@ class SMachine_Ctrl
     ////////////////////////////////////////////////////
 
     void INIT_SPIFFS_config();
+    void INIT_SD_Card();
     void INIT_I2C_Wires();
     void INIT_PoolData();
 
@@ -103,6 +104,10 @@ class SMachine_Ctrl
     ////////////////////////////////////////////////////
 
     String GetNowTimeString();
+    String GetTimeString(String interval=":");
+    String GetDateString(String interval="-");
+    String GetDatetimeString(String interval_date="-", String interval_middle=" ", String interval_time=":");
+
 
     ////////////////////////////////////////////////////
     //* For 測試
@@ -116,16 +121,17 @@ class SMachine_Ctrl
     //* 公用參數
     ////////////////////////////////////////////////////
 
-    /**
-     * @brief 當前執行動作TASK
-     * 
-     */
+
+    //! 當前執行動作TASK
     TaskHandle_t TASK__NOW_ACTION;
     DynamicJsonDocument *loadedAction = new DynamicJsonDocument(1000000);
 
     DynamicJsonDocument *sensorDataSave = new DynamicJsonDocument(50000);
     DynamicJsonDocument *DeviceLogSave = new DynamicJsonDocument(50000);
     JsonArray logArray;
+
+    //! SD卡系統相關參數
+    String LogFolder = "/logs/";
 
     TaskHandle_t TASK__Peristaltic_MOTOR;
     //? 蠕動馬達Task的互斥鎖，確保蠕動馬達的 moduleDataList 內容不會被多個Task同時變動
