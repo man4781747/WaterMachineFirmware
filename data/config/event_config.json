@@ -965,7 +965,7 @@
         "title": "等待5分鐘成色",
         "description": "等待5分鐘成色",
         "event": [
-            { "wait": 10 }
+          { "wait": 300 }
         ]
     },
     "NO2_Wash_Value_Get" : {

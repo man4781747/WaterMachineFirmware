@@ -511,9 +511,24 @@ void LOADED_ACTION(void* parameter)
               digitalWrite(7, LOW);
               AnySensorData = true;
             }
+            //! 等待設定
+            else if (eventItem.containsKey("wait")) {
+              ESP_LOGI("LOADED_ACTION","      [%d-%d-%d]等待",stepCount,eventGroupCount,eventCount);
+              vTaskDelay(eventItem["wait"].as<int>()*1000/portTICK_PERIOD_MS);
+            }
             //! 例外檢查
             else {
               ESP_LOGW("LOADED_ACTION","      [%d-%d-%d]未知的設定",stepCount,eventGroupCount,eventCount);
+              String returnString;
+              serializeJson(eventItem, returnString);
+
+              Machine_Ctrl.SetLog(
+                2, 
+                "發現未知的設定，請將下列訊息複製並通知管理員",
+                returnString,
+                Machine_Ctrl.BackendServer.ws_, NULL
+              );
+              
               serializeJsonPretty(eventItem, Serial);
             }
             eventCount += 1;

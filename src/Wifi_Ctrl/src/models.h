@@ -117,6 +117,11 @@ JsonObject BuildEventJSONItem(String S_thisEventKey, JsonObject D_thisEventSetti
       L_phMeterEventList.add(phMeterItem);
       L_eventList.add(phMeterListItem.as<JsonObject>());
     }
+    else if (eventItem.containsKey("wait")) {
+      DynamicJsonDocument WaitItem(200);
+      WaitItem["wait"].set(eventItem["wait"].as<int>());
+      L_eventList.add(WaitItem.as<JsonObject>());
+    }
   }
   return eventGroupItem.as<JsonObject>();
 }
