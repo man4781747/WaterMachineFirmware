@@ -26,7 +26,7 @@ class SPIFFS_Ctrl
 
     DynamicJsonDocument* GetDeviceSetting();
     void ReWriteDeviceSetting();
-    DynamicJsonDocument *DeviceSetting = new DynamicJsonDocument(100000);
+    DynamicJsonDocument *DeviceSetting = new DynamicJsonDocument(300000);
 
   private:
 };

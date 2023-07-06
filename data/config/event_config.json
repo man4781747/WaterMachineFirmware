@@ -89,12 +89,12 @@
       "description": "試劑水/RO水管路開關"
     },
     "S_M1": {
-      "index": 22,
+      "index": 21,
       "title": "通往PH測試",
       "description": "通往PH測試管路開關"
     },
     "S_M2": {
-        "index": 21,
+        "index": 22,
         "title": "樣本水",
         "description": "樣本水管路開關"
     },
@@ -1236,7 +1236,7 @@
     },
     "Clear_All_Path": {
       "title": "清空所有可以清空的東西",
-      "description": "1. 所有光度計、2. 混合室、3.主管道", 
+      "description": "1. 所有檢測模組、2. 混合室、3.主管道", 
       "steps": [
         "Reset_All_PWM_Motor",
         "Clear_NO2_SensorRoom_To_MixRoom",
@@ -1246,7 +1246,7 @@
     },
     "Wash_All_Path": {
       "title": "清洗儀器",
-      "description": "以RO水清洗1. 主管道、2. 混合室、3. 分光光度計", 
+      "description": "以RO水清洗1. 主管道、2. 混合室、3. 檢測模組", 
       "steps": [
         "Reset_All_PWM_Motor",
         "FORWASH_Push_RO_Liquid_To_MixRoom",
