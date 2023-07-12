@@ -38,7 +38,7 @@ DFRobot_MCP9808_I2C mcp9808_other(&Machine_Ctrl.WireOne, 0x19);
 #include <Adafruit_AS7341.h>
 Adafruit_AS7341 as7341;
 void SEN0364Test();
-void testWeb(int index, int type);
+void testWeb(int index, int type, String desp);
 
 uint16_t CH0_Buff [30];
 uint16_t CH1_Buff [30];
@@ -69,7 +69,7 @@ uint32_t delayMS;
 const char* LOG_TAG = "MAIN";
 SMachine_Ctrl Machine_Ctrl;
 
-const char* FIRMWARE_VERSION = "V2.23.71.1";
+const char* FIRMWARE_VERSION = "V2.23.71.3";
 
 //TODO oled暫時這樣寫死
 
@@ -81,13 +81,8 @@ void scanI2C();
 
 void setup() {
   pinMode(39, PULLUP);
-  
   Serial.begin(115200);
   Serial.println("START");
-  // Serial.printf("Total heap: %d\n", ESP.getHeapSize());
-  // Serial.printf("Free heap: %d\n", ESP.getFreeHeap());
-  // Serial.printf("Total PSRAM: %d\n", ESP.getPsramSize());
-  // Serial.printf("Free PSRAM: %d\n", ESP.getFreePsram());
   Machine_Ctrl.INIT_SPIFFS_config();
   Machine_Ctrl.INIT_I2C_Wires();
   Machine_Ctrl.INIT_PoolData();
@@ -114,99 +109,90 @@ void setup() {
   display.setCursor(0, 16);
   display.printf("Ver: %s",FIRMWARE_VERSION);
   display.display();
+  pinMode(48, OUTPUT);
   //TODO oled暫時這樣寫死
 
-  // if (!SD.begin(8)) {
-  //   Serial.println("initialization failed!");
-  //   while (1);
+
+
+  // mcp9808_other.wakeUpMode();
+  // mcp9808_other.setResolution(RESOLUTION_0_0625);
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_48X);
+  // uint16_t CH_Buff [30];
+  // uint16_t Temp_Buff[30];
+
+
+  // for (int i=120;i<160;i=i+1) {
+  //   Machine_Ctrl.WireOne.beginTransmission(0x2F);
+  //   Machine_Ctrl.WireOne.write(0b00000000);
+  //   Machine_Ctrl.WireOne.write(i);
+  //   Machine_Ctrl.WireOne.endTransmission();
+  //   for (int i=0;i<30;i++) {
+  //     test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  //     CH_Buff[i] = test.CH_0;
+  //   }
+  //   double test_value = afterFilterValue(CH_Buff,30);
+  //   Serial.println(test_value);
+  //   if (test_value >= 50000) {
+  //     break;
+  //   }
   // }
-  // Serial.println("initialization done.");
 
-
-  //TODO oled暫時這樣寫死
-
-  // mcp9808.begin();
-  // mcp9808_other.begin();
-  // tempsensor.begin(0x18);
-  // tempsensor.setResolution(3);
-
-  // digitalWrite(Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.stcpPin, LOW);
-  // shiftOut(
-  //   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.dataPin, 
-  //   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.shcpPin, 
-  //   LSBFIRST, 0b11110011
-  // );
-  // digitalWrite(Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.stcpPin, HIGH);
-  // pinMode(Sensor_1_PIN, OUTPUT);
-  // pinMode(Sensor_2_PIN, OUTPUT);
-  // pinMode(Sensor_3_PIN, OUTPUT);
-  // pinMode(Sensor_4_PIN, OUTPUT);
-
-  // if (!as7341.begin((uint8_t)57U, &(Machine_Ctrl.WireOne))){
-  //   Serial.println("Could not find AS7341");
-  //   while (1) { delay(10); }
-  // }
-  // Serial.println("Setup Atime, ASTEP, Gain");
-  // as7341.setATIME(100);
-  // as7341.setASTEP(999);
-  // as7341.setGain(AS7341_GAIN_256X);
-
-  // dht.begin();
-
-  // sensor_t sensor;
-  // dht.temperature().getSensor(&sensor);
-  // Serial.println(F("------------------------------------"));
-  // Serial.println(F("Temperature Sensor"));
-  // Serial.print  (F("Sensor Type: ")); Serial.println(sensor.name);
-  // Serial.print  (F("Driver Ver:  ")); Serial.println(sensor.version);
-  // Serial.print  (F("Unique ID:   ")); Serial.println(sensor.sensor_id);
-  // Serial.print  (F("Max Value:   ")); Serial.print(sensor.max_value); Serial.println(F("°C"));
-  // Serial.print  (F("Min Value:   ")); Serial.print(sensor.min_value); Serial.println(F("°C"));
-  // Serial.print  (F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F("°C"));
-  // Serial.println(F("------------------------------------"));
-  // // Print humidity sensor details.
-  // dht.humidity().getSensor(&sensor);
-  // Serial.println(F("Humidity Sensor"));
-  // Serial.print  (F("Sensor Type: ")); Serial.println(sensor.name);
-  // Serial.print  (F("Driver Ver:  ")); Serial.println(sensor.version);
-  // Serial.print  (F("Unique ID:   ")); Serial.println(sensor.sensor_id);
-  // Serial.print  (F("Max Value:   ")); Serial.print(sensor.max_value); Serial.println(F("%"));
-  // Serial.print  (F("Min Value:   ")); Serial.print(sensor.min_value); Serial.println(F("%"));
-  // Serial.print  (F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F("%"));
-  // Serial.println(F("------------------------------------"));
-  // delayMS = sensor.min_delay / 1000;
-  // pinMode(14, INPUT);
-  // Machine_Ctrl.WireOne.beginTransmission(0x70);
-  // Machine_Ctrl.WireOne.write(1 << 0);
-  // Machine_Ctrl.WireOne.endTransmission();
-  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(0);
 }
 
 void loop() {
-  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_96X);
-  // for (int i=0;i<256;i++) {
+  // test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  // Serial.printf("%s, %d,%d,%.2f\n", Machine_Ctrl.GetDatetimeString().c_str(), test.CH_0, test.CH_1,mcp9808_other.getTemperature());
+  // uint16_t CH_Buff [30];
+  // uint16_t Temp_Buff[30];
+  // for (int i=0;i<30;i++) {
+  //   test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+  //   CH_Buff[i] = test.CH_0;
+  //   // Temp_Buff[i] = (uint16_t)(mcp9808_other.getTemperature());
+  // }
+
+  // Serial.printf("%s, %.2f,%.2f\n", 
+  //   Machine_Ctrl.GetDatetimeString().c_str(), 
+  //   afterFilterValue(CH_Buff,30), 
+  //   mcp9808_other.getTemperature()
+  //   // afterFilterValue(Temp_Buff,30)
+  // );
+
+  // for (int i=151;i<156;i=i+1) {
   //   Machine_Ctrl.WireOne.beginTransmission(0x2F);
   //   Machine_Ctrl.WireOne.write(0b00000000);
   //   Machine_Ctrl.WireOne.write(i);
   //   Machine_Ctrl.WireOne.endTransmission();
   //   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_48X);
   //   test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
-  //   Serial.printf("%d,%d,%d,", i, test.CH_0, test.CH_1);
-  //   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_96X);
-  //   test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
-  //   Serial.printf("%d,%d,%.2f\n", test.CH_0, test.CH_1,mcp9808_other.getTemperature());
-  //   mcp9808_other.wakeUpMode();
-  //   mcp9808_other.setResolution(RESOLUTION_0_0625);
+  //   Serial.printf("%s, %d,%d,%d,%.2f\n", Machine_Ctrl.GetDatetimeString().c_str(), i, test.CH_0, test.CH_1,mcp9808_other.getTemperature());
+    // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_96X);
+    // test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+
+    // Serial.printf("%d,%d,%.2f\n", test.CH_0, test.CH_1,mcp9808_other.getTemperature());
+    // Serial.printf("%d,%d,%.2f\n", test.CH_0, test.CH_1,mcp9808_other.getTemperature());
+    // mcp9808_other.wakeUpMode();
+    // mcp9808_other.setResolution(RESOLUTION_0_0625);
 
   // }
-
-
+  // Machine_Ctrl.GetDatetimeString();
+  // testWeb(0, 148, "綠光測試: 148");
+  // testWeb(1, 248, "藍光測試: 248");
   // for (int indexChose = 0;indexChose<2;indexChose++) {
-  //   for (int typeChose = 0;typeChose<=200;typeChose=typeChose+10) {
-  //     testWeb(indexChose, typeChose);
-  //   }
+    // for (int typeChose = 0;typeChose<=200;typeChose=typeChose+10) {
+      // testWeb(indexChose, 160);
+    // }
   // }
-  delay(1000);
+  
+  // digitalWrite(48, HIGH);
+  // delay(500);
+  // Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(0, PeristalticMotorStatus::FORWARD);
+  // Machine_Ctrl.peristalticMotorsCtrl.RunMotor(
+  //   Machine_Ctrl.peristalticMotorsCtrl.moduleDataList
+  // );
+  // delay(1500);
+  // Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
+  // digitalWrite(48, LOW);
+  delay(2000);
 }
 
 void scanI2C(){
@@ -230,11 +216,11 @@ void scanI2C(){
   }
 }
 
-void testWeb(int index, int type) {
+void testWeb(int index, int type, String desp) {
   DynamicJsonDocument PostData_V2(10000);
   uint16_t CH0_Buff_V2 [30];
   uint16_t CH1_Buff_V2 [30];
-  uint16_t data[30];
+  uint16_t Temp_Buff[30];
 
   Machine_Ctrl.WireOne.beginTransmission(0x70);
   Machine_Ctrl.WireOne.write(1 << index);
@@ -242,7 +228,6 @@ void testWeb(int index, int type) {
   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(index);
   delay(100);
   Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_96X);
-
   Machine_Ctrl.WireOne.beginTransmission(0x2F);
   Machine_Ctrl.WireOne.write(0b00000000);
   Machine_Ctrl.WireOne.write(type);
@@ -264,7 +249,7 @@ void testWeb(int index, int type) {
   //TODO 溫度測試
   PostData_V2["Type"].set("X96");
   PostData_V2["SensorIndex"].set(index);
-  PostData_V2["Name"].set("綠光測試: 48000");
+  PostData_V2["Name"].set(desp);
   PostData_V2["Resistance_Level"].set(type);
   nowTime = now();
   sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",

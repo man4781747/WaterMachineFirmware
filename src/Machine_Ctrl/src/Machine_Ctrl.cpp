@@ -78,7 +78,7 @@ void SMachine_Ctrl::INIT_PoolData()
   for (JsonPair D_poolItem : D_pools) {
     (*sensorDataSave)[D_poolItem.key()]["PoolID"].set(D_poolItem.key());
     (*sensorDataSave)[D_poolItem.key()]["PoolName"].set(D_poolItem.value().as<JsonObject>()["title"].as<String>());
-    (*sensorDataSave)[D_poolItem.key()]["PoolDescription"].set(D_poolItem.value().as<JsonObject>()["description"].as<String>());
+    (*sensorDataSave)[D_poolItem.key()]["PoolDescription"].set(D_poolItem.value().as<JsonObject>()["desp"].as<String>());
     (*sensorDataSave)[D_poolItem.key()]["NO2_wash_volt"].set(-1.);
     (*sensorDataSave)[D_poolItem.key()]["NO2_test_volt"].set(-1.);
     (*sensorDataSave)[D_poolItem.key()]["NO2"].set(-1.);
@@ -156,10 +156,10 @@ void SMachine_Ctrl::LOAD__ACTION(JsonObject actionJSON)
   loadedAction->set(actionJSON);
   ESP_LOGI("LOADED_ACTION","OK");
 
-  //? 以下為測試用的code，可以得到排程資訊是否有正確讀取 
+  // //? 以下為測試用的code，可以得到排程資訊是否有正確讀取 
   // String poolID = actionJSON["pool"].as<String>();
   // ESP_LOGI("LOADED_ACTION","執行流程: %s", actionJSON["title"].as<String>().c_str());
-  // ESP_LOGI("LOADED_ACTION","流程說明: %s", actionJSON["description"].as<String>().c_str());
+  // ESP_LOGI("LOADED_ACTION","流程說明: %s", actionJSON["desp"].as<String>().c_str());
   // ESP_LOGI("LOADED_ACTION","蝦池ID: %s", poolID.c_str());
   // ESP_LOGI("LOADED_ACTION","是否為測試: %s", actionJSON["data_type"].as<String>() == String("TEST")? "是" : "否");
   // int stepCount = 1;
@@ -169,7 +169,7 @@ void SMachine_Ctrl::LOAD__ACTION(JsonObject actionJSON)
   //     ESP_LOGI("LOADED_ACTION","  [%d]%s - %s",
   //       stepCount, 
   //       D_stepItem_.value()["title"].as<String>().c_str(),
-  //       D_stepItem_.value()["description"].as<String>().c_str()
+  //       D_stepItem_.value()["desp"].as<String>().c_str()
   //     );
   //     vTaskDelay(10/portTICK_PERIOD_MS);
   //     int eventGroupCount = 1;
@@ -179,7 +179,7 @@ void SMachine_Ctrl::LOAD__ACTION(JsonObject actionJSON)
   //         ESP_LOGI("LOADED_ACTION","    [%d-%d]%s - %s", 
   //           stepCount, eventGroupCount, 
   //           D_eventGroupItem_.value()["title"].as<String>().c_str(),
-  //           D_eventGroupItem_.value()["description"].as<String>().c_str()
+  //           D_eventGroupItem_.value()["desp"].as<String>().c_str()
   //         );
   //         vTaskDelay(10/portTICK_PERIOD_MS);
   //       }
@@ -197,13 +197,13 @@ void LOADED_ACTION(void* parameter)
   JsonObject D_loadedActionJSON = Machine_Ctrl.loadedAction->as<JsonObject>();
   String poolID = D_loadedActionJSON["pool"].as<String>();
   ESP_LOGI("LOADED_ACTION","執行流程: %s", D_loadedActionJSON["title"].as<String>().c_str());
-  ESP_LOGI("LOADED_ACTION","流程說明: %s", D_loadedActionJSON["description"].as<String>().c_str());
+  ESP_LOGI("LOADED_ACTION","流程說明: %s", D_loadedActionJSON["desp"].as<String>().c_str());
   ESP_LOGI("LOADED_ACTION","蝦池ID: %s", poolID.c_str());
   ESP_LOGI("LOADED_ACTION","是否為測試: %s", D_loadedActionJSON["data_type"].as<String>() == String("TEST")? "是" : "否");
   Machine_Ctrl.SetLog(
     3, 
     "執行流程: "+D_loadedActionJSON["title"].as<String>(),
-    "流程說明: "+D_loadedActionJSON["description"].as<String>(),
+    "流程說明: "+D_loadedActionJSON["desp"].as<String>(),
     Machine_Ctrl.BackendServer.ws_, NULL
   );
   
@@ -218,7 +218,7 @@ void LOADED_ACTION(void* parameter)
       ESP_LOGI("LOADED_ACTION","  [%d]%s - %s",
         stepCount, 
         D_stepItem_.value()["title"].as<String>().c_str(),
-        D_stepItem_.value()["description"].as<String>().c_str()
+        D_stepItem_.value()["desp"].as<String>().c_str()
       );
       int eventGroupCount = 1;
       for (JsonVariant eventGroupItem : D_stepItem_.value()["event_group_list"].as<JsonArray>()) {
@@ -227,7 +227,7 @@ void LOADED_ACTION(void* parameter)
           ESP_LOGI("LOADED_ACTION","    [%d-%d]%s - %s", 
             stepCount, eventGroupCount, 
             D_eventGroupItem_.value()["title"].as<String>().c_str(),
-            D_eventGroupItem_.value()["description"].as<String>().c_str()
+            D_eventGroupItem_.value()["desp"].as<String>().c_str()
           );
 
           Machine_Ctrl.SetLog(
@@ -311,7 +311,7 @@ void LOADED_ACTION(void* parameter)
                 String value_name = spectrophotometerItem["value_name"].as<String>();
                 String spectrophotometerName = spectrophotometerItem["spectrophotometer"]["title"].as<String>();
                 
-                String spectrophotometer_id = spectrophotometerItem["spectrophotometer_id"].as<String>();
+                String spectrophotometer_id = spectrophotometerItem["id"].as<String>();
                 
                 ESP_LOGI("LOADED_ACTION","       - %s(%d) %s 測量倍率，並紀錄為: %s", 
                   spectrophotometerName.c_str(), 
@@ -351,13 +351,23 @@ void LOADED_ACTION(void* parameter)
                 ALS_01_Data_t sensorData;
                 int targetLevel = spectrophotometerItem["target"].as<int>();
                 String targetChannel = spectrophotometerItem["channel"].as<String>();
+                uint16_t CH0_Buff [30];
+                uint16_t CH1_Buff [30];
+                double CH0_result, CH1_result;
+                double CH0_after, CH1_after;
                 //?  如果targetLevel不為-1 則代表為測量數值
                 if (targetLevel == -1) {
                   Machine_Ctrl.WireOne.beginTransmission(0x2F);
                   Machine_Ctrl.WireOne.write(0b00000000);
                   Machine_Ctrl.WireOne.write((*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["level"].as<int>());
                   Machine_Ctrl.WireOne.endTransmission();
-                  sensorData = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+                  for (int i=0;i<30;i++) {
+                    sensorData = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+                    CH0_Buff[i] = sensorData.CH_0;
+                    CH1_Buff[i] = sensorData.CH_1;
+                  }
+                  CH0_result = afterFilterValue(CH0_Buff, 30);
+                  CH1_result = afterFilterValue(CH1_Buff, 30);
                 }
                 //? 反之，則為測量0ppm並將光強度調整至指定數值
                 else {
@@ -392,16 +402,23 @@ void LOADED_ACTION(void* parameter)
                       }
                     }
                   }
+                  CH0_result = (double)sensorData.CH_0;
+                  CH1_result = (double)sensorData.CH_1;
                 }
-
-
-
                 Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
 
 
+                // CH0_result = 35182.57;
+                // CH1_result = 16624;
+                double m = (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["calibration"][0]["ret"]["m"].as<double>();
+                double b = (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["calibration"][0]["ret"]["b"].as<double>();
 
-                // ALS_01_Data_t testValue = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
-                // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
+                CH0_after = (-log10(CH0_result/50000.)-b)/m;
+                CH1_after = (-log10(CH1_result/50000.)-b)/m;
+                
+                Serial.printf("%s, %.2f, %.2f, %.4f, %.4f, %.2f, %.2f",
+                  spectrophotometer_id.c_str(), CH0_result, CH1_result, m, b, CH0_after, CH1_after
+                );
 
                 time_t nowTime = now();
                 spectrophotometerItem["finish_time"].set(now());
@@ -450,8 +467,8 @@ void LOADED_ACTION(void* parameter)
                   }
                 }
                 poolSensorData[poolID][value_name]["Gain"].set(GainStr);
-                poolSensorData[poolID][value_name]["Value"]["CH0"].set(sensorData.CH_0);
-                poolSensorData[poolID][value_name]["Value"]["CH1"].set(sensorData.CH_1);
+                poolSensorData[poolID][value_name]["Value"]["CH0"].set(CH0_result);
+                poolSensorData[poolID][value_name]["Value"]["CH1"].set(CH1_result);
                 poolSensorData[poolID][value_name]["Time"].set(datetimeChar);
 
 
@@ -459,7 +476,7 @@ void LOADED_ACTION(void* parameter)
                 Machine_Ctrl.SetLog(
                   3, 
                   "分光光度計: " + spectrophotometerName + "獲得新量測值",
-                  "資料名稱: "+value_name+"倍率: "+GainStr + ",CH0: "+String(sensorData.CH_0)+",CH1: "+String(sensorData.CH_1),
+                  "資料名稱: "+value_name+"倍率: "+GainStr + ",CH0(光強度): "+String(CH0_result)+",CH1(光強度): "+String(CH1_result)+",CH0(PPM): "+String(CH0_after)+",CH1(PPM): "+String(CH1_after),
                   Machine_Ctrl.BackendServer.ws_, NULL
                 );
 
@@ -606,7 +623,7 @@ void SMachine_Ctrl::RUN__LOADED_ACTION()
 
 void PeristalticMotorEvent(void* parameter)
 {
-  ESP_LOGD("PeristalticMotorEvent","START");
+  // ESP_LOGD("PeristalticMotorEvent","START");
   Peristaltic_task_config config_ = *((Peristaltic_task_config*) parameter);
   PeristalticMotorStatus status = (config_.status==1 ? PeristalticMotorStatus::FORWARD : PeristalticMotorStatus::REVERSR);
 
@@ -653,7 +670,7 @@ void PeristalticMotorEvent(void* parameter)
   // Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
   // ESP_LOGW("PeristalticMotorEvent","END");
   // Machine_Ctrl.TASK__Peristaltic_MOTOR = NULL;
-  ESP_LOGD("PeristalticMotorEvent","END");
+  // ESP_LOGD("PeristalticMotorEvent","END");
   vTaskDelete(NULL);
 }
 EVENT_RESULT SMachine_Ctrl::RUN__PeristalticMotorEvent(Peristaltic_task_config *config_)
@@ -725,7 +742,7 @@ DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String descri
   logItem["level"].set(Level);
   logItem["time"].set(timeString);
   logItem["title"].set(Title);
-  logItem["description"].set(description);
+  logItem["desp"].set(description);
   
   String logFileFullPath = LogFolder + GetDateString("") + "_log.csv";
   File logFile;
@@ -779,7 +796,7 @@ DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String descri
         break;
     }
     D_baseInfo["action"]["message"].set(Title);
-    D_baseInfo["action"]["description"].set(description);
+    D_baseInfo["action"]["desp"].set(description);
     D_baseInfo["action"]["status"].set("OK");
     String returnString;
     serializeJson(D_baseInfo, returnString);

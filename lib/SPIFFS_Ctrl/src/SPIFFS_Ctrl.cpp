@@ -187,8 +187,6 @@ DynamicJsonDocument* SPIFFS_Ctrl::GetDeviceSetting()
     File file = SPIFFS.open("/config/event_config.json", FILE_READ);
     String FileContent = file.readString();
     file.close();
-    // Serial.printf("file length: %d\r\n", FileContent.length());
-    // Serial.printf("file content: %s\r\n", FileContent.c_str());
     if (FileContent.length() != 0) {
       DeserializationError error = deserializeJson(*DeviceSetting, FileContent);
       if (error) {
@@ -208,7 +206,7 @@ DynamicJsonDocument* SPIFFS_Ctrl::GetDeviceSetting()
   return DeviceSetting;
 }
 
-void SPIFFS_Ctrl::ReWriteDeviceSetting()
+String SPIFFS_Ctrl::ReWriteDeviceSetting()
 {
   //TODO 發現設定檔在編輯後，設定檔內容會空白
   SPIFFS.begin(true);
@@ -222,16 +220,20 @@ void SPIFFS_Ctrl::ReWriteDeviceSetting()
     fileString = "";
     serializeJson(*DeviceSetting, fileString);
     if (fileString.length() != 0) {
-      break;
+      for (int j=0;j<3;j++) {
+        File file = SPIFFS.open("/config/event_config_temp.json", FILE_WRITE);
+        size_t writeSize = file.print(fileString);
+        file.close();
+        if ((int)writeSize == fileString.length()) {
+          SPIFFS.remove("/config/event_config.json");
+          SPIFFS.rename("/config/event_config_temp.json", "/config/event_config.json");
+          ESP_LOGD("SPIFFS", "更新設定檔，原始長度 %d, 寫入長度 %d", fileString.length(), writeSize);
+          return "SUCCESS";
+        }
+      }
+      return "Write File Fail";
     }
   }
-  if (fileString.length() != 0) {
-    File file = SPIFFS.open("/config/event_config.json", FILE_WRITE);
-    size_t writeSize = file.print(fileString);
-    ESP_LOGD("SPIFFS", "更新設定檔，原始長度 %d, 寫入長度 %d", fileString.length(), writeSize);
-    file.close();
-  } else {
-    ESP_LOGE("SPIFFS", "更新設定檔失敗，設定檔輸出成文字失敗");
-  }
+  return "String length in ZERO";
 }
 

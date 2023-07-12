@@ -155,7 +155,7 @@ DynamicJsonDocument CWIFI_Ctrler::GetBaseWSReturnData(String MessageString)
   } else {
     BaseWSReturnData["device_status"].set("Idle");
   }
-
+  serializeJsonPretty(BaseWSReturnData, Serial);
   // BaseWSReturnData["device_status"].set(Machine_Ctrl.GetEventStatus());
   return BaseWSReturnData;
 } 

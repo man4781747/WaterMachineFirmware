@@ -78,9 +78,6 @@ void Motor_Ctrl::SetMotorTo(int channelIndex_, int angle)
   } else {
     pwm_1->setPWM(channelIndex_%16, 0, pulse_width);
     pwm_1->setPWM(channelIndex_%16, 0, pulse_width);
-    // Serial.println("test");
-    // Serial.println(channelIndex_%16);
-    // Serial.println(pulse_width);
   }
 }
 
@@ -154,12 +151,8 @@ void C_Peristaltic_Motors_Ctrl::RunMotor(uint8_t *moduleDataList)
 {
   digitalWrite(STCP, LOW);
   for (int index = moduleNum-1;index >= 0;index--) {
-    for (int i = 0; i <= 7; i++) {
-      Serial.print(((moduleDataList[index] >> i) & 1) ? '1' : '0');
-    }
     shiftOut(DATA, SHCP, MSBFIRST, moduleDataList[index]);
   }
-  Serial.println();
   digitalWrite(STCP, HIGH);
 }
 

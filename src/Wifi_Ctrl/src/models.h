@@ -16,14 +16,14 @@ JsonObject BuildPWNMotorEventJSONItem(JsonArray pwmMotorEventList){
   DynamicJsonDocument D_pwmMotorListItem(5000);
   JsonArray L_allPwmEventList = D_pwmMotorListItem.createNestedArray("pwm_motor_list");
   for (JsonVariant pwmMotorEventItem : pwmMotorEventList) {
-    String pwmID = pwmMotorEventItem["pwm_motor_id"].as<String>();
+    String pwmID = pwmMotorEventItem["id"].as<String>();
     if (!D_AllpwmMotorSetting.containsKey(pwmID)) {
       continue;
     }
     DynamicJsonDocument D_OnePwmMotorSetItem(500);
     D_OnePwmMotorSetItem["pwn_motor"]["index"].set(D_AllpwmMotorSetting[pwmID]["index"].as<int>());
     D_OnePwmMotorSetItem["pwn_motor"]["title"].set(D_AllpwmMotorSetting[pwmID]["title"].as<String>());
-    D_OnePwmMotorSetItem["pwn_motor"]["description"].set(D_AllpwmMotorSetting[pwmID]["description"].as<String>());
+    D_OnePwmMotorSetItem["pwn_motor"]["desp"].set(D_AllpwmMotorSetting[pwmID]["desp"].as<String>());
     D_OnePwmMotorSetItem["finish_time"].set(-1);
     D_OnePwmMotorSetItem["status"].set(pwmMotorEventItem["status"].as<int>());
     L_allPwmEventList.add(D_OnePwmMotorSetItem);
@@ -36,14 +36,14 @@ JsonObject BuildPeristalticMotorEventJSONItem(JsonArray peristalticMotorEventLis
   DynamicJsonDocument D_PeristalticMotorListItem(5000);
   JsonArray L_allPeristalticEventList = D_PeristalticMotorListItem.createNestedArray("peristaltic_motor_list");
   for (JsonVariant peristalticMotorEventItem : peristalticMotorEventList) {
-    String peristalticID = peristalticMotorEventItem["peristaltic_motor_id"].as<String>();
+    String peristalticID = peristalticMotorEventItem["id"].as<String>();
     if (!D_AllPeristalticMotorSetting.containsKey(peristalticID)) {
       continue;
     }
     DynamicJsonDocument D_onePeristalticMotorSetItem(500);
     D_onePeristalticMotorSetItem["peristaltic_motor"]["index"].set(D_AllPeristalticMotorSetting[peristalticID]["index"].as<int>());
     D_onePeristalticMotorSetItem["peristaltic_motor"]["title"].set(D_AllPeristalticMotorSetting[peristalticID]["title"].as<String>());
-    D_onePeristalticMotorSetItem["peristaltic_motor"]["description"].set(D_AllPeristalticMotorSetting[peristalticID]["description"].as<String>());
+    D_onePeristalticMotorSetItem["peristaltic_motor"]["desp"].set(D_AllPeristalticMotorSetting[peristalticID]["desp"].as<String>());
     D_onePeristalticMotorSetItem["finish_time"].set(-1);
     D_onePeristalticMotorSetItem["status"].set(peristalticMotorEventItem["status"].as<int>());
     D_onePeristalticMotorSetItem["time"].set(peristalticMotorEventItem["time"].as<float>());
@@ -58,7 +58,7 @@ JsonObject BuildSpectrophotometerEventJSONItem(JsonArray spectrophotometerEventL
   DynamicJsonDocument D_SpectrophotometerListItem(5000);
   JsonArray L_allSpectrophotometerEventList = D_SpectrophotometerListItem.createNestedArray("spectrophotometer_list");
   for (JsonVariant spectrophotometerEventItem : spectrophotometerEventList) {
-    String spectrophotometerID = spectrophotometerEventItem["spectrophotometer_id"].as<String>();
+    String spectrophotometerID = spectrophotometerEventItem["id"].as<String>();
     if (!D_AllSpectrophotometerSetting.containsKey(spectrophotometerID)) {
       continue;
     }
@@ -66,8 +66,8 @@ JsonObject BuildSpectrophotometerEventJSONItem(JsonArray spectrophotometerEventL
     DynamicJsonDocument D_oneSpectrophotometerSetItem(500);
     D_oneSpectrophotometerSetItem["spectrophotometer"]["index"].set(D_AllSpectrophotometerSetting[spectrophotometerID]["index"].as<int>());
     D_oneSpectrophotometerSetItem["spectrophotometer"]["title"].set(D_AllSpectrophotometerSetting[spectrophotometerID]["title"].as<String>());
-    D_oneSpectrophotometerSetItem["spectrophotometer"]["description"].set(D_AllSpectrophotometerSetting[spectrophotometerID]["description"].as<String>());
-    D_oneSpectrophotometerSetItem["spectrophotometer_id"].set(spectrophotometerEventItem["spectrophotometer_id"].as<String>());
+    D_oneSpectrophotometerSetItem["spectrophotometer"]["desp"].set(D_AllSpectrophotometerSetting[spectrophotometerID]["desp"].as<String>());
+    D_oneSpectrophotometerSetItem["id"].set(spectrophotometerEventItem["id"].as<String>());
     D_oneSpectrophotometerSetItem["finish_time"].set(-1);
     D_oneSpectrophotometerSetItem["gain"].set(spectrophotometerEventItem["gain"].as<String>());
     D_oneSpectrophotometerSetItem["value_name"].set(spectrophotometerEventItem["value_name"].as<String>());
@@ -81,7 +81,7 @@ JsonObject BuildSpectrophotometerEventJSONItem(JsonArray spectrophotometerEventL
 JsonObject BuildEventJSONItem(String S_thisEventKey, JsonObject D_thisEventSetting) {
   DynamicJsonDocument eventGroupItem(10000);
   eventGroupItem[S_thisEventKey]["title"].set(D_thisEventSetting["title"].as<String>());
-  eventGroupItem[S_thisEventKey]["description"].set(D_thisEventSetting["description"].as<String>());
+  eventGroupItem[S_thisEventKey]["desp"].set(D_thisEventSetting["desp"].as<String>());
   eventGroupItem[S_thisEventKey]["finish_time"].set(-1);
   JsonArray L_eventList = eventGroupItem[S_thisEventKey].createNestedArray("event_list");
 
@@ -113,7 +113,7 @@ JsonObject BuildEventJSONItem(String S_thisEventKey, JsonObject D_thisEventSetti
       DynamicJsonDocument phMeterListItem(500);
       JsonArray L_phMeterEventList = phMeterListItem.createNestedArray("ph_meter");
       DynamicJsonDocument phMeterItem(200);
-      phMeterItem["ph_meter_id"].set("A");
+      phMeterItem["id"].set("A");
       L_phMeterEventList.add(phMeterItem);
       L_eventList.add(phMeterListItem.as<JsonObject>());
     }
@@ -129,7 +129,7 @@ JsonObject BuildEventJSONItem(String S_thisEventKey, JsonObject D_thisEventSetti
 JsonObject BuildStepJSONItem(String S_thisStepKey, JsonObject D_thisStepSetting) {
   DynamicJsonDocument stepItem(50000);
   stepItem[S_thisStepKey]["title"].set(D_thisStepSetting["title"].as<String>());
-  stepItem[S_thisStepKey]["description"].set(D_thisStepSetting["description"].as<String>());
+  stepItem[S_thisStepKey]["desp"].set(D_thisStepSetting["desp"].as<String>());
   stepItem[S_thisStepKey]["finish_time"].set(-1);
   JsonArray L_eventGroupList = stepItem[S_thisStepKey].createNestedArray("event_group_list");
   JsonObject D_EventGroupSetting = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["event_group"];
@@ -146,7 +146,7 @@ JsonObject BuildStepJSONItem(String S_thisStepKey, JsonObject D_thisStepSetting)
 JsonObject BuildPipelineJSONItem(String S_thisPipelineKey, JsonObject D_thisPipelineSetting) {
   DynamicJsonDocument pipelineItem(100000);
   pipelineItem["title"].set(D_thisPipelineSetting["title"].as<String>());
-  pipelineItem["description"].set(D_thisPipelineSetting["description"].as<String>());
+  pipelineItem["desp"].set(D_thisPipelineSetting["desp"].as<String>());
   pipelineItem["finish_time"].set(-1);
   time_t nowTime = now();
   char datetimeChar[30];
@@ -321,7 +321,6 @@ void ws_GetAllPoolData(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
 
 void ws_PatchPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
 {
-  // ReWriteDeviceSetting
   String TargetName = D_PathParameter->as<JsonObject>()["name"];
   ESP_LOGD("Websocket", "Patch Spectrophotometer Name: %s", TargetName.c_str());
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
@@ -349,7 +348,15 @@ void ws_PatchPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyna
       "事件組名稱: " + D_oldConfig["title"].as<String>(),
       server, NULL
     );
-    Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    if (RewriteConfigResult != "SUCCESS") {
+      Machine_Ctrl.SetLog(
+        1,
+        "更新設定檔失敗，請將此情況通知開發人員",
+        RewriteConfigResult,
+        NULL, client
+      );
+    }
   } else {
     Machine_Ctrl.SetLog(
       1,
@@ -383,7 +390,15 @@ void ws_DeletePoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
       "蝦池設定ID: " + TargetName,
       server, NULL
     );
-    Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    if (RewriteConfigResult != "SUCCESS") {
+      Machine_Ctrl.SetLog(
+        1,
+        "更新設定檔失敗，請將此情況通知開發人員",
+        RewriteConfigResult,
+        NULL, client
+      );
+    }
   } else {
     Machine_Ctrl.SetLog(
       1,
@@ -454,7 +469,7 @@ void ws_AddNewPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
     }
     JsonObject D_pools = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pools"];
     D_pools[String(random_name)]["title"].set(D_newConfig["title"].as<String>());
-    D_pools[String(random_name)]["description"].set(D_newConfig["description"].as<String>());
+    D_pools[String(random_name)]["desp"].set(D_newConfig["desp"].as<String>());
     D_baseInfoJSON["status"].set("OK");
     D_baseInfoJSON["action"]["target"].set("Pool");
     D_baseInfoJSON["action"]["method"].set("Update");
@@ -465,10 +480,18 @@ void ws_AddNewPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
     Machine_Ctrl.SetLog(
       5,
       "新增蝦池設定: "+D_newConfig["title"].as<String>(),
-      "說明: " + D_newConfig["description"].as<String>(),
+      "說明: " + D_newConfig["desp"].as<String>(),
       server, NULL
     );
-    Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    if (RewriteConfigResult != "SUCCESS") {
+      Machine_Ctrl.SetLog(
+        1,
+        "更新設定檔失敗，請將此情況通知開發人員",
+        RewriteConfigResult,
+        NULL, client
+      );
+    }
   }
 }
 
@@ -492,7 +515,7 @@ void ws_TestSpectrophotometer(AsyncWebSocket *server, AsyncWebSocketClient *clie
   else if (D_spectrophotometer.containsKey(TargetName)) {
     DynamicJsonDocument actionItem(10000);
     actionItem["title"].set("分光光度計測試");
-    actionItem["description"].set("分光光度計測試");
+    actionItem["desp"].set("分光光度計測試");
     time_t nowTime = now();
     char datetimeChar[30];
     sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
@@ -508,14 +531,14 @@ void ws_TestSpectrophotometer(AsyncWebSocket *server, AsyncWebSocketClient *clie
 
     DynamicJsonDocument stepItem(5000);
     stepItem["SpectrophotometerTest"]["title"].set("分光光度計測試");
-    stepItem["SpectrophotometerTest"]["description"].set("分光光度計測試");
+    stepItem["SpectrophotometerTest"]["desp"].set("分光光度計測試");
     stepItem["SpectrophotometerTest"]["finish_time"].set(-1);
 
     JsonArray L_eventGroupList = stepItem["SpectrophotometerTest"].createNestedArray("event_group_list");
 
     DynamicJsonDocument eventGroupItem(1000);
     eventGroupItem["SpectrophotometerTest"]["title"].set("分光光度計測試");
-    eventGroupItem["SpectrophotometerTest"]["description"].set("分光光度計測試");
+    eventGroupItem["SpectrophotometerTest"]["desp"].set("分光光度計測試");
     eventGroupItem["SpectrophotometerTest"]["finish_time"].set(-1);
     JsonArray L_eventList = eventGroupItem["SpectrophotometerTest"].createNestedArray("event_list");
 
@@ -530,7 +553,7 @@ void ws_TestSpectrophotometer(AsyncWebSocket *server, AsyncWebSocketClient *clie
     DynamicJsonDocument spectrophotometerSet(500);
     spectrophotometerSet["spectrophotometer"]["index"].set(D_spectrophotometerSetting["index"].as<int>());
     spectrophotometerSet["spectrophotometer"]["title"].set(D_spectrophotometerSetting["title"].as<String>());
-    spectrophotometerSet["spectrophotometer"]["description"].set(D_spectrophotometerSetting["description"].as<String>());
+    spectrophotometerSet["spectrophotometer"]["desp"].set(D_spectrophotometerSetting["desp"].as<String>());
     spectrophotometerSet["gain"].set("1X");
     spectrophotometerSet["value_name"].set("sensor_test_1X");
     spectrophotometerSet["measurement_time"].set(-1);
@@ -540,7 +563,7 @@ void ws_TestSpectrophotometer(AsyncWebSocket *server, AsyncWebSocketClient *clie
     DynamicJsonDocument spectrophotometerSet_2(500);
     spectrophotometerSet_2["spectrophotometer"]["index"].set(D_spectrophotometerSetting["index"].as<int>());
     spectrophotometerSet_2["spectrophotometer"]["title"].set(D_spectrophotometerSetting["title"].as<String>());
-    spectrophotometerSet_2["spectrophotometer"]["description"].set(D_spectrophotometerSetting["description"].as<String>());
+    spectrophotometerSet_2["spectrophotometer"]["desp"].set(D_spectrophotometerSetting["desp"].as<String>());
     spectrophotometerSet_2["gain"].set("2X");
     spectrophotometerSet_2["value_name"].set("sensor_test_2X");
     spectrophotometerSet_2["measurement_time"].set(-1);
@@ -550,7 +573,7 @@ void ws_TestSpectrophotometer(AsyncWebSocket *server, AsyncWebSocketClient *clie
     DynamicJsonDocument spectrophotometerSet_3(500);
     spectrophotometerSet_3["spectrophotometer"]["index"].set(D_spectrophotometerSetting["index"].as<int>());
     spectrophotometerSet_3["spectrophotometer"]["title"].set(D_spectrophotometerSetting["title"].as<String>());
-    spectrophotometerSet_3["spectrophotometer"]["description"].set(D_spectrophotometerSetting["description"].as<String>());
+    spectrophotometerSet_3["spectrophotometer"]["desp"].set(D_spectrophotometerSetting["desp"].as<String>());
     spectrophotometerSet_3["gain"].set("4X");
     spectrophotometerSet_3["value_name"].set("sensor_test_4X");
     spectrophotometerSet_3["measurement_time"].set(-1);
@@ -560,7 +583,7 @@ void ws_TestSpectrophotometer(AsyncWebSocket *server, AsyncWebSocketClient *clie
     DynamicJsonDocument spectrophotometerSet_4(500);
     spectrophotometerSet_4["spectrophotometer"]["index"].set(D_spectrophotometerSetting["index"].as<int>());
     spectrophotometerSet_4["spectrophotometer"]["title"].set(D_spectrophotometerSetting["title"].as<String>());
-    spectrophotometerSet_4["spectrophotometer"]["description"].set(D_spectrophotometerSetting["description"].as<String>());
+    spectrophotometerSet_4["spectrophotometer"]["desp"].set(D_spectrophotometerSetting["desp"].as<String>());
     spectrophotometerSet_4["gain"].set("8X");
     spectrophotometerSet_4["value_name"].set("sensor_test_8X");
     spectrophotometerSet_4["measurement_time"].set(-1);
@@ -570,7 +593,7 @@ void ws_TestSpectrophotometer(AsyncWebSocket *server, AsyncWebSocketClient *clie
     DynamicJsonDocument spectrophotometerSet_5(500);
     spectrophotometerSet_5["spectrophotometer"]["index"].set(D_spectrophotometerSetting["index"].as<int>());
     spectrophotometerSet_5["spectrophotometer"]["title"].set(D_spectrophotometerSetting["title"].as<String>());
-    spectrophotometerSet_5["spectrophotometer"]["description"].set(D_spectrophotometerSetting["description"].as<String>());
+    spectrophotometerSet_5["spectrophotometer"]["desp"].set(D_spectrophotometerSetting["desp"].as<String>());
     spectrophotometerSet_5["gain"].set("48X");
     spectrophotometerSet_5["value_name"].set("sensor_test_48X");
     spectrophotometerSet_5["measurement_time"].set(-1);
@@ -580,7 +603,7 @@ void ws_TestSpectrophotometer(AsyncWebSocket *server, AsyncWebSocketClient *clie
     DynamicJsonDocument spectrophotometerSet_6(500);
     spectrophotometerSet_6["spectrophotometer"]["index"].set(D_spectrophotometerSetting["index"].as<int>());
     spectrophotometerSet_6["spectrophotometer"]["title"].set(D_spectrophotometerSetting["title"].as<String>());
-    spectrophotometerSet_6["spectrophotometer"]["description"].set(D_spectrophotometerSetting["description"].as<String>());
+    spectrophotometerSet_6["spectrophotometer"]["desp"].set(D_spectrophotometerSetting["desp"].as<String>());
     spectrophotometerSet_6["gain"].set("96X");
     spectrophotometerSet_6["value_name"].set("sensor_test_96X");
     spectrophotometerSet_6["measurement_time"].set(-1);
@@ -631,7 +654,15 @@ void ws_DeleteSpectrophotometerInfo(AsyncWebSocket *server, AsyncWebSocketClient
       "分光光度計設定ID: " + TargetName,
       server, NULL
     );
-    Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    if (RewriteConfigResult != "SUCCESS") {
+      Machine_Ctrl.SetLog(
+        1,
+        "更新設定檔失敗，請將此情況通知開發人員",
+        RewriteConfigResult,
+        NULL, client
+      );
+    }
   } else {
     Machine_Ctrl.SetLog(
       1,
@@ -658,6 +689,9 @@ void ws_PatchSpectrophotometerInfo(AsyncWebSocket *server, AsyncWebSocketClient 
     //     D_oldConfig[newConfigItem.key()].set(newConfigItem.value().as<String>());
     //   }
     // }
+
+    serializeJsonPretty(D_newConfig, Serial);
+
     D_baseInfoJSON["parameter"][TargetName].set(D_spectrophotometer[TargetName].as<JsonObject>());
 
     D_baseInfoJSON["action"]["status"].set("OK");
@@ -673,7 +707,15 @@ void ws_PatchSpectrophotometerInfo(AsyncWebSocket *server, AsyncWebSocketClient 
       "分光光度計設定名稱: " + D_spectrophotometer[TargetName]["title"].as<String>(),
       server, NULL
     );
-    Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    if (RewriteConfigResult != "SUCCESS") {
+      Machine_Ctrl.SetLog(
+        1,
+        "更新設定檔失敗，請將此情況通知開發人員",
+        RewriteConfigResult,
+        NULL, client
+      );
+    }
   } else {
     Machine_Ctrl.SetLog(
       1,
@@ -754,7 +796,7 @@ void ws_AddNewSpectrophotometerInfo(AsyncWebSocket *server, AsyncWebSocketClient
       JsonObject D_spectrophotometer = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["spectrophotometer"];
       D_spectrophotometer[String(random_name)]["index"].set(newIndex);
       D_spectrophotometer[String(random_name)]["title"].set(D_newConfig["title"].as<String>());
-      D_spectrophotometer[String(random_name)]["description"].set(D_newConfig["description"].as<String>());
+      D_spectrophotometer[String(random_name)]["desp"].set(D_newConfig["desp"].as<String>());
       D_baseInfoJSON["status"].set("OK");
       D_baseInfoJSON["action"]["target"].set("Spectrophotometer");
       D_baseInfoJSON["action"]["method"].set("Update");
@@ -766,11 +808,19 @@ void ws_AddNewSpectrophotometerInfo(AsyncWebSocket *server, AsyncWebSocketClient
       Machine_Ctrl.SetLog(
         5,
         "新增分光光度計設定: "+D_newConfig["title"].as<String>(),
-        "說明: " + D_newConfig["description"].as<String>(),
+        "說明: " + D_newConfig["desp"].as<String>(),
         server, NULL
       );
 
-      Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+      String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+      if (RewriteConfigResult != "SUCCESS") {
+        Machine_Ctrl.SetLog(
+          1,
+          "更新設定檔失敗，請將此情況通知開發人員",
+          RewriteConfigResult,
+          NULL, client
+        );
+      }
     }
   }
 }
@@ -795,7 +845,7 @@ void ws_TestPeristalticMotor(AsyncWebSocket *server, AsyncWebSocketClient *clien
   else if (D_peristaltic_motor.containsKey(TargetName)) {
     DynamicJsonDocument actionItem(10000);
     actionItem["title"].set("蠕動馬達測試");
-    actionItem["description"].set("蠕動馬達測試");
+    actionItem["desp"].set("蠕動馬達測試");
     time_t nowTime = now();
     char datetimeChar[30];
     sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
@@ -811,14 +861,14 @@ void ws_TestPeristalticMotor(AsyncWebSocket *server, AsyncWebSocketClient *clien
 
     DynamicJsonDocument stepItem(5000);
     stepItem["peristalticMotorTest"]["title"].set("蠕動馬達測試");
-    stepItem["peristalticMotorTest"]["description"].set("蠕動馬達測試");
+    stepItem["peristalticMotorTest"]["desp"].set("蠕動馬達測試");
     stepItem["peristalticMotorTest"]["finish_time"].set(-1);
 
     JsonArray L_eventGroupList = stepItem["peristalticMotorTest"].createNestedArray("event_group_list");
 
     DynamicJsonDocument eventGroupItem(1000);
     eventGroupItem["peristalticMotorTest"]["title"].set("蠕動馬達測試");
-    eventGroupItem["peristalticMotorTest"]["description"].set("蠕動馬達測試");
+    eventGroupItem["peristalticMotorTest"]["desp"].set("蠕動馬達測試");
     eventGroupItem["peristalticMotorTest"]["finish_time"].set(-1);
     JsonArray L_eventList = eventGroupItem["peristalticMotorTest"].createNestedArray("event_list");
 
@@ -833,7 +883,7 @@ void ws_TestPeristalticMotor(AsyncWebSocket *server, AsyncWebSocketClient *clien
     
     peristalticMotorSet_1["peristaltic_motor"]["index"].set(D_peristalticMotorSetting["index"].as<int>());
     peristalticMotorSet_1["peristaltic_motor"]["title"].set(D_peristalticMotorSetting["title"].as<String>());
-    peristalticMotorSet_1["peristaltic_motor"]["description"].set(D_peristalticMotorSetting["description"].as<String>());
+    peristalticMotorSet_1["peristaltic_motor"]["desp"].set(D_peristalticMotorSetting["desp"].as<String>());
     peristalticMotorSet_1["finish_time"].set(-1);
     peristalticMotorSet_1["status"].set(1);
     peristalticMotorSet_1["time"].set(1.0);
@@ -844,7 +894,7 @@ void ws_TestPeristalticMotor(AsyncWebSocket *server, AsyncWebSocketClient *clien
     
     peristalticMotorSet_2["peristaltic_motor"]["index"].set(D_peristalticMotorSetting["index"].as<int>());
     peristalticMotorSet_2["peristaltic_motor"]["title"].set(D_peristalticMotorSetting["title"].as<String>());
-    peristalticMotorSet_2["peristaltic_motor"]["description"].set(D_peristalticMotorSetting["description"].as<String>());
+    peristalticMotorSet_2["peristaltic_motor"]["desp"].set(D_peristalticMotorSetting["desp"].as<String>());
     peristalticMotorSet_2["finish_time"].set(-1);
     peristalticMotorSet_2["status"].set(-1);
     peristalticMotorSet_2["time"].set(1.0);
@@ -928,7 +978,15 @@ void ws_PatchPeristalticMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *
       "事件組設定名稱: " + D_oldConfig["title"].as<String>(),
       server, NULL
     );
-    Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    if (RewriteConfigResult != "SUCCESS") {
+      Machine_Ctrl.SetLog(
+        1,
+        "更新設定檔失敗，請將此情況通知開發人員",
+        RewriteConfigResult,
+        NULL, client
+      );
+    }
   } else {
     Machine_Ctrl.SetLog(
       1,
@@ -962,7 +1020,15 @@ void ws_DeletePeristalticMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient 
       "蠕動馬達設定ID: " + TargetName,
       server, NULL
     );
-    Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    if (RewriteConfigResult != "SUCCESS") {
+      Machine_Ctrl.SetLog(
+        1,
+        "更新設定檔失敗，請將此情況通知開發人員",
+        RewriteConfigResult,
+        NULL, client
+      );
+    }
   } else {
     Machine_Ctrl.SetLog(
       2,
@@ -1018,7 +1084,7 @@ void ws_AddNewPeristalticMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient 
       JsonObject D_peristaltic_motor = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["peristaltic_motor"];
       D_peristaltic_motor[String(random_name)]["index"].set(newIndex);
       D_peristaltic_motor[String(random_name)]["title"].set(D_newConfig["title"].as<String>());
-      D_peristaltic_motor[String(random_name)]["description"].set(D_newConfig["description"].as<String>());
+      D_peristaltic_motor[String(random_name)]["desp"].set(D_newConfig["desp"].as<String>());
       D_baseInfoJSON["status"].set("OK");
       D_baseInfoJSON["action"]["target"].set("PeristalticMotor");
       D_baseInfoJSON["action"]["method"].set("Update");
@@ -1030,11 +1096,19 @@ void ws_AddNewPeristalticMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient 
       Machine_Ctrl.SetLog(
         5,
         "新增蠕動馬達設定: "+D_newConfig["title"].as<String>(),
-        "說明: " + D_newConfig["description"].as<String>(),
+        "說明: " + D_newConfig["desp"].as<String>(),
         server, NULL
       );
 
-      Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+      String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+      if (RewriteConfigResult != "SUCCESS") {
+        Machine_Ctrl.SetLog(
+          1,
+          "更新設定檔失敗，請將此情況通知開發人員",
+          RewriteConfigResult,
+          NULL, client
+        );
+      }
     }
   }
 }
@@ -1059,7 +1133,7 @@ void ws_TestPwmMotor(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynam
   else if (D_pwm_motor.containsKey(TargetName)) {
     DynamicJsonDocument actionItem(10000);
     actionItem["title"].set("測試流程-伺服馬達測試");
-    actionItem["description"].set("測試流程-伺服馬達測試");
+    actionItem["desp"].set("測試流程-伺服馬達測試");
     time_t nowTime = now();
     char datetimeChar[30];
     sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
@@ -1075,14 +1149,14 @@ void ws_TestPwmMotor(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynam
 
     DynamicJsonDocument stepItem(5000);
     stepItem["pwmMotorTest"]["title"].set("伺服馬達測試");
-    stepItem["pwmMotorTest"]["description"].set("伺服馬達測試");
+    stepItem["pwmMotorTest"]["desp"].set("伺服馬達測試");
     stepItem["pwmMotorTest"]["finish_time"].set(-1);
 
     JsonArray L_eventGroupList = stepItem["pwmMotorTest"].createNestedArray("event_group_list");
 
     DynamicJsonDocument eventGroupItem(1000);
     eventGroupItem["pwmMotorTest"]["title"].set("伺服馬達測試");
-    eventGroupItem["pwmMotorTest"]["description"].set("伺服馬達測試");
+    eventGroupItem["pwmMotorTest"]["desp"].set("伺服馬達測試");
     eventGroupItem["pwmMotorTest"]["finish_time"].set(-1);
     JsonArray L_eventList = eventGroupItem["pwmMotorTest"].createNestedArray("event_list");
 
@@ -1097,7 +1171,7 @@ void ws_TestPwmMotor(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynam
     
     pwmMotorSet_1["pwn_motor"]["index"].set(D_pwmMotorSetting["index"].as<int>());
     pwmMotorSet_1["pwn_motor"]["title"].set(D_pwmMotorSetting["title"].as<String>());
-    pwmMotorSet_1["pwn_motor"]["description"].set(D_pwmMotorSetting["description"].as<String>());
+    pwmMotorSet_1["pwn_motor"]["desp"].set(D_pwmMotorSetting["desp"].as<String>());
     pwmMotorSet_1["finish_time"].set(-1);
     pwmMotorSet_1["status"].set(0);
 
@@ -1107,7 +1181,7 @@ void ws_TestPwmMotor(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynam
     
     pwmMotorSet_2["pwn_motor"]["index"].set(D_pwmMotorSetting["index"].as<int>());
     pwmMotorSet_2["pwn_motor"]["title"].set(D_pwmMotorSetting["title"].as<String>());
-    pwmMotorSet_2["pwn_motor"]["description"].set(D_pwmMotorSetting["description"].as<String>());
+    pwmMotorSet_2["pwn_motor"]["desp"].set(D_pwmMotorSetting["desp"].as<String>());
     pwmMotorSet_2["finish_time"].set(-1);
     pwmMotorSet_2["status"].set(90);
 
@@ -1116,7 +1190,7 @@ void ws_TestPwmMotor(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynam
     DynamicJsonDocument pwmMotorSet_3(500);
     pwmMotorSet_3["pwn_motor"]["index"].set(D_pwmMotorSetting["index"].as<int>());
     pwmMotorSet_3["pwn_motor"]["title"].set(D_pwmMotorSetting["title"].as<String>());
-    pwmMotorSet_3["pwn_motor"]["description"].set(D_pwmMotorSetting["description"].as<String>());
+    pwmMotorSet_3["pwn_motor"]["desp"].set(D_pwmMotorSetting["desp"].as<String>());
     pwmMotorSet_3["finish_time"].set(-1);
     pwmMotorSet_3["status"].set(180);
 
@@ -1202,7 +1276,15 @@ void ws_PatchPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, 
       "伺服馬達設定名稱: " + D_oldConfig["title"].as<String>(),
       server, NULL
     );
-    Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    if (RewriteConfigResult != "SUCCESS") {
+      Machine_Ctrl.SetLog(
+        1,
+        "更新設定檔失敗，請將此情況通知開發人員",
+        RewriteConfigResult,
+        NULL, client
+      );
+    }
   } else {
     Machine_Ctrl.SetLog(
       1,
@@ -1236,7 +1318,15 @@ void ws_DeletePwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
       "伺服馬達設定ID: " + TargetName,
       server, NULL
     );
-    Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    if (RewriteConfigResult != "SUCCESS") {
+      Machine_Ctrl.SetLog(
+        1,
+        "更新設定檔失敗，請將此情況通知開發人員",
+        RewriteConfigResult,
+        NULL, client
+      );
+    }
   } else {
     Machine_Ctrl.SetLog(
       1,
@@ -1278,7 +1368,7 @@ void ws_AddNewPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
       JsonObject D_pwm_motor = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pwm_motor"];
       D_pwm_motor[String(random_name)]["index"].set(newIndex);
       D_pwm_motor[String(random_name)]["title"].set(D_newConfig["title"].as<String>());
-      D_pwm_motor[String(random_name)]["description"].set(D_newConfig["description"].as<String>());
+      D_pwm_motor[String(random_name)]["desp"].set(D_newConfig["desp"].as<String>());
       D_baseInfoJSON["status"].set("OK");
       D_baseInfoJSON["action"]["target"].set("PwmMotor");
       D_baseInfoJSON["action"]["method"].set("Update");
@@ -1289,10 +1379,18 @@ void ws_AddNewPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
       Machine_Ctrl.SetLog(
         5,
         "新增伺服馬達設定: "+D_newConfig["title"].as<String>(),
-        "說明: " + D_newConfig["description"].as<String>(),
+        "說明: " + D_newConfig["desp"].as<String>(),
         server, NULL
       );
-      Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+      String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+      if (RewriteConfigResult != "SUCCESS") {
+        Machine_Ctrl.SetLog(
+          1,
+          "更新設定檔失敗，請將此情況通知開發人員",
+          RewriteConfigResult,
+          NULL, client
+        );
+      }
     }
   }
 }
@@ -1332,7 +1430,7 @@ void ws_TestEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJ
     DynamicJsonDocument actionItem(100000);
     //? 流程設定
     actionItem["title"].set("(流程)事件組測試");
-    actionItem["description"].set("(流程)事件組測試");
+    actionItem["desp"].set("(流程)事件組測試");
     time_t nowTime = now();
     char datetimeChar[30];
     sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
@@ -1348,7 +1446,7 @@ void ws_TestEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJ
     //? 步驟設定
     DynamicJsonDocument stepItem(50000);
     stepItem["pwmMotorTest"]["title"].set("(步驟)事件組測試");
-    stepItem["pwmMotorTest"]["description"].set("(步驟)事件組測試");
+    stepItem["pwmMotorTest"]["desp"].set("(步驟)事件組測試");
     stepItem["pwmMotorTest"]["finish_time"].set(-1);
 
     JsonArray L_eventGroupList = stepItem["pwmMotorTest"].createNestedArray("event_group_list");
@@ -1430,8 +1528,8 @@ void ws_PatchEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
     if (D_oldConfig["title"].as<String>() != D_newConfig["title"].as<String>()) {
       D_oldConfig["title"] = D_newConfig["title"].as<String>();
     }
-    if (D_oldConfig["description"].as<String>() != D_newConfig["description"].as<String>()) {
-      D_oldConfig["description"] = D_newConfig["description"].as<String>();
+    if (D_oldConfig["desp"].as<String>() != D_newConfig["desp"].as<String>()) {
+      D_oldConfig["desp"] = D_newConfig["desp"].as<String>();
     }
     D_oldConfig.remove("event");
     D_oldConfig["event"].set(D_newConfig["event"]);
@@ -1451,7 +1549,15 @@ void ws_PatchEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
       "事件組設定名稱: " + D_oldConfig["title"].as<String>(),
       server, NULL
     );
-    Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    if (RewriteConfigResult != "SUCCESS") {
+      Machine_Ctrl.SetLog(
+        1,
+        "更新設定檔失敗，請將此情況通知開發人員",
+        RewriteConfigResult,
+        NULL, client
+      );
+    }
   } else {
     Machine_Ctrl.SetLog(
       1,
@@ -1484,7 +1590,15 @@ void ws_DeleteEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dy
       "事件組設定ID: " + TargetName,
       server, NULL
     );
-    Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    if (RewriteConfigResult != "SUCCESS") {
+      Machine_Ctrl.SetLog(
+        1,
+        "更新設定檔失敗，請將此情況通知開發人員",
+        RewriteConfigResult,
+        NULL, client
+      );
+    }
   } else {
     Machine_Ctrl.SetLog(
       1,
@@ -1517,7 +1631,7 @@ void ws_AddNewEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dy
     }
     String NewIDString = String(random_name);
     D_event_group[NewIDString]["title"].set(D_newConfig["title"].as<String>());
-    D_event_group[NewIDString]["description"].set(D_newConfig["description"].as<String>());
+    D_event_group[NewIDString]["desp"].set(D_newConfig["desp"].as<String>());
     D_event_group[NewIDString].createNestedArray("event");
 
     D_baseInfoJSON["parameter"][NewIDString].set(D_event_group[NewIDString]);
@@ -1533,11 +1647,19 @@ void ws_AddNewEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dy
     Machine_Ctrl.SetLog(
       5,
       "新增事件組設定: "+D_newConfig["title"].as<String>(),
-      "說明: " + D_newConfig["description"].as<String>(),
+      "說明: " + D_newConfig["desp"].as<String>(),
       server, NULL
     );
 
-    Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    if (RewriteConfigResult != "SUCCESS") {
+      Machine_Ctrl.SetLog(
+        1,
+        "更新設定檔失敗，請將此情況通知開發人員",
+        RewriteConfigResult,
+        NULL, client
+      );
+    }
   }
 }
 
@@ -1562,7 +1684,7 @@ void ws_TestStep(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJs
     //? 流程設定
     DynamicJsonDocument actionItem(100000);
     actionItem["title"].set("(流程)步驟測試");
-    actionItem["description"].set("(流程)步驟測試");
+    actionItem["desp"].set("(流程)步驟測試");
     time_t nowTime = now();
     char datetimeChar[30];
     sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
@@ -1660,7 +1782,15 @@ void ws_DeleteStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
         NULL, client
     );
 
-    Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    if (RewriteConfigResult != "SUCCESS") {
+      Machine_Ctrl.SetLog(
+        1,
+        "更新設定檔失敗，請將此情況通知開發人員",
+        RewriteConfigResult,
+        NULL, client
+      );
+    }
   } else {
     Machine_Ctrl.SetLog(
       1,
@@ -1684,8 +1814,8 @@ void ws_PatchStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyna
     if (D_oldConfig["title"].as<String>() != D_newConfig["title"].as<String>()) {
       D_oldConfig["title"] = D_newConfig["title"].as<String>();
     }
-    if (D_oldConfig["description"].as<String>() != D_newConfig["description"].as<String>()) {
-      D_oldConfig["description"] = D_newConfig["description"].as<String>();
+    if (D_oldConfig["desp"].as<String>() != D_newConfig["desp"].as<String>()) {
+      D_oldConfig["desp"] = D_newConfig["desp"].as<String>();
     }
     D_oldConfig.remove("steps");
     D_oldConfig["steps"].set(D_newConfig["steps"]);
@@ -1707,7 +1837,15 @@ void ws_PatchStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyna
         server, NULL
     );
 
-    Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    if (RewriteConfigResult != "SUCCESS") {
+      Machine_Ctrl.SetLog(
+        1,
+        "更新設定檔失敗，請將此情況通知開發人員",
+        RewriteConfigResult,
+        NULL, client
+      );
+    }
   } else {
     Machine_Ctrl.SetLog(
       1,
@@ -1739,7 +1877,7 @@ void ws_AddNewStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
     }
     String NewIDString = String(random_name);
     D_steps_group[NewIDString]["title"].set(D_newConfig["title"].as<String>());
-    D_steps_group[NewIDString]["description"].set(D_newConfig["description"].as<String>());
+    D_steps_group[NewIDString]["desp"].set(D_newConfig["desp"].as<String>());
     D_steps_group[NewIDString].createNestedArray("steps");
     D_baseInfoJSON["action"]["status"].set("OK");
     D_baseInfoJSON["action"]["message"].set("新增步驟設定完畢");
@@ -1755,7 +1893,15 @@ void ws_AddNewStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
       "名稱: "+D_steps_group[NewIDString]["title"].as<String>(),
       server, NULL
     );
-    Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    if (RewriteConfigResult != "SUCCESS") {
+      Machine_Ctrl.SetLog(
+        1,
+        "更新設定檔失敗，請將此情況通知開發人員",
+        RewriteConfigResult,
+        NULL, client
+      );
+    }
   }
 }
 
@@ -2042,8 +2188,8 @@ void ws_PatchPipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, 
     if (D_oldConfig["title"].as<String>() != D_newConfig["title"].as<String>()) {
       D_oldConfig["title"] = D_newConfig["title"].as<String>();
     }
-    if (D_oldConfig["description"].as<String>() != D_newConfig["description"].as<String>()) {
-      D_oldConfig["description"] = D_newConfig["description"].as<String>();
+    if (D_oldConfig["desp"].as<String>() != D_newConfig["desp"].as<String>()) {
+      D_oldConfig["desp"] = D_newConfig["desp"].as<String>();
     }
     if (D_oldConfig["pool"].as<String>() != D_newConfig["pool"].as<String>()) {
       D_oldConfig["pool"] = D_newConfig["pool"].as<String>();
@@ -2067,7 +2213,15 @@ void ws_PatchPipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, 
       server, NULL
     );
 
-    Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    if (RewriteConfigResult != "SUCCESS") {
+      Machine_Ctrl.SetLog(
+        1,
+        "更新設定檔失敗，請將此情況通知開發人員",
+        RewriteConfigResult,
+        NULL, client
+      );
+    }
   } else {
     Machine_Ctrl.SetLog(
       1,
@@ -2102,7 +2256,15 @@ void ws_DeletePipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
       server, NULL
     );
 
-    Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    if (RewriteConfigResult != "SUCCESS") {
+      Machine_Ctrl.SetLog(
+        1,
+        "更新設定檔失敗，請將此情況通知開發人員",
+        RewriteConfigResult,
+        NULL, client
+      );
+    }
   } else {
     Machine_Ctrl.SetLog(
       1,
@@ -2148,7 +2310,7 @@ void ws_AddNewPipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
     }
     String NewIDString = String(random_name);
     D_pipeline[NewIDString]["title"].set(D_newConfig["title"].as<String>());
-    D_pipeline[NewIDString]["description"].set(D_newConfig["description"].as<String>());
+    D_pipeline[NewIDString]["desp"].set(D_newConfig["desp"].as<String>());
     D_pipeline[NewIDString]["pool"].set(D_newConfig["pool"].as<String>());
     D_pipeline[NewIDString].createNestedArray("steps");
 
@@ -2165,11 +2327,19 @@ void ws_AddNewPipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
     Machine_Ctrl.SetLog(
       5,
       "新增流程設定: "+D_pipeline[NewIDString]["title"].as<String>(),
-      "說明: " + D_pipeline[NewIDString]["description"].as<String>(),
+      "說明: " + D_pipeline[NewIDString]["desp"].as<String>(),
       server, NULL
     );
 
-    Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+    if (RewriteConfigResult != "SUCCESS") {
+      Machine_Ctrl.SetLog(
+        1,
+        "更新設定檔失敗，請將此情況通知開發人員",
+        RewriteConfigResult,
+        NULL, client
+      );
+    }
   }
 }
 

@@ -50,7 +50,7 @@ enum ALS_measurement_rate : uint8_t {
 };
 
 struct ALS_Meas_Rate_t {
-  uint8_t ALS_integration_time = ALS_integration_time::T_100ms;
+  uint8_t ALS_integration_time = ALS_integration_time::T_400ms;
   uint8_t ALS_measurement_rate = ALS_measurement_rate::Meas_Rate_500ms;
 };
 
