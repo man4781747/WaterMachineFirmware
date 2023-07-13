@@ -10,6 +10,7 @@
 #include <ArduinoJson.h>
 #include <ESP32Servo.h>
 #include <NTPClient.h>
+#include <SD.h>
 #include <esp_system.h>
 // #include <Ethernet.h>
 // #include <AsyncWebServer_ESP32_W5500.h>
@@ -155,7 +156,7 @@ DynamicJsonDocument CWIFI_Ctrler::GetBaseWSReturnData(String MessageString)
   } else {
     BaseWSReturnData["device_status"].set("Idle");
   }
-  serializeJsonPretty(BaseWSReturnData, Serial);
+  // serializeJsonPretty(BaseWSReturnData, Serial);
   // BaseWSReturnData["device_status"].set(Machine_Ctrl.GetEventStatus());
   return BaseWSReturnData;
 } 
@@ -520,6 +521,7 @@ void CWIFI_Ctrler::createWebServer()
 void CWIFI_Ctrler::setStaticAPIs()
 {
   asyncServer.serveStatic("/static/SPIFFS/",SPIFFS,"/");
+  asyncServer.serveStatic("/static/SD/",SD,"/");
   asyncServer.serveStatic("/",SPIFFS,"/").setDefaultFile("index.html");
   
 }
@@ -535,10 +537,6 @@ void CWIFI_Ctrler::setAPIs()
   });
 
   asyncServer.serveStatic("/api/Setting/event_config.json", SPIFFS, "/config/event_config.json");
-  // asyncServer.on("/api/Setting", HTTP_GET, [&](AsyncWebServerRequest *request){
-  //   AsyncWebServerResponse* response = request->beginResponse(200, "application/json", "OK");
-  //   SendHTTPesponse(request, response);
-  // });
 
   asyncServer.on("/api/wifi/Connect", HTTP_POST, [&](AsyncWebServerRequest *request){
     AsyncWebServerResponse* response = request->beginResponse(200, "application/json", "OK");

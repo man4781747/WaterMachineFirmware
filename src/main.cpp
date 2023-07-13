@@ -113,7 +113,8 @@ void setup() {
   //TODO oled暫時這樣寫死
 
 
-
+  // pinMode(48, OUTPUT);
+  // digitalWrite(48, HIGH);
   // mcp9808_other.wakeUpMode();
   // mcp9808_other.setResolution(RESOLUTION_0_0625);
   // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_48X);

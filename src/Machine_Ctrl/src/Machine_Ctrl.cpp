@@ -259,6 +259,8 @@ void LOADED_ACTION(void* parameter)
             }
             //! 蠕動馬達控制設定
             else if (eventItem.containsKey("peristaltic_motor_list")) {
+              pinMode(48, OUTPUT);
+              digitalWrite(48, HIGH);
               ESP_LOGI("LOADED_ACTION","      [%d-%d-%d]蠕動馬達控制",stepCount,eventGroupCount,eventCount);
               for (JsonVariant peristalticMotorItem : eventItem["peristaltic_motor_list"].as<JsonArray>()) {
                 ESP_LOGI("LOADED_ACTION","       - %s(%d) %s 持續 %.2f 秒", 
@@ -300,7 +302,7 @@ void LOADED_ACTION(void* parameter)
                 vTaskDelay(10/portTICK_PERIOD_MS);
               }
               // peristalticMotorItem["finish_time"].set(now());
-
+              digitalWrite(48, LOW);
             }
             //! 分光光度計控制設定
             else if (eventItem.containsKey("spectrophotometer_list")) {
@@ -750,6 +752,7 @@ DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String descri
     logFile = SD.open(logFileFullPath, FILE_APPEND);
   } else {
     logFile = SD.open(logFileFullPath, FILE_WRITE);
+    logFile.print("\xEF\xBB\xBF");
   }
   logFile.printf("%d,%s,%s,%s\n",
     Level, timeString.c_str(),

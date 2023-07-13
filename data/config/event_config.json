@@ -122,13 +122,13 @@
     },
     "S_M1": {
       "index": 21,
-      "title": "通往PH測試",
-      "desp": "通往PH測試管路開關"
+      "title": "樣本水",
+      "desp": "樣本水管路開關"
     },
     "S_M2": {
       "index": 22,
-      "title": "樣本水",
-      "desp": "樣本水管路開關"
+      "title": "通往PH測試",
+      "desp": "通往PH測試管路開關"
     },
     "S_M3": {
       "index": 20,
@@ -199,8 +199,8 @@
     },
     "M4": {
       "index": 3,
-      "title": "光度測試/排廢液馬達",
-      "desp": "光度測試/排廢液馬達"
+      "title": "光度測試馬達",
+      "desp": "光度測試馬達"
     },
     "M5": {
       "index": 4,
@@ -211,6 +211,11 @@
       "index": 5,
       "title": "NH4-R2試劑馬達",
       "desp": "NH4-R2試劑馬達"
+    },
+    "M7": {
+      "index": 6,
+      "title": "排廢液馬達",
+      "desp": "排廢液馬達"
     }
   },
   "event_group": {
@@ -442,6 +447,36 @@
         ]}
       ]
     },
+    "Full_Everything_Needed_For_Pool1": {
+      "title": "補充池1與RO水",
+      "desp": "1. 抽取池1的水、2. 抽滿RO水",
+      "event": [
+        {"pwm_motor_list": [
+          {"id": "S_B1","status": 0},
+          {"id": "S_B2","status": 90},
+          {"id": "S_B3","status": 90},
+          {"id": "S_B4","status": 90},
+          {"id": "S_M0","status": 90},
+          {"id": "S_M1","status": 90},
+          {"id": "S_M2","status": 90},
+          {"id": "S_M3","status": 90},
+          {"id": "S_M4","status": 90},
+          {"id": "S_M5","status": 90},
+          {"id": "S_M6","status": 90},
+          {"id": "S_M7","status": 90},
+          {"id": "S_M8","status": 0}
+        ]},
+        {"peristaltic_motor_list": [
+          {"id": "M2","status": 1,"time": 240,"until":"RO"},
+          {"id": "M1","status": 1,"time": 120,"until":"SAMPLE"}
+        ]},
+        {"pwm_motor_list": [
+          {"id": "S_B1","status": 90}
+        ]}
+      ]
+    },
+
+
     "Clean_Sample_Liquid_Room_To_POOL1_Water": {
       "title": "檢體暫存水池退回池1",
       "desp": "檢體暫存水池退回池1",
@@ -491,8 +526,8 @@
       ]
     },
     "Clean_Sample_Liquid_Room_To_POOL2_Water": {
-      "title": "檢體暫存水池退回池1",
-      "desp": "檢體暫存水池退回池1",
+      "title": "檢體暫存水池退回池2",
+      "desp": "檢體暫存水池退回池2",
       "event": [
         {"pwm_motor_list": [
           {"id": "S_B1","status": 90},
@@ -660,6 +695,31 @@
         ]}
       ]
     },
+    "FORWASH_Push_Sample_Liquid_To_MixRoom" : {
+      "title": "[清洗用] 抽取池水 (50秒) 至混合室",
+      "desp": "[清洗用] 抽取池水(50秒)，傳輸至混合室",
+      "event": [
+          {"pwm_motor_list": [
+              {"id": "S_M0","status": 180},
+              {"id": "S_M1","status": 180},
+              {"id": "S_M2","status": 90},
+              {"id": "S_M3","status": 90},
+              {"id": "S_M4","status": 90},
+              {"id": "S_M5","status": 90},
+              {"id": "S_M6","status": 90},
+              {"id": "S_M7","status": 90}
+          ]},
+          {"peristaltic_motor_list": [
+            {"id": "M5","status": 1,"time": 50,"until":"-"}
+          ]},
+          {"pwm_motor_list": [
+            {"id": "S_M1","status": 90}
+          ]},
+          {"peristaltic_motor_list": [
+            {"id": "M5","status": 1,"time": 10,"until":"-"}
+          ]}
+      ]
+    },
     "FORWASH_Push_RO_Liquid_To_MixRoom" : {
       "title": "[清洗用] 抽取試劑水 (50秒) 至混合室",
       "desp": "[清洗用] 抽取試劑水/RO溶液(50秒)，傳輸至混合室",
@@ -735,13 +795,13 @@
           ]}
       ]
     },
-    "FOR_WASH_VALUE__Push_RO_Liquid_To_MixRoom" : {
-      "title": "[檢測-清洗] 抽取試劑水/RO溶液至混合室",
-      "desp": "抽取''少量''試劑水/RO溶液，傳輸至混合室，量不需多",
+    "FOR_WASH_VALUE__Push_Sample_Liquid_To_MixRoom" : {
+      "title": "[檢測-清洗] 抽取池水至混合室",
+      "desp": "抽取''少量''池水，傳輸至混合室，量不需多",
       "event": [
           {"pwm_motor_list": [
-              {"id": "S_M0","status": 180},
-              {"id": "S_M1","status": 90},
+              {"id": "S_M0","status": 90},
+              {"id": "S_M1","status": 180},
               {"id": "S_M2","status": 90},
               {"id": "S_M3","status": 90},
               {"id": "S_M4","status": 90},
@@ -753,7 +813,7 @@
             {"id": "M5","status": 1,"time": 10,"until":"-"}
           ]},
           {"pwm_motor_list": [
-            {"id": "S_M0","status": 90}
+            {"id": "S_M1","status": 90}
           ]},
           {"peristaltic_motor_list": [
             {"id": "M5","status": 1,"time": 30,"until":"-"}
@@ -958,7 +1018,7 @@
             ]}
         ]
     },
-    "Clear_NO2_SensorRoom_To_MixRoom" : {
+    "Clear_NO3_SensorRoom_To_MixRoom" : {
         "title": "亞硝酸鹽光度檢測室溶液退回混合室",
         "desp": "亞硝酸鹽光度檢測室溶液退回混合室",
         "event": [
@@ -1007,7 +1067,7 @@
             { "wait": 10 }
         ]
     },
-    "NO2_Wash_Value_Get" : {
+    "NO3_Wash_Value_Get" : {
       "title": "[檢測-清洗] 亞硝酸鹽清洗數值獲得",
       "desp": "測量純水光強度，並調整靠近50000",
       "event": [
@@ -1082,8 +1142,8 @@
         "event": [
             {"pwm_motor_list": [
                 {"id": "S_M0","status": 90},
-                {"id": "S_M1","status": 180},
-                {"id": "S_M2","status": 0},
+                {"id": "S_M1","status": 0},
+                {"id": "S_M2","status": 180},
                 {"id": "S_PH1","status": 0},
                 {"id": "S_PH2","status": 180}
             ]},
@@ -1171,13 +1231,21 @@
         "Clear_MixRoom_40sec"
       ]
     },
+    "Full_Everything_Needed_For_Pool1": {
+      "title": "補充池1所需溶液",
+      "desp": "1. 抽取池1的水、2. 抽滿RO水", 
+      "steps": [
+        "Reset_All_PWM_Motor",
+        "Full_Everything_Needed_For_Pool1"
+      ]
+    },
     "Return_To_Initial_From_Pool1_State": {
       "title": "從檢測池1的流程中回歸初始",
       "desp": "1. 清空所有東西、2. 待測溶液推回池1", 
       "steps": [
         "Reset_All_PWM_Motor",
         "Clean_Sample_Liquid_Room_To_POOL1_Water",
-        "Clear_NO2_SensorRoom_To_MixRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
         "Clear_NH4_SensorRoom_To_MixRoom",
         "Clear_MixRoom"
       ]
@@ -1200,7 +1268,7 @@
       "steps": [
         "Reset_All_PWM_Motor",
         "Clean_Sample_Liquid_Room_To_POOL2_Water",
-        "Clear_NO2_SensorRoom_To_MixRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
         "Clear_NH4_SensorRoom_To_MixRoom",
         "Clear_MixRoom"
       ]
@@ -1223,7 +1291,7 @@
       "steps": [
         "Reset_All_PWM_Motor",
         "Clean_Sample_Liquid_Room_To_POOL3_Water",
-        "Clear_NO2_SensorRoom_To_MixRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
         "Clear_NH4_SensorRoom_To_MixRoom",
         "Clear_MixRoom"
       ]
@@ -1246,7 +1314,7 @@
       "steps": [
         "Reset_All_PWM_Motor",
         "Clean_Sample_Liquid_Room_To_POOL4_Water",
-        "Clear_NO2_SensorRoom_To_MixRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
         "Clear_NH4_SensorRoom_To_MixRoom",
         "Clear_MixRoom"
       ]
@@ -1278,43 +1346,68 @@
       "desp": "馬達回歸原點，清空檢測模組、混合室、主管道", 
       "steps": [
         "Reset_All_PWM_Motor",
-        "Clear_NO2_SensorRoom_To_MixRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
         "Clear_NH4_SensorRoom_To_MixRoom",
         "Clear_MixRoom"
       ]
     },
     "Wash_All_Path": {
-      "title": "清洗儀器",
+      "title": "RO水清洗儀器",
       "desp": "以RO水清洗1. 主管道、2. 混合室、3. 亞硝檢測室與氨氮檢測室", 
       "steps": [
         "Reset_All_PWM_Motor",
         "FORWASH_Push_RO_Liquid_To_MixRoom",
         "Push_MixRoom_To_NO2_SensorRoom",
         "Push_MixRoom_To_NH4_SensorRoom",
-        "Clear_NO2_SensorRoom_To_MixRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
         "Clear_NH4_SensorRoom_To_MixRoom",
         "Clear_MixRoom"
       ]
     },
-    "NO3_AND_NH4_Original_Value_Get": {
-      "title": "亞硝酸鹽原點與氨氮原點檢測",
-      "desp": "亞硝酸鹽原點與氨氮原點檢測", 
+    "Wash_All_Path_With_Sample": {
+      "title": "池水清洗儀器",
+      "desp": "以池水清洗1. 主管道、2. 混合室、3. 亞硝檢測室與氨氮檢測室", 
       "steps": [
         "Reset_All_PWM_Motor",
-        "FOR_WASH_VALUE__Push_RO_Liquid_To_MixRoom", 
-        "Push_MixRoom_To_NO2_SensorRoom", "NO2_Wash_Value_Get", "Clear_NO2_SensorRoom_To_MixRoom", 
-        "Push_MixRoom_To_NH4_SensorRoom", "NH4_Wash_Value_Get", "Clear_NH4_SensorRoom_To_MixRoom",
+        "FORWASH_Push_RO_Liquid_To_MixRoom",
+        "Push_MixRoom_To_NO2_SensorRoom",
+        "Push_MixRoom_To_NH4_SensorRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
+        "Clear_NH4_SensorRoom_To_MixRoom",
         "Clear_MixRoom"
       ]
     },
-    "NO2_Sample_Value_Get": {
+    "NO3_Original_Value_Get": {
+      "title": "亞硝酸鹽原點數值檢測",
+      "desp": "亞硝酸鹽原點數值檢測", 
+      "steps": [
+        "Reset_All_PWM_Motor",
+        "FOR_WASH_VALUE__Push_Sample_Liquid_To_MixRoom", 
+        "Push_MixRoom_To_NO2_SensorRoom", "NO3_Wash_Value_Get", "Clear_NO3_SensorRoom_To_MixRoom", 
+        "Clear_MixRoom_40sec"
+      ]
+    },
+
+
+    "NO3_AND_NH4_Original_Value_Get": {
+      "title": "使池水充滿亞硝酸鹽與氨氮檢測室",
+      "desp": "等待試劑配置好後再量測", 
+      "steps": [
+        "Reset_All_PWM_Motor",
+        "FOR_WASH_VALUE__Push_Sample_Liquid_To_MixRoom", 
+        "Push_MixRoom_To_NO2_SensorRoom",
+        "Push_MixRoom_To_NH4_SensorRoom",
+        "Clear_MixRoom"
+      ]
+    },
+    "NO3_Sample_Value_Get": {
         "title": "亞硝酸鹽待測液檢測",
         "desp": "RO水(22.5s)、池水(2.5s)、試劑(1s)", 
         "steps": [
           "Reset_All_PWM_Motor",
           "FORNO3_Push_RO_Liquid_To_MixRoom", "FORNO3_Push_Sample_Liquid",
           "Mix_Liquid_In_MixRoom", "Push_NO2_Liquid_To_MixRoom", "Mix_Liquid_In_MixRoom", "Wait_5_Min", 
-          "Push_MixRoom_To_NO2_SensorRoom", "NO2_Test_Value_Get", "Clear_NO2_SensorRoom_To_MixRoom", 
+          "Push_MixRoom_To_NO2_SensorRoom", "NO2_Test_Value_Get", "Clear_NO3_SensorRoom_To_MixRoom", 
           "Clear_MixRoom_40sec"
         ]
     },
@@ -1323,7 +1416,7 @@
         "desp": "氨氮原點檢測", 
         "steps": [
           "Reset_All_PWM_Motor",
-          "FOR_WASH_VALUE__Push_RO_Liquid_To_MixRoom", "Mix_Liquid_In_MixRoom", 
+          "FOR_WASH_VALUE__Push_Sample_Liquid_To_MixRoom", 
           "Push_MixRoom_To_NH4_SensorRoom", "NH4_Wash_Value_Get", "Clear_NH4_SensorRoom_To_MixRoom", 
           "Clear_MixRoom_40sec"
         ]
@@ -1355,7 +1448,7 @@
       "title": "(測試用)強制更新感測器數值",
       "desp": "(測試用)強制更新感測器數值", 
       "steps": [
-        "NO2_Wash_Value_Get",
+        "NO3_Wash_Value_Get",
         "NO2_Test_Value_Get",
         "NH4_Wash_Value_Get",
         "NH4_Test_Value_Get",
@@ -1369,7 +1462,7 @@
         "Reset_All_PWM_Motor",
         "FOR_Correction__Push_NO3_Sample_Liquid", 
         "Push_NO2_Liquid_To_MixRoom", "Mix_Liquid_In_MixRoom", "Wait_5_Min", 
-        "Push_MixRoom_To_NO2_SensorRoom", "NO2_Test_Value_Get", "Clear_NO2_SensorRoom_To_MixRoom", 
+        "Push_MixRoom_To_NO2_SensorRoom", "NO2_Test_Value_Get", "Clear_NO3_SensorRoom_To_MixRoom", 
         "Clear_MixRoom_40sec"
       ]
     },
@@ -1394,16 +1487,17 @@
       "steps": [
         "Clear_All_Path",
         "Prepare_Everything_Needed_For_Pool1",
-        "Wash_All_Path",
-        "Full_RO_Tank",
-        "Wash_All_Path",
-        "Full_RO_Tank",
-        "NO3_AND_NH4_Original_Value_Get",
-        "NO2_Sample_Value_Get",
-        "Wash_All_Path",
-        "Full_RO_Tank",
-        "Wash_All_Path",
-        "Full_RO_Tank",
+        "Wash_All_Path_With_Sample",
+        "Full_Everything_Needed_For_Pool1",
+        "Wash_All_Path_With_Sample",
+        "Full_Everything_Needed_For_Pool1",
+        "NO3_Original_Value_Get",
+        "NO3_Sample_Value_Get",
+        "Wash_All_Path_With_Sample",
+        "Full_Everything_Needed_For_Pool1",
+        "Wash_All_Path_With_Sample",
+        "Full_Everything_Needed_For_Pool1",
+        "NH4_Original_Value_Get",
         "NH4_Sample_Value_Get",
         "PH_Value_Get", 
         "Return_To_Initial_From_Pool1_State",
@@ -1424,7 +1518,7 @@
         "Wash_All_Path",
         "Full_RO_Tank",
         "NO3_AND_NH4_Original_Value_Get",
-        "NO2_Sample_Value_Get",
+        "NO3_Sample_Value_Get",
         "Wash_All_Path",
         "Full_RO_Tank",
         "Wash_All_Path",
@@ -1449,7 +1543,7 @@
         "Wash_All_Path",
         "Full_RO_Tank",
         "NO3_AND_NH4_Original_Value_Get",
-        "NO2_Sample_Value_Get",
+        "NO3_Sample_Value_Get",
         "Wash_All_Path",
         "Full_RO_Tank",
         "Wash_All_Path",
@@ -1474,7 +1568,7 @@
         "Wash_All_Path",
         "Full_RO_Tank",
         "NO3_AND_NH4_Original_Value_Get",
-        "NO2_Sample_Value_Get",
+        "NO3_Sample_Value_Get",
         "Wash_All_Path",
         "Full_RO_Tank",
         "Wash_All_Path",
