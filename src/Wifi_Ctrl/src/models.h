@@ -1123,8 +1123,8 @@ void ws_TestPwmMotor(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynam
   }
   else if (D_pwm_motor.containsKey(TargetName)) {
     DynamicJsonDocument actionItem(10000);
-    actionItem["title"].set("測試流程-伺服馬達測試");
-    actionItem["desp"].set("測試流程-伺服馬達測試");
+    actionItem["title"].set("流程-伺服馬達測試");
+    actionItem["desp"].set("測試");
     time_t nowTime = now();
     char datetimeChar[30];
     sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
@@ -1139,15 +1139,15 @@ void ws_TestPwmMotor(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynam
     JsonArray L_stepList = actionItem.createNestedArray("step_list");
 
     DynamicJsonDocument stepItem(5000);
-    stepItem["pwmMotorTest"]["title"].set("伺服馬達測試");
-    stepItem["pwmMotorTest"]["desp"].set("伺服馬達測試");
+    stepItem["pwmMotorTest"]["title"].set("步驟-伺服馬達測試");
+    stepItem["pwmMotorTest"]["desp"].set("測試");
     stepItem["pwmMotorTest"]["finish_time"].set(-1);
 
     JsonArray L_eventGroupList = stepItem["pwmMotorTest"].createNestedArray("event_group_list");
 
     DynamicJsonDocument eventGroupItem(1000);
-    eventGroupItem["pwmMotorTest"]["title"].set("伺服馬達測試");
-    eventGroupItem["pwmMotorTest"]["desp"].set("伺服馬達測試");
+    eventGroupItem["pwmMotorTest"]["title"].set("事件組-伺服馬達測試");
+    eventGroupItem["pwmMotorTest"]["desp"].set("測試");
     eventGroupItem["pwmMotorTest"]["finish_time"].set(-1);
     JsonArray L_eventList = eventGroupItem["pwmMotorTest"].createNestedArray("event_list");
 
@@ -1192,7 +1192,13 @@ void ws_TestPwmMotor(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynam
     L_pwnMotorList_3.add(pwmMotorSet_3);
     L_eventList.add(eventItem_3);
     L_eventGroupList.add(eventGroupItem);
+    JsonObject Reset_All_PWM_Motor_Event = BuildEventJSONItem(
+      "Reset_All_PWM_Motor", 
+      (*Machine_Ctrl.spiffs.DeviceSetting)["event_group"]["Reset_All_PWM_Motor"].as<JsonObject>()
+    );
+    L_eventGroupList.add(Reset_All_PWM_Motor_Event);
     L_stepList.add(stepItem);
+    // serializeJsonPretty(L_eventGroupList, Serial);
 
     // String settingString;
     // serializeJson(actionItem,settingString);
