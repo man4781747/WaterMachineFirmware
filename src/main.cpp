@@ -69,7 +69,7 @@ uint32_t delayMS;
 const char* LOG_TAG = "MAIN";
 SMachine_Ctrl Machine_Ctrl;
 
-const char* FIRMWARE_VERSION = "V2.23.71.3";
+const char* FIRMWARE_VERSION = "V2.23.72.1";
 
 //TODO oled暫時這樣寫死
 
@@ -97,6 +97,7 @@ void setup() {
   Machine_Ctrl.BackendServer.ConnectToWifi();
   Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
   Machine_Ctrl.BackendServer.ServerStart();
+  Machine_Ctrl.SetLog(3, "機器開機", "");
 
   //TODO oled暫時這樣寫死
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);

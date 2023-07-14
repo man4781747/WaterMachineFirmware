@@ -468,7 +468,7 @@ void ws_AddNewPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
     JsonObject D_pools = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pools"];
     D_pools[String(random_name)]["title"].set(D_newConfig["title"].as<String>());
     D_pools[String(random_name)]["desp"].set(D_newConfig["desp"].as<String>());
-    D_baseInfoJSON["status"].set("OK");
+    D_baseInfoJSON["action"]["status"].set("OK");
     D_baseInfoJSON["action"]["target"].set("Pool");
     D_baseInfoJSON["action"]["method"].set("Update");
     D_baseInfoJSON["parameter"][String(random_name)].set(D_pools[String(random_name)]);
@@ -792,7 +792,7 @@ void ws_AddNewSpectrophotometerInfo(AsyncWebSocket *server, AsyncWebSocketClient
       D_spectrophotometer[String(random_name)]["index"].set(newIndex);
       D_spectrophotometer[String(random_name)]["title"].set(D_newConfig["title"].as<String>());
       D_spectrophotometer[String(random_name)]["desp"].set(D_newConfig["desp"].as<String>());
-      D_baseInfoJSON["status"].set("OK");
+      D_baseInfoJSON["action"]["status"].set("OK");
       D_baseInfoJSON["action"]["target"].set("Spectrophotometer");
       D_baseInfoJSON["action"]["method"].set("Update");
       D_baseInfoJSON["parameter"][String(random_name)].set(D_spectrophotometer[String(random_name)]);
@@ -1077,7 +1077,7 @@ void ws_AddNewPeristalticMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient 
       D_peristaltic_motor[String(random_name)]["index"].set(newIndex);
       D_peristaltic_motor[String(random_name)]["title"].set(D_newConfig["title"].as<String>());
       D_peristaltic_motor[String(random_name)]["desp"].set(D_newConfig["desp"].as<String>());
-      D_baseInfoJSON["status"].set("OK");
+      D_baseInfoJSON["action"]["status"].set("OK");
       D_baseInfoJSON["action"]["target"].set("PeristalticMotor");
       D_baseInfoJSON["action"]["method"].set("Update");
       D_baseInfoJSON["parameter"][String(random_name)].set(D_peristaltic_motor[String(random_name)]);
@@ -1364,7 +1364,7 @@ void ws_AddNewPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
       D_pwm_motor[String(random_name)]["index"].set(newIndex);
       D_pwm_motor[String(random_name)]["title"].set(D_newConfig["title"].as<String>());
       D_pwm_motor[String(random_name)]["desp"].set(D_newConfig["desp"].as<String>());
-      D_baseInfoJSON["status"].set("OK");
+      D_baseInfoJSON["action"]["status"].set("OK");
       D_baseInfoJSON["action"]["target"].set("PwmMotor");
       D_baseInfoJSON["action"]["method"].set("Update");
       D_baseInfoJSON["parameter"][String(random_name)].set(D_pwm_motor[String(random_name)]);
