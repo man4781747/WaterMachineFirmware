@@ -59,6 +59,7 @@ class SMachine_Ctrl
     void INIT_SD_Card();
     void INIT_I2C_Wires();
     void INIT_PoolData();
+    void LoadOldLogs();
 
     //? 緊急終止所有動作，並且回歸初始狀態
     void StopDeviceAndINIT();
@@ -135,6 +136,7 @@ class SMachine_Ctrl
 
     //! SD卡系統相關參數
     String LogFolder = "/logs/";
+
 
     TaskHandle_t TASK__Peristaltic_MOTOR;
     //? 蠕動馬達Task的互斥鎖，確保蠕動馬達的 moduleDataList 內容不會被多個Task同時變動

@@ -386,8 +386,10 @@ void OTAServiceTask(void* parameter) {
   ArduinoOTA.setPort(3232);
   ArduinoOTA.onStart([]() {
     Serial.println("OTA starting...");
+    Machine_Ctrl.SetLog(3, "儀器遠端更新中", "", Machine_Ctrl.BackendServer.ws_, NULL);
   });
   ArduinoOTA.onEnd([]() {
+    Machine_Ctrl.SetLog(3, "儀器遠端更新成功，即將重開機", "", Machine_Ctrl.BackendServer.ws_, NULL);
     Serial.println("\nOTA end!");
   });
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
@@ -396,14 +398,19 @@ void OTAServiceTask(void* parameter) {
   ArduinoOTA.onError([](ota_error_t error) {
     Serial.printf("OTA error[%u]: ", error);
     if (error == OTA_AUTH_ERROR) {
+      Machine_Ctrl.SetLog(1, "儀器遠端更新失敗", "OTA auth failed", Machine_Ctrl.BackendServer.ws_, NULL);
       Serial.println("OTA auth failed");
     } else if (error == OTA_BEGIN_ERROR) {
+      Machine_Ctrl.SetLog(1, "儀器遠端更新失敗", "OTA begin failed", Machine_Ctrl.BackendServer.ws_, NULL);
       Serial.println("OTA begin failed");
     } else if (error == OTA_CONNECT_ERROR) {
+      Machine_Ctrl.SetLog(1, "儀器遠端更新失敗", "OTA connect failed", Machine_Ctrl.BackendServer.ws_, NULL);
       Serial.println("OTA connect failed");
     } else if (error == OTA_RECEIVE_ERROR) {
+      Machine_Ctrl.SetLog(1, "儀器遠端更新失敗", "OTA receive failed", Machine_Ctrl.BackendServer.ws_, NULL);
       Serial.println("OTA receive failed");
     } else if (error == OTA_END_ERROR) {
+      Machine_Ctrl.SetLog(1, "儀器遠端更新失敗", "OTA end failed", Machine_Ctrl.BackendServer.ws_, NULL);
       Serial.println("OTA end failed");
     }
   });

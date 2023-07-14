@@ -93,6 +93,7 @@ void setup() {
 
   Machine_Ctrl.StopDeviceAndINIT();
   Machine_Ctrl.INIT_SD_Card();
+  Machine_Ctrl.LoadOldLogs();
 
   Machine_Ctrl.BackendServer.ConnectToWifi();
   Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();

@@ -91,6 +91,137 @@ void SMachine_Ctrl::INIT_PoolData()
   }
 }
 
+
+void SMachine_Ctrl::LoadOldLogs()
+{
+  std::vector<String> logFileNameList;
+  File logsFolder = SD.open("/logs");
+  while (true) {
+    File entry =  logsFolder.openNextFile();
+    if (! entry) {
+      break;
+    }
+    logFileNameList.push_back(String(entry.name()));
+    entry.close();
+    if (logFileNameList.size() > 100) {
+      logFileNameList.erase(logFileNameList.begin());
+    }
+  }
+
+  std::vector<String> logContentList;
+  for (int i=logFileNameList.size()-1;i>-1;i--) {
+    if (logContentList.size() > 100) {
+      break;
+    }
+    File logFileChose = SD.open("/logs/"+logFileNameList[i]);
+    std::vector<String> singleLogContentList;
+    String line = logFileChose.readStringUntil('\n');
+    while (line.length() > 0) {
+      singleLogContentList.push_back(line);
+      line = logFileChose.readStringUntil('\n');
+    }
+    logFileChose.close();
+    
+    for (int singleLineIndex=singleLogContentList.size()-1;singleLineIndex>0;singleLineIndex--) {
+      logContentList.push_back(singleLogContentList[singleLineIndex]);
+      if (logContentList.size() > 100) {
+        break;
+      }
+    }
+  }
+  for (int lineIndex=logContentList.size()-1;lineIndex>0;lineIndex--) {
+    int delimiterIndex = 0;
+    String lineChose = logContentList[lineIndex];
+    int itemIndex = 0;
+    int level;
+    String title,time, desp="";
+    while (lineChose.length() > 0) {
+      delimiterIndex = lineChose.indexOf(",");
+      if (itemIndex == 0) {
+        level = lineChose.substring(0, delimiterIndex).toInt();
+      }
+      else if (itemIndex == 1) {
+        time = lineChose.substring(0, delimiterIndex);
+      }
+      else if (itemIndex == 2) {
+        title = lineChose.substring(0, delimiterIndex);
+      }
+      else if (itemIndex == 3) {
+        desp = lineChose.substring(0, delimiterIndex);
+      }
+      if (delimiterIndex == -1) {
+        break;
+      }
+      lineChose = lineChose.substring(delimiterIndex + 1);
+      itemIndex++;
+    }
+    DynamicJsonDocument logItem(3000);
+    logItem["level"].set(level);
+    logItem["time"].set(time);
+    logItem["title"].set(title);
+    logItem["desp"].set(desp);
+    // serializeJson(logItem, Serial);
+    logArray.add(logItem);
+    if (logArray.size() > 100) {
+      break;
+    }
+  }
+
+  // for (int i=logFileNameList.size()-1;i>-1;i--) {
+  //   if (logArray.size() > 100) {
+  //     break;
+  //   }
+  //   std::vector<String> logContentList;
+
+  //   File logFileChose = SD.open("/logs/"+logFileNameList[i]);
+  //   String line = logFileChose.readStringUntil('\n');
+  //   while (line.length() > 0) {
+  //     logContentList.push_back(line);
+  //     line = logFileChose.readStringUntil('\n');
+  //   }
+  //   logFileChose.close();
+
+  //   for (int lineIndex=logContentList.size()-1;lineIndex>0;lineIndex--) {
+  //     int delimiterIndex = 0;
+  //     String lineChose = logContentList[lineIndex];
+  //     int itemIndex = 0;
+  //     int level;
+  //     String title,time, desp="";
+  //     while (lineChose.length() > 0) {
+  //       delimiterIndex = lineChose.indexOf(",");
+  //       if (itemIndex == 0) {
+  //         level = lineChose.substring(0, delimiterIndex).toInt();
+  //       }
+  //       else if (itemIndex == 1) {
+  //         time = lineChose.substring(0, delimiterIndex);
+  //       }
+  //       else if (itemIndex == 2) {
+  //         title = lineChose.substring(0, delimiterIndex);
+  //       }
+  //       else if (itemIndex == 3) {
+  //         desp = lineChose.substring(0, delimiterIndex);
+  //       }
+  //       if (delimiterIndex == -1) {
+  //         break;
+  //       }
+  //       lineChose = lineChose.substring(delimiterIndex + 1);
+  //       itemIndex++;
+  //     }
+  //     DynamicJsonDocument logItem(3000);
+  //     logItem["level"].set(level);
+  //     logItem["time"].set(time);
+  //     logItem["title"].set(title);
+  //     logItem["desp"].set(desp);
+  //     serializeJson(logItem, Serial);
+  //     logArray.add(logItem);
+  //     if (logArray.size() > 100) {
+  //       break;
+  //     }
+  //   }
+  // }
+
+}
+
 void SMachine_Ctrl::StopDeviceAndINIT()
 {
   if (TASK__NOW_ACTION != NULL) {
