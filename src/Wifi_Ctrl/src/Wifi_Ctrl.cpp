@@ -58,6 +58,10 @@ const char* LOG_TAG_WIFI = "WIFI";
 uint8_t *oteUpdateFileBuffer;
 size_t oteUpdateFileBufferLen;
 
+uint8_t *newConfigUpdateFileBuffer;
+size_t newConfigUpdateFileBufferLen;
+
+
 enum OTAByFileStatus {
   OTAByFileStatusNO,
   OTAByFileStatusING,
@@ -537,6 +541,86 @@ void CWIFI_Ctrler::setAPIs()
   });
 
   asyncServer.serveStatic("/api/Setting/event_config.json", SPIFFS, "/config/event_config.json");
+  asyncServer.on("/api/Setting/event_config", HTTP_POST, 
+    [&](AsyncWebServerRequest *request)
+    { 
+      String FileContent = String(newConfigUpdateFileBuffer ,newConfigUpdateFileBufferLen);
+      free(newConfigUpdateFileBuffer);
+      DynamicJsonDocument NewDeviceSetting(300000);
+      DeserializationError error = deserializeJson(NewDeviceSetting, FileContent);
+      if (error) {
+        Serial.print("deserializeJson() failed: ");
+        Serial.println(error.f_str());
+        AsyncWebServerResponse* response = request->beginResponse(400, "application/json", "{\"Result\":\"FAIL\"}");
+        SendHTTPesponse(request, response);
+      }
+      else {
+        if (NewDeviceSetting.containsKey("pools") == false) {
+          AsyncWebServerResponse* response = request->beginResponse(400, "application/json", "{\"Result\":\"FAIL\"}");
+          SendHTTPesponse(request, response);
+        }
+        else if (NewDeviceSetting.containsKey("PH_meter") == false) {
+          AsyncWebServerResponse* response = request->beginResponse(400, "application/json", "{\"Result\":\"FAIL\"}");
+          SendHTTPesponse(request, response);
+        }
+        else if (NewDeviceSetting.containsKey("spectrophotometer") == false) {
+          AsyncWebServerResponse* response = request->beginResponse(400, "application/json", "{\"Result\":\"FAIL\"}");
+          SendHTTPesponse(request, response);
+        }
+        else if (NewDeviceSetting.containsKey("pwm_motor") == false) {
+          AsyncWebServerResponse* response = request->beginResponse(400, "application/json", "{\"Result\":\"FAIL\"}");
+          SendHTTPesponse(request, response);
+        }
+        else if (NewDeviceSetting.containsKey("peristaltic_motor") == false) {
+          AsyncWebServerResponse* response = request->beginResponse(400, "application/json", "{\"Result\":\"FAIL\"}");
+          SendHTTPesponse(request, response);
+        }
+        else if (NewDeviceSetting.containsKey("event_group") == false) {
+          AsyncWebServerResponse* response = request->beginResponse(400, "application/json", "{\"Result\":\"FAIL\"}");
+          SendHTTPesponse(request, response);
+        }
+        else if (NewDeviceSetting.containsKey("steps_group") == false) {
+          AsyncWebServerResponse* response = request->beginResponse(400, "application/json", "{\"Result\":\"FAIL\"}");
+          SendHTTPesponse(request, response);
+        }
+        else if (NewDeviceSetting.containsKey("pipeline") == false) {
+          AsyncWebServerResponse* response = request->beginResponse(400, "application/json", "{\"Result\":\"FAIL\"}");
+          SendHTTPesponse(request, response);
+        }
+        else {
+          (*Machine_Ctrl.spiffs.DeviceSetting).clear();
+          (*Machine_Ctrl.spiffs.DeviceSetting).set(NewDeviceSetting.as<JsonObject>());
+          Machine_Ctrl.ReWriteDeviceSetting();
+          AsyncWebServerResponse* response = request->beginResponse(200, "application/json", "{\"Result\":\"SUCCESS\"}");
+          SendHTTPesponse(request, response);
+        }
+      }
+
+    },
+    [&](AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+    {
+      if (index == 0) {
+        newConfigUpdateFileBuffer = (uint8_t *)malloc(request->contentLength());
+      }
+      memcpy(newConfigUpdateFileBuffer + index, data, len);
+      if (final) {
+        Serial.printf("檔案 %s 接收完成， len: %d ，共 %d/%d bytes\n", filename.c_str(), len ,index + len, request->contentLength());
+        newConfigUpdateFileBufferLen = index + len;
+
+        File configTempFile;
+        configTempFile = SD.open("/config/event_config_upload_temp.json", FILE_WRITE);
+        configTempFile.write(newConfigUpdateFileBuffer ,index + len);
+        configTempFile.close();
+        //? 收完檔案後，要來檢查收到的內容是不是正確的格式
+
+      } 
+      else {
+        Serial.printf("檔案 %s 正在傳輸， len: %d ，目前已接收 %d/%d bytes\n", filename.c_str(), len, index + len, request->contentLength());
+      }
+    }
+  );
+
+
 
   asyncServer.on("/api/wifi/Connect", HTTP_POST, [&](AsyncWebServerRequest *request){
     AsyncWebServerResponse* response = request->beginResponse(200, "application/json", "OK");

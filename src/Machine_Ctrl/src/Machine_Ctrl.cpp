@@ -5,6 +5,7 @@
 #include "CalcFunction.h"
 
 #include <SD.h>
+#include <SPIFFS.h>
 #include <Wire.h>
 #include <ArduinoJson.h>
 #include <ESP32Servo.h>
@@ -390,7 +391,7 @@ void LOADED_ACTION(void* parameter)
                       if (sensorData.CH_0 >= targetLevel) {
                         ESP_LOGI("LOADED_ACTION","      CH0 已將強度調整為:%d", sensorData.CH_0);
                         (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["level"].set(i);
-                        Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+                        Machine_Ctrl.ReWriteDeviceSetting();
                         break;
                       }
                     }
@@ -399,7 +400,7 @@ void LOADED_ACTION(void* parameter)
                       if (sensorData.CH_1 >= targetLevel) {
                         ESP_LOGI("LOADED_ACTION","      CH1 已將強度調整為:%d", sensorData.CH_1);
                         (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["level"].set(i);
-                        Machine_Ctrl.spiffs.ReWriteDeviceSetting();
+                        Machine_Ctrl.ReWriteDeviceSetting();
                         break;
                       }
                     }
@@ -915,8 +916,41 @@ void SMachine_Ctrl::UpdateAllPoolsDataRandom()
 void SMachine_Ctrl::LoopTest()
 {
   poolsCtrl.UpdateAllPoolsDataRandom();
-};
+}
 
+
+//! 在寫入大檔案的時候，可能會觸發看門狗，因此單獨將寫檔案拉成獨立的Task，也可以不讓Server被卡住
+void BuildNewTempDeviceSettingFile(void* parameter)
+{ 
+  SPIFFS.begin(true);
+  for (int i=0;i<3;i++) {
+    File file = SPIFFS.open("/config/event_config_temp.json", FILE_WRITE);
+    size_t writeSize = serializeJson(*(Machine_Ctrl.spiffs.DeviceSetting), file);
+    file.close();
+    if ((int)writeSize != 0) {
+      SPIFFS.remove("/config/event_config.json");
+      SPIFFS.rename("/config/event_config_temp.json", "/config/event_config.json");
+      ESP_LOGI("SPIFFS", "檔案重建完成");
+      break;
+    }
+  }
+  Machine_Ctrl.TASK__SPIFFS_Working = NULL;
+  vTaskDelete(NULL);
+}
+String SMachine_Ctrl::ReWriteDeviceSetting()
+{
+  if (TASK__SPIFFS_Working == NULL) {
+    xTaskCreatePinnedToCore(
+      BuildNewTempDeviceSettingFile, "BuileNewSetting",
+      10000, NULL, 2, &TASK__SPIFFS_Working, 1
+    );
+    return "";
+  }
+  else {
+    // SetLog(2, "機器讀寫忙碌中", "請稍後在試", Machine_Ctrl.BackendServer.ws_, NULL);
+    return "BUSY";
+  }
+}
 
 ////////////////////////////////////////////////////
 // 捨棄使用，純紀錄

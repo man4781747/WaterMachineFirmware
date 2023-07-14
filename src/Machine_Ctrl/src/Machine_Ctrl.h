@@ -121,6 +121,9 @@ class SMachine_Ctrl
     //* 公用參數
     ////////////////////////////////////////////////////
 
+    //! SPIFFS TASK
+    TaskHandle_t TASK__SPIFFS_Working;
+    String ReWriteDeviceSetting();
 
     //! 當前執行動作TASK
     TaskHandle_t TASK__NOW_ACTION;

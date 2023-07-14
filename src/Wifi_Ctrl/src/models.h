@@ -348,12 +348,11 @@ void ws_PatchPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyna
       "事件組名稱: " + D_oldConfig["title"].as<String>(),
       server, NULL
     );
-    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-    if (RewriteConfigResult != "SUCCESS") {
+    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+    if (RewriteConfigResult == "BUSY") {
       Machine_Ctrl.SetLog(
         1,
-        "更新設定檔失敗，請將此情況通知開發人員",
-        RewriteConfigResult,
+        "機器讀寫忙碌中", "請稍後再試",
         NULL, client
       );
     }
@@ -390,12 +389,11 @@ void ws_DeletePoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
       "蝦池設定ID: " + TargetName,
       server, NULL
     );
-    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-    if (RewriteConfigResult != "SUCCESS") {
+    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+    if (RewriteConfigResult == "BUSY") {
       Machine_Ctrl.SetLog(
         1,
-        "更新設定檔失敗，請將此情況通知開發人員",
-        RewriteConfigResult,
+        "機器讀寫忙碌中", "請稍後再試",
         NULL, client
       );
     }
@@ -483,12 +481,11 @@ void ws_AddNewPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
       "說明: " + D_newConfig["desp"].as<String>(),
       server, NULL
     );
-    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-    if (RewriteConfigResult != "SUCCESS") {
+    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+    if (RewriteConfigResult == "BUSY") {
       Machine_Ctrl.SetLog(
         1,
-        "更新設定檔失敗，請將此情況通知開發人員",
-        RewriteConfigResult,
+        "機器讀寫忙碌中", "請稍後再試",
         NULL, client
       );
     }
@@ -654,12 +651,11 @@ void ws_DeleteSpectrophotometerInfo(AsyncWebSocket *server, AsyncWebSocketClient
       "分光光度計設定ID: " + TargetName,
       server, NULL
     );
-    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-    if (RewriteConfigResult != "SUCCESS") {
+    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+    if (RewriteConfigResult == "BUSY") {
       Machine_Ctrl.SetLog(
         1,
-        "更新設定檔失敗，請將此情況通知開發人員",
-        RewriteConfigResult,
+        "機器讀寫忙碌中", "請稍後再試",
         NULL, client
       );
     }
@@ -707,12 +703,11 @@ void ws_PatchSpectrophotometerInfo(AsyncWebSocket *server, AsyncWebSocketClient 
       "分光光度計設定名稱: " + D_spectrophotometer[TargetName]["title"].as<String>(),
       server, NULL
     );
-    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-    if (RewriteConfigResult != "SUCCESS") {
+    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+    if (RewriteConfigResult == "BUSY") {
       Machine_Ctrl.SetLog(
         1,
-        "更新設定檔失敗，請將此情況通知開發人員",
-        RewriteConfigResult,
+        "機器讀寫忙碌中", "請稍後再試",
         NULL, client
       );
     }
@@ -812,12 +807,11 @@ void ws_AddNewSpectrophotometerInfo(AsyncWebSocket *server, AsyncWebSocketClient
         server, NULL
       );
 
-      String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-      if (RewriteConfigResult != "SUCCESS") {
+      String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+      if (RewriteConfigResult == "BUSY") {
         Machine_Ctrl.SetLog(
           1,
-          "更新設定檔失敗，請將此情況通知開發人員",
-          RewriteConfigResult,
+          "機器讀寫忙碌中", "請稍後再試",
           NULL, client
         );
       }
@@ -978,12 +972,11 @@ void ws_PatchPeristalticMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *
       "事件組設定名稱: " + D_oldConfig["title"].as<String>(),
       server, NULL
     );
-    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-    if (RewriteConfigResult != "SUCCESS") {
+    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+    if (RewriteConfigResult == "BUSY") {
       Machine_Ctrl.SetLog(
         1,
-        "更新設定檔失敗，請將此情況通知開發人員",
-        RewriteConfigResult,
+        "機器讀寫忙碌中", "請稍後再試",
         NULL, client
       );
     }
@@ -1020,12 +1013,11 @@ void ws_DeletePeristalticMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient 
       "蠕動馬達設定ID: " + TargetName,
       server, NULL
     );
-    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-    if (RewriteConfigResult != "SUCCESS") {
+    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+    if (RewriteConfigResult == "BUSY") {
       Machine_Ctrl.SetLog(
         1,
-        "更新設定檔失敗，請將此情況通知開發人員",
-        RewriteConfigResult,
+        "機器讀寫忙碌中", "請稍後再試",
         NULL, client
       );
     }
@@ -1100,12 +1092,11 @@ void ws_AddNewPeristalticMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient 
         server, NULL
       );
 
-      String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-      if (RewriteConfigResult != "SUCCESS") {
+      String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+      if (RewriteConfigResult == "BUSY") {
         Machine_Ctrl.SetLog(
           1,
-          "更新設定檔失敗，請將此情況通知開發人員",
-          RewriteConfigResult,
+          "機器讀寫忙碌中", "請稍後再試",
           NULL, client
         );
       }
@@ -1276,12 +1267,11 @@ void ws_PatchPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, 
       "伺服馬達設定名稱: " + D_oldConfig["title"].as<String>(),
       server, NULL
     );
-    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-    if (RewriteConfigResult != "SUCCESS") {
+    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+    if (RewriteConfigResult == "BUSY") {
       Machine_Ctrl.SetLog(
         1,
-        "更新設定檔失敗，請將此情況通知開發人員",
-        RewriteConfigResult,
+        "機器讀寫忙碌中", "請稍後再試",
         NULL, client
       );
     }
@@ -1318,12 +1308,11 @@ void ws_DeletePwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
       "伺服馬達設定ID: " + TargetName,
       server, NULL
     );
-    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-    if (RewriteConfigResult != "SUCCESS") {
+    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+    if (RewriteConfigResult == "BUSY") {
       Machine_Ctrl.SetLog(
         1,
-        "更新設定檔失敗，請將此情況通知開發人員",
-        RewriteConfigResult,
+        "機器讀寫忙碌中", "請稍後再試",
         NULL, client
       );
     }
@@ -1382,12 +1371,11 @@ void ws_AddNewPwmMotorInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
         "說明: " + D_newConfig["desp"].as<String>(),
         server, NULL
       );
-      String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-      if (RewriteConfigResult != "SUCCESS") {
+      String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+      if (RewriteConfigResult == "BUSY") {
         Machine_Ctrl.SetLog(
           1,
-          "更新設定檔失敗，請將此情況通知開發人員",
-          RewriteConfigResult,
+          "機器讀寫忙碌中", "請稍後再試",
           NULL, client
         );
       }
@@ -1549,12 +1537,11 @@ void ws_PatchEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
       "事件組設定名稱: " + D_oldConfig["title"].as<String>(),
       server, NULL
     );
-    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-    if (RewriteConfigResult != "SUCCESS") {
+    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+    if (RewriteConfigResult == "BUSY") {
       Machine_Ctrl.SetLog(
         1,
-        "更新設定檔失敗，請將此情況通知開發人員",
-        RewriteConfigResult,
+        "機器讀寫忙碌中", "請稍後再試",
         NULL, client
       );
     }
@@ -1590,12 +1577,11 @@ void ws_DeleteEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dy
       "事件組設定ID: " + TargetName,
       server, NULL
     );
-    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-    if (RewriteConfigResult != "SUCCESS") {
+    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+    if (RewriteConfigResult == "BUSY") {
       Machine_Ctrl.SetLog(
         1,
-        "更新設定檔失敗，請將此情況通知開發人員",
-        RewriteConfigResult,
+        "機器讀寫忙碌中", "請稍後再試",
         NULL, client
       );
     }
@@ -1651,12 +1637,11 @@ void ws_AddNewEventInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dy
       server, NULL
     );
 
-    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-    if (RewriteConfigResult != "SUCCESS") {
+    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+    if (RewriteConfigResult == "BUSY") {
       Machine_Ctrl.SetLog(
         1,
-        "更新設定檔失敗，請將此情況通知開發人員",
-        RewriteConfigResult,
+        "機器讀寫忙碌中", "請稍後再試",
         NULL, client
       );
     }
@@ -1782,12 +1767,11 @@ void ws_DeleteStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
         NULL, client
     );
 
-    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-    if (RewriteConfigResult != "SUCCESS") {
+    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+    if (RewriteConfigResult == "BUSY") {
       Machine_Ctrl.SetLog(
         1,
-        "更新設定檔失敗，請將此情況通知開發人員",
-        RewriteConfigResult,
+        "機器讀寫忙碌中", "請稍後再試",
         NULL, client
       );
     }
@@ -1837,12 +1821,11 @@ void ws_PatchStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyna
         server, NULL
     );
 
-    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-    if (RewriteConfigResult != "SUCCESS") {
+    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+    if (RewriteConfigResult == "BUSY") {
       Machine_Ctrl.SetLog(
         1,
-        "更新設定檔失敗，請將此情況通知開發人員",
-        RewriteConfigResult,
+        "機器讀寫忙碌中", "請稍後再試",
         NULL, client
       );
     }
@@ -1893,12 +1876,11 @@ void ws_AddNewStepInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
       "名稱: "+D_steps_group[NewIDString]["title"].as<String>(),
       server, NULL
     );
-    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-    if (RewriteConfigResult != "SUCCESS") {
+    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+    if (RewriteConfigResult == "BUSY") {
       Machine_Ctrl.SetLog(
         1,
-        "更新設定檔失敗，請將此情況通知開發人員",
-        RewriteConfigResult,
+        "機器讀寫忙碌中", "請稍後再試",
         NULL, client
       );
     }
@@ -2213,12 +2195,11 @@ void ws_PatchPipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, 
       server, NULL
     );
 
-    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-    if (RewriteConfigResult != "SUCCESS") {
+    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+    if (RewriteConfigResult == "BUSY") {
       Machine_Ctrl.SetLog(
         1,
-        "更新設定檔失敗，請將此情況通知開發人員",
-        RewriteConfigResult,
+        "機器讀寫忙碌中", "請稍後再試",
         NULL, client
       );
     }
@@ -2256,12 +2237,11 @@ void ws_DeletePipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
       server, NULL
     );
 
-    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-    if (RewriteConfigResult != "SUCCESS") {
+    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+    if (RewriteConfigResult == "BUSY") {
       Machine_Ctrl.SetLog(
         1,
-        "更新設定檔失敗，請將此情況通知開發人員",
-        RewriteConfigResult,
+        "機器讀寫忙碌中", "請稍後再試",
         NULL, client
       );
     }
@@ -2331,12 +2311,11 @@ void ws_AddNewPipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
       server, NULL
     );
 
-    String RewriteConfigResult = Machine_Ctrl.spiffs.ReWriteDeviceSetting();
-    if (RewriteConfigResult != "SUCCESS") {
+    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
+    if (RewriteConfigResult == "BUSY") {
       Machine_Ctrl.SetLog(
         1,
-        "更新設定檔失敗，請將此情況通知開發人員",
-        RewriteConfigResult,
+        "機器讀寫忙碌中", "請稍後再試",
         NULL, client
       );
     }

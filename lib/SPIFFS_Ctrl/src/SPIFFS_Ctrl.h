@@ -25,8 +25,8 @@ class SPIFFS_Ctrl
     String WiFiConfigFilePath = "/config/wifi_config.json";
 
     DynamicJsonDocument* GetDeviceSetting();
-    String ReWriteDeviceSetting();
     DynamicJsonDocument *DeviceSetting = new DynamicJsonDocument(300000);
+    
 
   private:
 };
