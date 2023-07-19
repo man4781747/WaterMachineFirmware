@@ -9,6 +9,8 @@
 #include <Wire.h>
 #include <ArduinoJson.h>
 #include <ESP32Servo.h>
+#include <U8g2lib.h>
+#include "../lib/QRCode/src/qrcode.h"
 
 #include <ESPAsyncWebServer.h>
 // #include <AsyncWebServer_ESP32_W5500.h>
@@ -28,6 +30,8 @@ TaskHandle_t TASK_SwitchMotorScan = NULL;
 TaskHandle_t TASK_PeristalticMotorScan = NULL;
 
 SemaphoreHandle_t MUTEX_Peristaltic_MOTOR = xSemaphoreCreateBinary();
+
+U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, Machine_Ctrl.WireOne_SCL, Machine_Ctrl.WireOne_SDA);
 // extern AsyncWebSocket ws;
 
 ////////////////////////////////////////////////////
@@ -1005,6 +1009,62 @@ String SMachine_Ctrl::GetTimeString(String interval)
 String SMachine_Ctrl::GetDatetimeString(String interval_date, String interval_middle, String interval_time)
 {
   return GetDateString(interval_date)+interval_middle+GetTimeString(interval_time);
+}
+
+void SMachine_Ctrl::ShowIPAndQRCodeOnOled()
+{
+  byte x0 = 3 + 64;
+  byte y0 = 3;
+  QRCode qrcode;
+  uint8_t qrcodeData[qrcode_getBufferSize(3)];
+  qrcode_initText(&qrcode, qrcodeData, 3, 0, ("http://" + BackendServer.IP).c_str());
+
+  int ipList[4];
+  String IpString = BackendServer.IP+"";
+  String delimiter = ".";
+  int delimiterIndex = IpString.indexOf(delimiter);
+  int rowChose = 0;
+  while (delimiterIndex != -1) {
+    ipList[rowChose] =  IpString.substring(0, delimiterIndex).toInt();
+    IpString = IpString.substring(delimiterIndex+1);
+    delimiterIndex = IpString.indexOf(delimiter);
+    rowChose++;
+  }
+  ipList[3] = IpString.toInt();
+
+  u8g2.begin();
+  u8g2.setFont(u8g2_font_HelvetiPixelOutline_te);
+  u8g2.firstPage();
+  do {
+    u8g2.setFont(u8g2_font_VCR_OSD_tn);
+    u8g2.setColorIndex(1); // 設成白色
+
+
+    for (int i = 0; i < 3; i++) {
+      u8g2.drawUTF8(0, 16 * (i + 1), (String(ipList[i]) + ".").c_str());
+    }
+    u8g2.drawUTF8(0, 16 * (3 + 1), (String(ipList[3])).c_str());
+
+    u8g2.drawBox(65, 0, 66, 64);
+    for (uint8_t y = 0; y < qrcode.size; y++)
+    {
+      for (uint8_t x = 0; x < qrcode.size; x++)
+      {
+        if (qrcode_getModule(&qrcode, x, y))
+        {
+          u8g2.setColorIndex(0);
+        }
+        else
+        {
+          u8g2.setColorIndex(1);
+        }
+        u8g2.drawBox(x0 + x * 2, y0 + y * 2, 2, 2);
+      }
+    }
+
+
+  } while ( u8g2.nextPage() );
+
 }
 
 ////////////////////////////////////////////////////

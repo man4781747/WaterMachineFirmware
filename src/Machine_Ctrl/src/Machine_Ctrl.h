@@ -14,6 +14,9 @@
 
 #include <TimeLib.h>   
 
+#include <U8g2lib.h>
+#include "../lib/QRCode/src/qrcode.h"
+
 #include "Wifi_Ctrl/src/Wifi_Ctrl.h"
 
 
@@ -108,7 +111,7 @@ class SMachine_Ctrl
     String GetTimeString(String interval=":");
     String GetDateString(String interval="-");
     String GetDatetimeString(String interval_date="-", String interval_middle=" ", String interval_time=":");
-
+    void ShowIPAndQRCodeOnOled();
 
     ////////////////////////////////////////////////////
     //* For 測試
@@ -168,4 +171,5 @@ class SMachine_Ctrl
   private:
 };
 extern SMachine_Ctrl Machine_Ctrl;
+extern U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2;
 #endif

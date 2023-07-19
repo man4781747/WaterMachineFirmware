@@ -19,14 +19,16 @@
 #include "Machine_Ctrl/src/Machine_Ctrl.h"
 
 //TODO oled暫時這樣寫死
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+// #include <Adafruit_GFX.h>
+// #include <Adafruit_SSD1306.h>
+#include <U8g2lib.h>
+#include "../lib/QRCode/src/qrcode.h"
 //TODO oled暫時這樣寫死
 
 #include <SD.h>
-#include <Adafruit_Sensor.h>
-#include <DHT.h>
-#include <DHT_U.h>
+// #include <Adafruit_Sensor.h>
+// #include <DHT.h>
+// #include <DHT_U.h>
 #include <HTTPClient.h>
 
 // #include "Adafruit_MCP9808.h"
@@ -35,9 +37,6 @@
 DFRobot_MCP9808_I2C mcp9808(&Machine_Ctrl.WireOne, 0x18);
 DFRobot_MCP9808_I2C mcp9808_other(&Machine_Ctrl.WireOne, 0x19);
 
-#include <Adafruit_AS7341.h>
-Adafruit_AS7341 as7341;
-void SEN0364Test();
 void testWeb(int index, int type, String desp);
 
 uint16_t CH0_Buff [30];
@@ -50,37 +49,22 @@ time_t nowTime;
 char datetimeChar[30];
 
 void sensorTest(int Index);
-long oneMinSave = 0;
-long fiveMinSave = 0;
-long tenMinSave = 0;
-long TwntyFiveMinSave = 0;
-
-int Sensor_1_PIN = 19;
-int Sensor_2_PIN = 20;
-int Sensor_3_PIN = 21;
-int Sensor_4_PIN = 22;
-
-#define DHTTYPE    DHT22
-#define DHTPIN 2
-DHT_Unified dht(DHTPIN, DHTTYPE);
-uint32_t delayMS;
-
 
 const char* LOG_TAG = "MAIN";
 SMachine_Ctrl Machine_Ctrl;
 
-const char* FIRMWARE_VERSION = "V2.23.72.1";
+const char* FIRMWARE_VERSION = "V2.23.73.2";
 
 //TODO oled暫時這樣寫死
-
-Adafruit_SSD1306 display(128, 64, &Machine_Ctrl.WireOne, -1);
+// U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, Machine_Ctrl.WireOne_SCL, Machine_Ctrl.WireOne_SDA);
+// Adafruit_SSD1306 display(128, 64, &Machine_Ctrl.WireOne, -1);
 // Adafruit_SH1106 display(Machine_Ctrl.WireOne_SDA, Machine_Ctrl.WireOne_SCL);
 //TODO oled暫時這樣寫死
 
 void scanI2C();
 
 void setup() {
-  pinMode(39, PULLUP);
+  // pinMode(39, PULLUP);
   Serial.begin(115200);
   Serial.println("START");
   Machine_Ctrl.INIT_SPIFFS_config();
@@ -98,21 +82,9 @@ void setup() {
   Machine_Ctrl.BackendServer.ConnectToWifi();
   Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
   Machine_Ctrl.BackendServer.ServerStart();
+  Machine_Ctrl.ShowIPAndQRCodeOnOled();
   Machine_Ctrl.SetLog(3, "機器開機", "");
-
-  //TODO oled暫時這樣寫死
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setRotation(0);
-  display.setTextColor(WHITE);  
-  display.setCursor(0, 0);
-  display.printf("%s",Machine_Ctrl.BackendServer.IP.c_str());
-  display.setCursor(0, 16);
-  display.printf("Ver: %s",FIRMWARE_VERSION);
-  display.display();
-  pinMode(48, OUTPUT);
-  //TODO oled暫時這樣寫死
+  
 
 
   // pinMode(48, OUTPUT);
@@ -143,6 +115,7 @@ void setup() {
 }
 
 void loop() {
+
   // test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
   // Serial.printf("%s, %d,%d,%.2f\n", Machine_Ctrl.GetDatetimeString().c_str(), test.CH_0, test.CH_1,mcp9808_other.getTemperature());
   // uint16_t CH_Buff [30];
@@ -195,6 +168,7 @@ void loop() {
   // delay(1500);
   // Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
   // digitalWrite(48, LOW);
+  // scanI2C();
   delay(2000);
 }
 
