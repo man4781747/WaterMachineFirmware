@@ -73,6 +73,7 @@ JsonObject BuildSpectrophotometerEventJSONItem(JsonArray spectrophotometerEventL
     D_oneSpectrophotometerSetItem["value_name"].set(spectrophotometerEventItem["value_name"].as<String>());
     D_oneSpectrophotometerSetItem["channel"].set(spectrophotometerEventItem["channel"].as<String>());
     D_oneSpectrophotometerSetItem["target"].set(spectrophotometerEventItem["target"].as<int>());
+    D_oneSpectrophotometerSetItem["dilution"].set(spectrophotometerEventItem["dilution"].as<double>());
     L_allSpectrophotometerEventList.add(D_oneSpectrophotometerSetItem);
   }
   return D_SpectrophotometerListItem.as<JsonObject>();

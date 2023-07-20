@@ -448,13 +448,16 @@ void LOADED_ACTION(void* parameter)
                 String GainStr = spectrophotometerItem["gain"].as<String>();
                 String value_name = spectrophotometerItem["value_name"].as<String>();
                 String spectrophotometerName = spectrophotometerItem["spectrophotometer"]["title"].as<String>();
+                double dilutionValue = spectrophotometerItem["dilution"].as<double>();
                 
                 String spectrophotometer_id = spectrophotometerItem["id"].as<String>();
                 
-                ESP_LOGI("LOADED_ACTION","       - %s(%d) %s 測量倍率，並紀錄為: %s", 
+                ESP_LOGI("LOADED_ACTION","       - %s(%d) %s 測量倍率、%.2f 稀釋倍率，並紀錄為: %s", 
                   spectrophotometerName.c_str(), 
                   spectrophotometerIndex, 
-                  GainStr.c_str(), value_name.c_str()
+                  GainStr.c_str(), 
+                  dilutionValue,
+                  value_name.c_str()
                 );
 
                 //? 開啟指定index模組
@@ -551,8 +554,8 @@ void LOADED_ACTION(void* parameter)
                 double m = (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["calibration"][0]["ret"]["m"].as<double>();
                 double b = (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["calibration"][0]["ret"]["b"].as<double>();
 
-                CH0_after = (-log10(CH0_result/50000.)-b)/m;
-                CH1_after = (-log10(CH1_result/50000.)-b)/m;
+                CH0_after = (-log10(CH0_result/50000.)-b)/m * dilutionValue;
+                CH1_after = (-log10(CH1_result/50000.)-b)/m * dilutionValue;
                 
                 Serial.printf("%s, %.2f, %.2f, %.4f, %.4f, %.2f, %.2f",
                   spectrophotometer_id.c_str(), CH0_result, CH1_result, m, b, CH0_after, CH1_after
