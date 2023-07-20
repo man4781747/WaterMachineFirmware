@@ -5,17 +5,11 @@
 // #undef ARDUHAL_LOG_LEVEL
 // #define ARDUHAL_LOG_LEVEL 5
 
-// ArduinoJson.h
-// #define JSON_MAX_DEPTH 40
-
-
 #include <Arduino.h>
 #include <Wire.h>
 #include <esp_log.h>
 #include <ArduinoJson.h>
-
 #include "CalcFunction.h"
-
 #include "Machine_Ctrl/src/Machine_Ctrl.h"
 
 //TODO oled暫時這樣寫死
@@ -34,40 +28,17 @@
 // #include "Adafruit_MCP9808.h"
 // Adafruit_MCP9808 tempsensor = Adafruit_MCP9808();
 #include "DFRobot_MCP9808.h"
-DFRobot_MCP9808_I2C mcp9808(&Machine_Ctrl.WireOne, 0x18);
-DFRobot_MCP9808_I2C mcp9808_other(&Machine_Ctrl.WireOne, 0x19);
+// DFRobot_MCP9808_I2C mcp9808(&Machine_Ctrl.WireOne, 0x18);
+// DFRobot_MCP9808_I2C mcp9808_other(&Machine_Ctrl.WireOne, 0x19);
 
 void testWeb(int index, int type, String desp);
 
-uint16_t CH0_Buff [30];
-uint16_t CH1_Buff [30];
-DynamicJsonDocument PostData(10000);
-ALS_01_Data_t test;
-HTTPClient http;
-String PostString;
-time_t nowTime;
-char datetimeChar[30];
-
-void sensorTest(int Index);
-
-const char* LOG_TAG = "MAIN";
-SMachine_Ctrl Machine_Ctrl;
-
 const char* FIRMWARE_VERSION = "V2.23.73.2";
-
-//TODO oled暫時這樣寫死
-// U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, Machine_Ctrl.WireOne_SCL, Machine_Ctrl.WireOne_SDA);
-// U8G2_SSD1306_128X64_NONAME_1_2ND_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
-// Adafruit_SSD1306 display(128, 64, &Machine_Ctrl.WireOne, -1);
-// Adafruit_SH1106 display(Machine_Ctrl.WireOne_SDA, Machine_Ctrl.WireOne_SCL);
-//TODO oled暫時這樣寫死
 
 void scanI2C();
 
 void setup() {
-  // pinMode(39, PULLUP);
   Serial.begin(115200);
-  Serial.println("START");
   Machine_Ctrl.INIT_SD_Card();
   Machine_Ctrl.INIT_SPIFFS_config();
   Machine_Ctrl.INIT_I2C_Wires();
@@ -201,6 +172,7 @@ void scanI2C(){
 }
 
 void testWeb(int index, int type, String desp) {
+  HTTPClient http;
   DynamicJsonDocument PostData_V2(10000);
   uint16_t CH0_Buff_V2 [30];
   uint16_t CH1_Buff_V2 [30];
@@ -217,13 +189,18 @@ void testWeb(int index, int type, String desp) {
   Machine_Ctrl.WireOne.write(type);
   Machine_Ctrl.WireOne.endTransmission();
   for (int i=0;i<30;i++) {
-    test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+    ALS_01_Data_t test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
     CH0_Buff_V2[i] = test.CH_0;
     CH1_Buff_V2[i] = test.CH_1;
   }
   PostData_V2["CH0"].set(afterFilterValue(CH0_Buff_V2,30));
   PostData_V2["CH1"].set(afterFilterValue(CH1_Buff_V2,30));
   //TODO 溫度測試
+  DFRobot_MCP9808_I2C mcp9808(&Machine_Ctrl.WireOne, 0x18);
+  DFRobot_MCP9808_I2C mcp9808_other(&Machine_Ctrl.WireOne, 0x19);
+
+
+
   mcp9808.wakeUpMode();
   mcp9808.setResolution(RESOLUTION_0_0625);
   mcp9808_other.wakeUpMode();
@@ -235,13 +212,14 @@ void testWeb(int index, int type, String desp) {
   PostData_V2["SensorIndex"].set(index);
   PostData_V2["Name"].set(desp);
   PostData_V2["Resistance_Level"].set(type);
-  nowTime = now();
+  time_t nowTime = now();
+  char datetimeChar[30];
   sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
     year(nowTime), month(nowTime), day(nowTime),
     hour(nowTime), minute(nowTime), second(nowTime)
   );
   PostData_V2["DataTime"] = datetimeChar;
-  PostString = "";
+  String PostString = "";
   http.begin("http://192.168.20.27:5566/data");
   http.addHeader("Content-Type", "application/json");
   serializeJsonPretty(PostData_V2, PostString);

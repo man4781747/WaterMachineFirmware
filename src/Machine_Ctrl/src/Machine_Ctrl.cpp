@@ -3,6 +3,7 @@
 #include "esp_random.h"
 
 #include "CalcFunction.h"
+#include "../../lib/StorgeSystemExternalFunction/SD_ExternalFuncion.h"
 
 #include <SD.h>
 #include <SPIFFS.h>
@@ -60,13 +61,10 @@ double getRandomNumber(double mean, double stddev) {
 void SMachine_Ctrl::INIT_SD_Card()
 {
   if (!SD.begin(8)) {
-    Serial.println("initialization failed!");
-    // while (1);
+    ESP_LOGE("SD", "initialization failed!");
   } else {
-    Serial.println("initialization done.");
+    ESP_LOGV("SD", "initialization done.");
   }
-  // SD.mkdir("/sd/logs");
-
 }
 
 /**
@@ -111,7 +109,7 @@ void SMachine_Ctrl::INIT_PoolData()
     (*sensorDataSave)[D_poolItem.key()]["pH"].set(-1.);
   }
 
-
+  
 
   if (SD.exists(LastDataSaveFilePath)) {
     File tempData = SD.open(LastDataSaveFilePath, FILE_READ);
@@ -916,7 +914,7 @@ DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String descri
   if (SD.exists(logFileFullPath)) {
     logFile = SD.open(logFileFullPath, FILE_APPEND);
   } else {
-    CreateFile(logFileFullPath);
+    ExSD_CreateFile(SD, logFileFullPath);
     logFile = SD.open(logFileFullPath, FILE_APPEND);
     logFile.print("\xEF\xBB\xBF");
   }
@@ -1187,7 +1185,7 @@ void SMachine_Ctrl::SaveSensorData_photometer(
 {
   File SaveFile;
   if (SD.exists(filePath) == false) {
-    CreateFile(filePath);
+    ExSD_CreateFile(SD, filePath);
     SaveFile = SD.open(filePath, FILE_APPEND);
     SaveFile.print("\xEF\xBB\xBF");
   } else {
@@ -1200,38 +1198,12 @@ void SMachine_Ctrl::SaveSensorData_photometer(
   SaveFile.close();
 }
 
-void SMachine_Ctrl::CreateFile(String FilePath){
-  ESP_LOGI("SD", "CreateFile: %s", FilePath.c_str());
-  String folderPath = FilePath.substring(0,FilePath.lastIndexOf('/')+1);
-  if (folderPath.indexOf('/') == 0){
-    folderPath = folderPath.substring(1,folderPath.length());
-  }
-  String folderPathStack = "";
-  int index;
-  int length;
-  while (1){
-    index = folderPath.indexOf('/');
-    if (index <0) {
-      break;
-    }
-    folderPathStack = folderPathStack + "/" + folderPath.substring(0,index);
-    folderPath = folderPath.substring(index+1,folderPath.length());
-    if (SD.exists(folderPathStack) == false){
-      ESP_LOGD("SD", "Create folder: %s", folderPathStack.c_str());
-      SD.mkdir(folderPathStack);
-    }
-  }
-  if (SD.exists(FilePath) == false){
-    File selectedFile = SD.open(FilePath, FILE_WRITE);
-    selectedFile.close();
-  }
-}
 
 void SMachine_Ctrl::ReWriteLastDataSaveFile(String filePath, JsonObject tempData){
-  CreateFile(filePath);
+  ExSD_CreateFile(SD, filePath)
   File SaveFile = SD.open(filePath, FILE_WRITE);
   serializeJson(tempData, SaveFile);
   SaveFile.close();
 }
 
-
+SMachine_Ctrl Machine_Ctrl;

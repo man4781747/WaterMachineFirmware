@@ -82,8 +82,6 @@ class SMachine_Ctrl
     //? 感測器資料儲存資料夾
     String SensorDataFolder = "/datas/";
     //? 儲存正式的光度計測量數據
-    void CreateFile(String FilePath);
-    //? 儲存正式的光度計測量數據
     void SaveSensorData_photometer(
       String filePath, String title, String desp, String Gain, String Channel,
       String ValueName, double dilution, double result, double ppm
