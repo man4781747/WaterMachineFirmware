@@ -10,6 +10,15 @@
 #include <ArduinoJson.h>
 #include <ESP32Servo.h>
 #include <U8g2lib.h>
+
+// #ifdef U8X8_HAVE_HW_I2C
+// #ifdef WIRE_INTERFACES_COUNT
+// #if WIRE_INTERFACES_COUNT > 1
+// #define U8X8_HAVE_2ND_HW_I2C
+// #endif
+// #endif
+// #endif /* U8X8_HAVE_HW_I2C */
+
 #include "../lib/QRCode/src/qrcode.h"
 
 #include <ESPAsyncWebServer.h>
@@ -32,6 +41,7 @@ TaskHandle_t TASK_PeristalticMotorScan = NULL;
 SemaphoreHandle_t MUTEX_Peristaltic_MOTOR = xSemaphoreCreateBinary();
 
 U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, Machine_Ctrl.WireOne_SCL, Machine_Ctrl.WireOne_SDA);
+// U8G2_SSD1306_128X64_NONAME_1_2ND_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 // extern AsyncWebSocket ws;
 
 ////////////////////////////////////////////////////
@@ -74,6 +84,7 @@ void SMachine_Ctrl::INIT_SPIFFS_config()
 
 void SMachine_Ctrl::INIT_I2C_Wires()
 {
+  WireOne.end();
   WireOne.begin(WireOne_SDA, WireOne_SCL);
 }
 
@@ -1016,6 +1027,7 @@ String SMachine_Ctrl::GetDatetimeString(String interval_date, String interval_mi
 
 void SMachine_Ctrl::ShowIPAndQRCodeOnOled()
 {
+  //TODO 不知為何 U8G2一直不能用Wire1來運作，目前寫死要用oled時 要停止Wire1 先開Wire給oled用
   byte x0 = 3 + 64;
   byte y0 = 3;
   QRCode qrcode;
@@ -1034,7 +1046,7 @@ void SMachine_Ctrl::ShowIPAndQRCodeOnOled()
     rowChose++;
   }
   ipList[3] = IpString.toInt();
-
+  WireOne.end();
   u8g2.begin();
   u8g2.setFont(u8g2_font_HelvetiPixelOutline_te);
   u8g2.firstPage();
@@ -1067,7 +1079,9 @@ void SMachine_Ctrl::ShowIPAndQRCodeOnOled()
 
 
   } while ( u8g2.nextPage() );
-
+  
+  Wire.end();
+  INIT_I2C_Wires();
 }
 
 ////////////////////////////////////////////////////
@@ -1146,75 +1160,52 @@ String SMachine_Ctrl::ReWriteDeviceSetting()
   }
 }
 
-////////////////////////////////////////////////////
-// 捨棄使用，純紀錄
-////////////////////////////////////////////////////
 
-// typedef struct {
-//   bool waitForTigger = false;
-//   char nextTaskName[17];
-//   u_int32_t param;
-// } TaskParamItem_t;
-// 
-// void Task_ChangeMotorStatus(void * parameter)
-// {
-//   ESP_LOGI("Task_ChangeMotorStatus","ChangeMotorStatus START");
-//   TaskParamItem_t* myParams = (TaskParamItem_t*)parameter;
-//   bool waitForTigger = myParams->waitForTigger;
-//   char* nextTaskName = myParams->nextTaskName;
-//   if (waitForTigger == true) {
-//     ESP_LOGI("Task_ChangeMotorStatus","Wait for fontTask finish");
-//     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-//   }
-//   u_int32_t mororStatusCode = myParams->param;
-//   int arrayLength = sizeof(Machine_Ctrl.motorCtrl.motorsArray) / sizeof(Machine_Ctrl.motorCtrl.motorsArray[0]);
-//   for (int index=0; index<arrayLength; index++) {
-//     if (Machine_Ctrl.motorCtrl.motorsArray[index].channelIndex == -1) {
-//       ESP_LOGI("Task_ChangeMotorStatus","Skip Motor %02d!", index);
-//       continue;
-//     }
-//     // if ((Machine_Ctrl.motorCtrl.motorsStatusCode >> index) & 1) {
-//     if ((mororStatusCode >> index) & 1) {
-//       ESP_LOGI("Task_ChangeMotorStatus","Motor %02d OPEN!", index);
-//       Machine_Ctrl.motorCtrl.SetMotorTo(index, 180);
-//     } else {
-//       ESP_LOGI("Task_ChangeMotorStatus","Motor %02d CLOSE!", index);
-//       Machine_Ctrl.motorCtrl.SetMotorTo(index, 0);
-//     }
-//     vTaskDelay(10);
-//   }
-//   vTaskDelay(2000);
-//   ESP_LOGI("Task_ChangeMotorStatus","ChangeMotorStatus END");
-//   TaskHandle_t nextTask = xTaskGetHandle(nextTaskName);
-//   if (nextTask != NULL) {
-//     xTaskNotifyGive(nextTask);
-//   }
-//   vTaskDelete(NULL);
-// };
-//
-// /**
-//  * @brief 建立伺服馬達控制Task
-//  * 
-//  * @param StatusCode 伺服馬達狀態碼
-//  * @param TaskName Task名稱
-//  * @param NextTaskName 下一個Triger的Task名稱 (default="")
-//  * @param waitForTigger 是否等待觸發後才執行 (default=fasle)
-//  */
-// void SMachine_Ctrl::ChangeMotorStatus(MOTOR_STATUS StatusCode, char* TaskName, char* NextTaskName, bool waitForTigger)
-// {
-//   TaskHandle_t myTaskHandle;
-//   myTaskHandle = xTaskGetHandle(TaskName);
-//   if (myTaskHandle == NULL) {
-//     TaskHandle_t* Task = new TaskHandle_t;
-//     TaskParamItem_t* TaskPara = new TaskParamItem_t;
-//     TaskPara->param = StatusCode;
-//     strncpy(TaskPara->nextTaskName, NextTaskName, sizeof(TaskPara->nextTaskName));
-//     TaskPara->waitForTigger = waitForTigger;
-//     xTaskCreate(
-//       Task_ChangeMotorStatus, TaskName,
-//       10000, TaskPara, 1, Task
-//     );
-//   } else {
-//     ESP_LOGW("ChangeMotorStatus","Task Busy");
-//   } 
-// };
+
+//! SD卡系統相關
+
+void SMachine_Ctrl::SaveSensorData_photometer(
+  String filePath, String title, String desp, String Gain, String Channel,
+  String ValueName, double dilution, double result, double ppm
+)
+{
+  File SaveFile;
+  if (SD.exists(filePath) == false) {
+    CreateFile(filePath);
+    SaveFile = SD.open(filePath, "a");
+  } else {
+    SaveFile = SD.open(filePath, "a");
+  }
+  SaveFile.printf(
+    "%s,%s,%s,%s,%s,%.2f,%.2f,%.2f\n"
+  );
+  SaveFile.close();
+}
+
+void SMachine_Ctrl::CreateFile(String FilePath){
+  ESP_LOGI("SD", "CreateFile: %s", FilePath.c_str());
+  String folderPath = FilePath.substring(0,FilePath.lastIndexOf('/')+1);
+  if (folderPath.indexOf('/') == 0){
+    folderPath = folderPath.substring(1,folderPath.length());
+  }
+  String folderPathStack = "";
+  int index;
+  int length;
+  while (1){
+    index = folderPath.indexOf('/');
+    if (index <0) {
+      break;
+    }
+    folderPathStack = folderPathStack + "/" + folderPath.substring(0,index);
+    folderPath = folderPath.substring(index+1,folderPath.length());
+    if (SD.exists(folderPathStack) == false){
+      ESP_LOGD("SD", "Create folder: %s", folderPathStack.c_str());
+      SD.mkdir(folderPathStack);
+    }
+  }
+  if (SD.exists(FilePath) == false){
+    File selectedFile = SD.open(FilePath, FILE_WRITE);
+    selectedFile.close();
+  }
+}
+

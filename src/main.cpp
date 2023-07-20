@@ -57,6 +57,7 @@ const char* FIRMWARE_VERSION = "V2.23.73.2";
 
 //TODO oled暫時這樣寫死
 // U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, Machine_Ctrl.WireOne_SCL, Machine_Ctrl.WireOne_SDA);
+// U8G2_SSD1306_128X64_NONAME_1_2ND_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 // Adafruit_SSD1306 display(128, 64, &Machine_Ctrl.WireOne, -1);
 // Adafruit_SH1106 display(Machine_Ctrl.WireOne_SDA, Machine_Ctrl.WireOne_SCL);
 //TODO oled暫時這樣寫死
@@ -85,8 +86,8 @@ void setup() {
   Machine_Ctrl.ShowIPAndQRCodeOnOled();
   Machine_Ctrl.SetLog(3, "機器開機", "");
   
-
-
+  
+  
   // pinMode(48, OUTPUT);
   // digitalWrite(48, HIGH);
   // mcp9808_other.wakeUpMode();
@@ -111,7 +112,11 @@ void setup() {
   //     break;
   //   }
   // }
-
+  // Machine_Ctrl.WireOne.beginTransmission(0x70);
+  // Machine_Ctrl.WireOne.write(1 << 0);
+  // Machine_Ctrl.WireOne.endTransmission();
+  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(7);
+  delay(1000);
 }
 
 void loop() {
@@ -169,6 +174,7 @@ void loop() {
   // Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
   // digitalWrite(48, LOW);
   // scanI2C();
+  // Machine_Ctrl.ShowIPAndQRCodeOnOled();
   delay(2000);
 }
 

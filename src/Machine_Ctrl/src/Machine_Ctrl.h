@@ -75,6 +75,18 @@ class SMachine_Ctrl
 
     int PeristalticMotorIDToMotorIndex(String motorID);
 
+    //! SD卡系統相關
+    String LogFolder = "/logs/";
+    String SensorDataFolder = "/datas/";
+
+    void CreateFile(String FilePath);
+    //? 儲存正式的光度計測量數據
+    void SaveSensorData_photometer(
+      String filePath, String title, String desp, String Gain, String Channel,
+      String ValueName, double dilution, double result, double ppm
+    );
+
+
     ////////////////////////////////////////////////////
     // For 事件執行
     ////////////////////////////////////////////////////
@@ -137,8 +149,6 @@ class SMachine_Ctrl
     DynamicJsonDocument *DeviceLogSave = new DynamicJsonDocument(50000);
     JsonArray logArray;
 
-    //! SD卡系統相關參數
-    String LogFolder = "/logs/";
 
 
     TaskHandle_t TASK__Peristaltic_MOTOR;
@@ -155,7 +165,7 @@ class SMachine_Ctrl
     CWIFI_Ctrler BackendServer;
     SPIFFS_Ctrl spiffs;
 
-    TwoWire WireOne = TwoWire(1);
+    TwoWire WireOne = Wire1;
     int WireOne_SDA = 5;
     int WireOne_SCL = 6;
     CMULTI_LTR_329ALS_01 MULTI_LTR_329ALS_01_Ctrler = CMULTI_LTR_329ALS_01(16, 18, 17, &WireOne);
