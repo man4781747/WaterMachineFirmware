@@ -62,7 +62,6 @@ JsonObject BuildSpectrophotometerEventJSONItem(JsonArray spectrophotometerEventL
     if (!D_AllSpectrophotometerSetting.containsKey(spectrophotometerID)) {
       continue;
     }
-    serializeJsonPretty(spectrophotometerEventItem,Serial);
     DynamicJsonDocument D_oneSpectrophotometerSetItem(500);
     D_oneSpectrophotometerSetItem["spectrophotometer"]["index"].set(D_AllSpectrophotometerSetting[spectrophotometerID]["index"].as<int>());
     D_oneSpectrophotometerSetItem["spectrophotometer"]["title"].set(D_AllSpectrophotometerSetting[spectrophotometerID]["title"].as<String>());

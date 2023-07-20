@@ -65,7 +65,7 @@ void SMachine_Ctrl::INIT_SD_Card()
   } else {
     Serial.println("initialization done.");
   }
-  SD.mkdir("/sd/logs");
+  // SD.mkdir("/sd/logs");
 
 }
 
@@ -88,6 +88,12 @@ void SMachine_Ctrl::INIT_I2C_Wires()
   WireOne.begin(WireOne_SDA, WireOne_SCL);
 }
 
+/**
+ * @brief 初始化各池的數值歷史紀錄
+ * 若記錄檔存在，則讀取紀錄檔
+ * 若不存在，則使用預設值
+ * 
+ */
 void SMachine_Ctrl::INIT_PoolData()
 {
   JsonObject D_pools = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pools"];
@@ -103,6 +109,14 @@ void SMachine_Ctrl::INIT_PoolData()
     (*sensorDataSave)[D_poolItem.key()]["NH4"].set(-1.);
     (*sensorDataSave)[D_poolItem.key()]["pH_volt"].set(-1.);
     (*sensorDataSave)[D_poolItem.key()]["pH"].set(-1.);
+  }
+
+
+
+  if (SD.exists(LastDataSaveFilePath)) {
+    File tempData = SD.open(LastDataSaveFilePath, FILE_READ);
+    DeserializationError error = deserializeJson(*sensorDataSave, tempData.readString());
+    tempData.close();
   }
 }
 
@@ -460,7 +474,7 @@ void LOADED_ACTION(void* parameter)
                 String value_name = spectrophotometerItem["value_name"].as<String>();
                 String spectrophotometerName = spectrophotometerItem["spectrophotometer"]["title"].as<String>();
                 double dilutionValue = spectrophotometerItem["dilution"].as<double>();
-                
+                String targetChannel = spectrophotometerItem["channel"].as<String>();
                 String spectrophotometer_id = spectrophotometerItem["id"].as<String>();
                 
                 ESP_LOGI("LOADED_ACTION","       - %s(%d) %s 測量倍率、%.2f 稀釋倍率，並紀錄為: %s", 
@@ -502,7 +516,7 @@ void LOADED_ACTION(void* parameter)
 
                 ALS_01_Data_t sensorData;
                 int targetLevel = spectrophotometerItem["target"].as<int>();
-                String targetChannel = spectrophotometerItem["channel"].as<String>();
+                
                 uint16_t CH0_Buff [30];
                 uint16_t CH1_Buff [30];
                 double CH0_result, CH1_result;
@@ -559,18 +573,15 @@ void LOADED_ACTION(void* parameter)
                 }
                 Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
 
-
-                // CH0_result = 35182.57;
-                // CH1_result = 16624;
                 double m = (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["calibration"][0]["ret"]["m"].as<double>();
                 double b = (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["calibration"][0]["ret"]["b"].as<double>();
 
                 CH0_after = (-log10(CH0_result/50000.)-b)/m * dilutionValue;
                 CH1_after = (-log10(CH1_result/50000.)-b)/m * dilutionValue;
                 
-                Serial.printf("%s, %.2f, %.2f, %.4f, %.4f, %.2f, %.2f",
-                  spectrophotometer_id.c_str(), CH0_result, CH1_result, m, b, CH0_after, CH1_after
-                );
+                // Serial.printf("%s, %.2f, %.2f, %.4f, %.4f, %.2f, %.2f",
+                //   spectrophotometer_id.c_str(), CH0_result, CH1_result, m, b, CH0_after, CH1_after
+                // );
 
                 time_t nowTime = now();
                 spectrophotometerItem["finish_time"].set(now());
@@ -580,7 +591,7 @@ void LOADED_ACTION(void* parameter)
                   year(nowTime), month(nowTime), day(nowTime),
                   hour(nowTime), minute(nowTime), second(nowTime)
                 );
-                /**
+                /*              
                  * 當 ["action"]["method"] == "RUN" 時，代表為正式執行的流程
                  * 其收到的Sensor數值必須存入 Machine_Ctrl.sensorDataSave 中
                  * 
@@ -597,9 +608,8 @@ void LOADED_ACTION(void* parameter)
                   
                   (*Machine_Ctrl.sensorDataSave)[poolID]["Data_datetime"].set(datetimeChar);
 
-                  //TODO 目前還沒有正確的減量線修正公式，所以先給假值
+
                   if (value_name == "NH4_test_volt") {
-                    // (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["CalibrationParameters"][]
                     (*Machine_Ctrl.sensorDataSave)[poolID]["NH4"].set(
                       getFixValueByLogarithmicFix(
                         (*Machine_Ctrl.sensorDataSave)[poolID][value_name].as<double>(),
@@ -617,13 +627,18 @@ void LOADED_ACTION(void* parameter)
                       (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometer_id]["CalibrationParameters"]["intercept"].as<double>()
                     ));
                   }
+                  String DataFileFullPath = Machine_Ctrl.SensorDataFolder + Machine_Ctrl.GetDateString("") + "_data.csv";
+                  Machine_Ctrl.SaveSensorData_photometer(
+                    DataFileFullPath, spectrophotometerName, "123", GainStr, targetChannel,
+                    value_name, dilutionValue, (*Machine_Ctrl.sensorDataSave)[poolID][value_name].as<double>(), (*Machine_Ctrl.sensorDataSave)[poolID]["NO2"].as<double>()
+                  );
                 }
                 poolSensorData[poolID][value_name]["Gain"].set(GainStr);
                 poolSensorData[poolID][value_name]["Value"]["CH0"].set(CH0_result);
                 poolSensorData[poolID][value_name]["Value"]["CH1"].set(CH1_result);
                 poolSensorData[poolID][value_name]["Time"].set(datetimeChar);
 
-
+                Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.LastDataSaveFilePath, (*Machine_Ctrl.sensorDataSave).as<JsonObject>());
 
                 Machine_Ctrl.SetLog(
                   3, 
@@ -901,7 +916,8 @@ DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String descri
   if (SD.exists(logFileFullPath)) {
     logFile = SD.open(logFileFullPath, FILE_APPEND);
   } else {
-    logFile = SD.open(logFileFullPath, FILE_WRITE);
+    CreateFile(logFileFullPath);
+    logFile = SD.open(logFileFullPath, FILE_APPEND);
     logFile.print("\xEF\xBB\xBF");
   }
   logFile.printf("%d,%s,%s,%s\n",
@@ -1172,12 +1188,14 @@ void SMachine_Ctrl::SaveSensorData_photometer(
   File SaveFile;
   if (SD.exists(filePath) == false) {
     CreateFile(filePath);
-    SaveFile = SD.open(filePath, "a");
+    SaveFile = SD.open(filePath, FILE_APPEND);
+    SaveFile.print("\xEF\xBB\xBF");
   } else {
-    SaveFile = SD.open(filePath, "a");
+    SaveFile = SD.open(filePath, FILE_APPEND);
   }
   SaveFile.printf(
-    "%s,%s,%s,%s,%s,%.2f,%.2f,%.2f\n"
+    "%s,%s,%s,%s,%s,%.2f,%.2f,%.2f\n",
+    title, desp, Gain, Channel, ValueName, dilution, result, ppm
   );
   SaveFile.close();
 }
@@ -1208,4 +1226,12 @@ void SMachine_Ctrl::CreateFile(String FilePath){
     selectedFile.close();
   }
 }
+
+void SMachine_Ctrl::ReWriteLastDataSaveFile(String filePath, JsonObject tempData){
+  CreateFile(filePath);
+  File SaveFile = SD.open(filePath, FILE_WRITE);
+  serializeJson(tempData, SaveFile);
+  SaveFile.close();
+}
+
 

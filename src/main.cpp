@@ -68,6 +68,7 @@ void setup() {
   // pinMode(39, PULLUP);
   Serial.begin(115200);
   Serial.println("START");
+  Machine_Ctrl.INIT_SD_Card();
   Machine_Ctrl.INIT_SPIFFS_config();
   Machine_Ctrl.INIT_I2C_Wires();
   Machine_Ctrl.INIT_PoolData();
@@ -77,7 +78,7 @@ void setup() {
   Machine_Ctrl.motorCtrl.INIT_Motors(Machine_Ctrl.WireOne);
 
   Machine_Ctrl.StopDeviceAndINIT();
-  Machine_Ctrl.INIT_SD_Card();
+ 
   Machine_Ctrl.LoadOldLogs();
 
   Machine_Ctrl.BackendServer.ConnectToWifi();

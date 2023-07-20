@@ -76,16 +76,23 @@ class SMachine_Ctrl
     int PeristalticMotorIDToMotorIndex(String motorID);
 
     //! SD卡系統相關
-    String LogFolder = "/logs/";
-    String SensorDataFolder = "/datas/";
 
+    //? LOG 資料夾位置
+    String LogFolder = "/logs/";
+    //? 感測器資料儲存資料夾
+    String SensorDataFolder = "/datas/";
+    //? 儲存正式的光度計測量數據
     void CreateFile(String FilePath);
     //? 儲存正式的光度計測量數據
     void SaveSensorData_photometer(
       String filePath, String title, String desp, String Gain, String Channel,
       String ValueName, double dilution, double result, double ppm
     );
-
+    //? 最新資料儲存檔案位置
+    //? API路徑:<ip>/static/SD/datas/temp.json
+    String LastDataSaveFilePath = SensorDataFolder+"/temp.json";
+    //? 更新最新資料儲存檔案
+    void ReWriteLastDataSaveFile(String filePath, JsonObject tempData);
 
     ////////////////////////////////////////////////////
     // For 事件執行

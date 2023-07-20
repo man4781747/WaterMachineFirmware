@@ -103,7 +103,7 @@ DynamicJsonDocument* SPIFFS_Ctrl::LoadDeviceBaseInfo()
   } else {
     File file = SPIFFS.open(DeviceBaseInfoFilePath, FILE_READ);
     String FileContent = file.readString();
-    Serial.println(FileContent);
+    // Serial.println(FileContent);
     file.close();
     if (FileContent.length() != 0) {
       DeserializationError error = deserializeJson(*DeviceBaseInfo, FileContent);
