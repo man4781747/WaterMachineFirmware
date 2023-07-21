@@ -204,5 +204,5 @@ class SMachine_Ctrl
   private:
 };
 extern SMachine_Ctrl Machine_Ctrl;
-extern U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2;
+// extern U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2;
 #endif

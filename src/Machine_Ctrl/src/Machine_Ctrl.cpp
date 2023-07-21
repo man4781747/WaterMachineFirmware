@@ -41,7 +41,7 @@ TaskHandle_t TASK_PeristalticMotorScan = NULL;
 
 SemaphoreHandle_t MUTEX_Peristaltic_MOTOR = xSemaphoreCreateBinary();
 
-U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, Machine_Ctrl.WireOne_SCL, Machine_Ctrl.WireOne_SDA);
+// U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, Machine_Ctrl.WireOne_SCL, Machine_Ctrl.WireOne_SDA);
 // U8G2_SSD1306_128X64_NONAME_1_2ND_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 // extern AsyncWebSocket ws;
 
@@ -1092,6 +1092,7 @@ void SMachine_Ctrl::ShowIPAndQRCodeOnOled()
   }
   ipList[3] = IpString.toInt();
   WireOne.end();
+  U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, Machine_Ctrl.WireOne_SCL, Machine_Ctrl.WireOne_SDA);
   u8g2.begin();
   u8g2.setFont(u8g2_font_HelvetiPixelOutline_te);
   u8g2.firstPage();
