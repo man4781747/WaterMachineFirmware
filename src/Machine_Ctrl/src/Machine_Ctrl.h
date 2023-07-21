@@ -62,6 +62,10 @@ class SMachine_Ctrl
     void INIT_SD_Card();
     void INIT_I2C_Wires();
     void INIT_PoolData();
+
+
+    bool LoadJsonConfig(fs::FS& fileSystem, String FilePath, JsonDocument &doc);
+    void LoadPiplineConfig();
     void LoadOldLogs();
 
     //? 緊急終止所有動作，並且回歸初始狀態
@@ -75,22 +79,36 @@ class SMachine_Ctrl
 
     int PeristalticMotorIDToMotorIndex(String motorID);
 
-    //! SD卡系統相關
 
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //! SPIFFS系統相關
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    String configsFolder = "/config/";
+    String deviceBaseConfigFileFullPath = configsFolder+"device_base_config.json";
+    String wifiConfigFileFullPath = configsFolder+"wifi_config.json";
+
+    
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //! SD卡系統相關
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    
+    String SD__configsFolder = "/config/";
+    String SD__piplineConfigsFileFullPath = SD__configsFolder+"event_config.json";
     //? LOG 資料夾位置
     String LogFolder = "/logs/";
     //? 感測器資料儲存資料夾
     String SensorDataFolder = "/datas/";
+    //? 最新資料儲存檔案位置
+    //? API路徑:<ip>/static/SD/datas/temp.json
+    String LastDataSaveFilePath = SensorDataFolder+"/temp.json";
     //? 儲存正式的光度計測量數據
     void SaveSensorData_photometer(
       String filePath, String title, String desp, String Gain, String Channel,
       String ValueName, double dilution, double result, double ppm
     );
-    //? 最新資料儲存檔案位置
-    //? API路徑:<ip>/static/SD/datas/temp.json
-    String LastDataSaveFilePath = SensorDataFolder+"/temp.json";
     //? 更新最新資料儲存檔案
     void ReWriteLastDataSaveFile(String filePath, JsonObject tempData);
+
 
     ////////////////////////////////////////////////////
     // For 事件執行

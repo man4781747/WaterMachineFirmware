@@ -26,8 +26,6 @@ class SPIFFS_Ctrl
 
     DynamicJsonDocument* GetDeviceSetting();
     DynamicJsonDocument *DeviceSetting = new DynamicJsonDocument(300000);
-    
-
   private:
 };
 

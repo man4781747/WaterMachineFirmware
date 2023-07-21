@@ -41,6 +41,7 @@ void setup() {
   Serial.begin(115200);
   Machine_Ctrl.INIT_SD_Card();
   Machine_Ctrl.INIT_SPIFFS_config();
+  Machine_Ctrl.LoadPiplineConfig();
   Machine_Ctrl.INIT_I2C_Wires();
   Machine_Ctrl.INIT_PoolData();
   

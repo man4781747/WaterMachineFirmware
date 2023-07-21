@@ -76,7 +76,7 @@ void SMachine_Ctrl::INIT_SPIFFS_config()
 {
   spiffs.INIT_SPIFFS();
   spiffs.LoadDeviceBaseInfo();
-  spiffs.GetDeviceSetting();
+  // spiffs.GetDeviceSetting();
   spiffs.LoadWiFiConfig();
 }
 
@@ -118,6 +118,37 @@ void SMachine_Ctrl::INIT_PoolData()
   }
 }
 
+// void SMachine_Ctrl::LoadPiplineConfig()
+// {
+//   if (SD.exists(SD__piplineConfigsFileFullPath)) {
+//     File file = SD.open(SD__piplineConfigsFileFullPath, FILE_READ);
+//     DeserializationError error = deserializeJson(*(spiffs.DeviceSetting), file);
+//   } else if (SPIFFS.exists("/config/event_config.json")) {
+//     File file = SPIFFS.open("/config/event_config.json", FILE_READ);
+    
+//   }
+// }
+bool SMachine_Ctrl::LoadJsonConfig(fs::FS& fileSystem, String FilePath, JsonDocument &doc)
+{
+  if (fileSystem.exists(FilePath)) {
+    File file = fileSystem.open(FilePath, FILE_READ);
+    DeserializationError error = deserializeJson(doc, file);
+    if (error) {
+      return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+void SMachine_Ctrl::LoadPiplineConfig()
+{
+  if (
+    LoadJsonConfig(SD, SD__piplineConfigsFileFullPath, *(spiffs.DeviceSetting)) == false
+  ) {
+    LoadJsonConfig(SPIFFS, SD__piplineConfigsFileFullPath, *(spiffs.DeviceSetting));
+  }
+}
 
 void SMachine_Ctrl::LoadOldLogs()
 {
@@ -1161,17 +1192,23 @@ void BuildNewTempDeviceSettingFile(void* parameter)
 }
 String SMachine_Ctrl::ReWriteDeviceSetting()
 {
-  if (TASK__SPIFFS_Working == NULL) {
-    xTaskCreatePinnedToCore(
-      BuildNewTempDeviceSettingFile, "BuileNewSetting",
-      10000, NULL, 2, &TASK__SPIFFS_Working, 1
-    );
-    return "";
-  }
-  else {
-    // SetLog(2, "機器讀寫忙碌中", "請稍後在試", Machine_Ctrl.BackendServer.ws_, NULL);
-    return "BUSY";
-  }
+  String test;
+  serializeJson(*(spiffs.DeviceSetting), test);
+  ExSD_ReWriteBigFile(
+    SD, "/config/event_config.json", test
+  );
+  return "";
+  // if (TASK__SPIFFS_Working == NULL) {
+  //   xTaskCreatePinnedToCore(
+  //     BuildNewTempDeviceSettingFile, "BuileNewSetting",
+  //     10000, NULL, 2, &TASK__SPIFFS_Working, 1
+  //   );
+  //   return "";
+  // }
+  // else {
+  //   // SetLog(2, "機器讀寫忙碌中", "請稍後在試", Machine_Ctrl.BackendServer.ws_, NULL);
+  //   return "BUSY";
+  // }
 }
 
 
@@ -1193,14 +1230,14 @@ void SMachine_Ctrl::SaveSensorData_photometer(
   }
   SaveFile.printf(
     "%s,%s,%s,%s,%s,%.2f,%.2f,%.2f\n",
-    title, desp, Gain, Channel, ValueName, dilution, result, ppm
+    title.c_str(), desp.c_str(), Gain.c_str(), Channel.c_str(), ValueName.c_str(), dilution, result, ppm
   );
   SaveFile.close();
 }
 
 
 void SMachine_Ctrl::ReWriteLastDataSaveFile(String filePath, JsonObject tempData){
-  ExSD_CreateFile(SD, filePath)
+  ExSD_CreateFile(SD, filePath);
   File SaveFile = SD.open(filePath, FILE_WRITE);
   serializeJson(tempData, SaveFile);
   SaveFile.close();

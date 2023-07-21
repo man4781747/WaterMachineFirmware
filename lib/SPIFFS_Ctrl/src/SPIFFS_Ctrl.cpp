@@ -197,8 +197,6 @@ DynamicJsonDocument* SPIFFS_Ctrl::GetDeviceSetting()
       File fileTemp = SPIFFS.open("/config/config_temp.json", FILE_READ);
       String tempFileContent = fileTemp.readString();
       fileTemp.close();
-      // Serial.printf("temp file length: %d\r\n", tempFileContent.length());
-      // Serial.printf("temp file content: %s\r\n", tempFileContent.c_str());
       deserializeJson(*DeviceSetting, tempFileContent);
     }
 
