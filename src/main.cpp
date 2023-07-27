@@ -19,6 +19,12 @@
 #include "../lib/QRCode/src/qrcode.h"
 //TODO oled暫時這樣寫死
 
+//TODO
+#include <vector>
+#include <map>
+//TODO
+
+
 #include <SD.h>
 // #include <Adafruit_Sensor.h>
 // #include <DHT.h>
@@ -36,6 +42,7 @@ void testWeb(int index, int type, String desp);
 const char* FIRMWARE_VERSION = "V2.23.73.2";
 
 void scanI2C();
+
 
 void setup() {
   Serial.begin(115200);
@@ -59,32 +66,60 @@ void setup() {
   Machine_Ctrl.ShowIPAndQRCodeOnOled();
   Machine_Ctrl.SetLog(3, "機器開機", "");
   
-  
-  
-  // pinMode(48, OUTPUT);
-  // digitalWrite(48, HIGH);
-  // mcp9808_other.wakeUpMode();
-  // mcp9808_other.setResolution(RESOLUTION_0_0625);
-  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_48X);
-  // uint16_t CH_Buff [30];
-  // uint16_t Temp_Buff[30];
+  //TODO
+  // DynamicJsonDocument pipelineConfig(65525);
+  // File testContent = SD.open("/pipelines/test_1.json", FILE_READ);
+  // deserializeJson((*Machine_Ctrl.pipelineConfig), testContent.readString());
+  // testContent.close();
+  // // serializeJsonPretty(testConfig["pipline"], Serial);
 
+  // //? pipelineConfig: 整個流程運行中都要存在的變數
+  // JsonArray piplineArray = (*Machine_Ctrl.pipelineConfig)["pipline"].as<JsonArray>();
 
-  // for (int i=120;i<160;i=i+1) {
-  //   Machine_Ctrl.WireOne.beginTransmission(0x2F);
-  //   Machine_Ctrl.WireOne.write(0b00000000);
-  //   Machine_Ctrl.WireOne.write(i);
-  //   Machine_Ctrl.WireOne.endTransmission();
-  //   for (int i=0;i<30;i++) {
-  //     test = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
-  //     CH_Buff[i] = test.CH_0;
+  // //? 將原本的pipeline流程設定轉換成後面Task好追蹤的格式
+  // DynamicJsonDocument piplineSave(65525);
+  // for (JsonArray singlePiplineArray : piplineArray) {
+  //   // serializeJson(singlePiplineArray, Serial);
+  //   // Serial.println();
+  //   String ThisNodeNameString = singlePiplineArray[0].as<String>();
+  //   // ESP_LOGI("", "處裡流成: %s", ThisNodeNameString.c_str());
+  //   if (!piplineSave.containsKey(ThisNodeNameString)) {
+  //     piplineSave[ThisNodeNameString]["Name"] = ThisNodeNameString;
+  //     piplineSave[ThisNodeNameString].createNestedObject("childList");
+  //     piplineSave[ThisNodeNameString].createNestedObject("parentList");
   //   }
-  //   double test_value = afterFilterValue(CH_Buff,30);
-  //   Serial.println(test_value);
-  //   if (test_value >= 50000) {
-  //     break;
+  //   for (String piplineChildName :  singlePiplineArray[1].as<JsonArray>()) {
+  //     if (!piplineSave.containsKey(piplineChildName)) {
+  //       piplineSave[piplineChildName]["Name"] = piplineChildName;
+  //       piplineSave[piplineChildName].createNestedObject("childList");
+  //       piplineSave[piplineChildName].createNestedObject("parentList");
+  //     }
+
+  //     if (!piplineSave[ThisNodeNameString]["childList"].containsKey(piplineChildName)){
+  //       piplineSave[ThisNodeNameString]["childList"].createNestedObject(piplineChildName);
+  //       // ESP_LOGI("", "%s 新增一個 child: %s", ThisNodeNameString.c_str(), piplineChildName.c_str());
+  //     }
+
+  //     if (!piplineSave[piplineChildName]["parentList"].containsKey(ThisNodeNameString)){
+  //       piplineSave[piplineChildName]["parentList"].createNestedObject(ThisNodeNameString);
+  //       // ESP_LOGI("", "%s 新增一個 parent: %s", piplineChildName.c_str(), ThisNodeNameString.c_str());
+  //     }
   //   }
   // }
+  // (*Machine_Ctrl.pipelineConfig)["pipline"].set(piplineSave);
+  // //? 將 steps_group 內的資料多加上key值: RESULT 來讓後續Task可以判斷流程是否正確執行
+  // JsonObject stepsGroup = (*Machine_Ctrl.pipelineConfig)["steps_group"].as<JsonObject>();
+  // for (JsonPair stepsGroupItem : stepsGroup) {
+  //   String stepsGroupName = String(stepsGroupItem.key().c_str());
+  //   (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("WAIT");
+  // };
+  // for (JsonPair stepsGroupItem : stepsGroup) {
+  //   String stepsGroupName = String(stepsGroupItem.key().c_str());
+  //   Machine_Ctrl.AddNewPiplelineFlowTask(stepsGroupName);
+  // };
+  //TODO
+
+  
   // Machine_Ctrl.WireOne.beginTransmission(0x70);
   // Machine_Ctrl.WireOne.write(1 << 0);
   // Machine_Ctrl.WireOne.endTransmission();

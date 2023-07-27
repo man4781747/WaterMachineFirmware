@@ -2,6 +2,7 @@
 #define ExSD_FUNCTION_H
 #include <esp_log.h>
 #include <SD.h>
+#include <ArduinoJson.h>
 
 //! 大檔案讀寫專用變數
 
@@ -109,5 +110,20 @@ inline void ExSD_ReWriteBigFile(fs::SDFS& SD_, String FilePath, String content)
 
 }
 
+inline DynamicJsonDocument ExFile_listDir(fs::FS& fileSystem, String dir) {
+  DynamicJsonDocument fileNameListItem(1000);
+  if (fileSystem.exists(dir)) {
+    File folder = fileSystem.open(dir.c_str());
+    while (true) {
+      File Entry = folder.openNextFile();
+      if (! Entry) {
+        break;
+      }
+      fileNameListItem.add(String(Entry.name()));
+      Entry.close();
+    }
+  }
+  return fileNameListItem;
+}
 
 #endif
