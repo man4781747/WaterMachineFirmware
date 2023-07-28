@@ -79,10 +79,18 @@ class SMachine_Ctrl
 
     int PeristalticMotorIDToMotorIndex(String motorID);
 
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //! 流程設定相關
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    DynamicJsonDocument *pipelineConfig = new DynamicJsonDocument(65525);
+    std::map<String, TaskHandle_t*> pipelineTaskHandleMap;
+    void AddNewPiplelineFlowTask(String stepsGroupName);
 
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //! SPIFFS系統相關
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
     String configsFolder = "/config/";
     String deviceBaseConfigFileFullPath = configsFolder+"device_base_config.json";
     String wifiConfigFileFullPath = configsFolder+"wifi_config.json";
@@ -119,7 +127,7 @@ class SMachine_Ctrl
     void LOAD__ACTION(String actionJSONString);
     void LOAD__ACTION(JsonObject actionJSON);
     void RUN__LOADED_ACTION();
-
+  
     EVENT_RESULT RUN__PeristalticMotorEvent(Peristaltic_task_config *config_);
 
     void STOP_AllTask();
