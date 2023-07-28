@@ -842,7 +842,7 @@ void LOADED_ACTION(void* parameter)
               if (D_loadedActionJSON["data_type"].as<String>() == "RUN") {
                 (*Machine_Ctrl.sensorDataSave)[poolID]["pH_volt"].set(PH_RowValue);
                 (*Machine_Ctrl.sensorDataSave)[poolID]["pH"].set(pHValue);
-                (*Machine_Ctrl.sensorDataSave)[poolID]["Data_datetime"].set(Machine_Ctrl.GetNowTimeString());
+                // (*Machine_Ctrl.sensorDataSave)[poolID]["Data_datetime"].set(Machine_Ctrl.GetNowTimeString());
               }
               poolSensorData[poolID]["pH"]["pH_volt"].set(PH_RowValue);
               poolSensorData[poolID]["pH"]["pH"].set(pHValue);
@@ -861,6 +861,26 @@ void LOADED_ACTION(void* parameter)
             else if (eventItem.containsKey("wait")) {
               ESP_LOGI("LOADED_ACTION","      [%d-%d-%d]等待",stepCount,eventGroupCount,eventCount);
               vTaskDelay(eventItem["wait"].as<int>()*1000/portTICK_PERIOD_MS);
+            }
+            //! 上傳資料 (NewData)
+            else if (eventItem.containsKey("upload")) {
+              ESP_LOGI("LOADED_ACTION","      [%d-%d-%d]廣播感測器資料",stepCount,eventGroupCount,eventCount);
+              JsonObject D_baseInfoJSON = Machine_Ctrl.BackendServer.GetBaseWSReturnData("Auto").as<JsonObject>();
+              D_baseInfoJSON["device_status"].set("Idle");
+              D_baseInfoJSON["cmd"].set("poolData");
+              if (D_loadedActionJSON["data_type"].as<String>() == String("TEST")) {
+                D_baseInfoJSON["action"]["target"].set("TEST_PoolSensorData");
+                D_baseInfoJSON["action"]["message"].set("獲得測試用數據");
+                D_baseInfoJSON["parameter"].set(poolSensorData);
+                D_baseInfoJSON["action"]["method"].set("Update");
+                D_baseInfoJSON["action"]["status"].set("OK");
+                String AfterSensorData;
+                serializeJsonPretty(D_baseInfoJSON, AfterSensorData);
+                Machine_Ctrl.BackendServer.ws_->binaryAll(AfterSensorData);
+              } else {
+                (*Machine_Ctrl.sensorDataSave)[poolID]["Data_datetime"].set(Machine_Ctrl.GetDatetimeString());
+                Machine_Ctrl.BroadcastNewPoolData(poolID);
+              }
             }
             //! 例外檢查
             else {
@@ -902,25 +922,6 @@ void LOADED_ACTION(void* parameter)
   );
 
   vTaskDelay(100/portTICK_PERIOD_MS);
-
-
-  if (AnySensorData) {
-    JsonObject D_baseInfoJSON = Machine_Ctrl.BackendServer.GetBaseWSReturnData("Auto").as<JsonObject>();
-    D_baseInfoJSON["device_status"].set("Idle");
-    D_baseInfoJSON["cmd"].set("poolData");
-    if (D_loadedActionJSON["data_type"].as<String>() == String("TEST")) {
-      D_baseInfoJSON["action"]["target"].set("TEST_PoolSensorData");
-      D_baseInfoJSON["action"]["message"].set("獲得測試用數據");
-      D_baseInfoJSON["parameter"].set(poolSensorData);
-      D_baseInfoJSON["action"]["method"].set("Update");
-      D_baseInfoJSON["action"]["status"].set("OK");
-      String AfterSensorData;
-      serializeJsonPretty(D_baseInfoJSON, AfterSensorData);
-      Machine_Ctrl.BackendServer.ws_->binaryAll(AfterSensorData);
-    } else {
-      Machine_Ctrl.BroadcastNewPoolData(poolID);
-    }
-  }
   
   vTaskDelete(NULL);
 }
