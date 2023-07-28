@@ -3,6 +3,8 @@
   "desp": "",
   "events": {
     "Reset_All_PWM_Motor": {
+      "title": "伺服馬達全數歸位",
+      "desp": "",
       "event": [
         {"pwm_motor_list": [
           {"index": 28,"status": 90},
@@ -26,6 +28,8 @@
       ]
     },
     "Clear_NO3_SensorRoom_To_MixRoom": {
+      "title": "清空NO3光度簡測模組",
+      "desp": "",
       "event": [
         {"pwm_motor_list": [
           {"index": 11,"status": 180},
@@ -38,6 +42,8 @@
       ]
     },
     "Clear_NH4_SensorRoom_To_MixRoom": {
+      "title": "清空NH4光度簡測模組",
+      "desp": "",
       "event": [
         {"pwm_motor_list": [
           {"index": 11,"status": 180},
@@ -48,17 +54,9 @@
         ]}
       ]
     },
-    "Clear_MixRoom_75sec": {
-      "event": [
-        {"pwm_motor_list": [
-          {"index": 11,"status": 0}
-        ]},
-        {"peristaltic_motor_list": [
-          {"index": 3,"status": 1,"time": 75,"until": "-"}
-        ]}
-      ]
-    },
     "Clear_MixRoom_40sec": {
+      "title": "清空混和室40秒",
+      "desp": "",
       "event": [
         {"pwm_motor_list": [
           {"index": 11,"status": 0}
@@ -69,6 +67,8 @@
       ]
     },
     "GetPool1Simple": {
+      "title": "抽取池水1的水",
+      "desp": "",
       "event": [
         {"pwm_motor_list": [
           {"index": 28,"status": 0}
@@ -79,6 +79,8 @@
       ]
     },
     "GetRO": {
+      "title": "抽取RO水",
+      "desp": "",
       "event": [
         {"pwm_motor_list": [
           {"index": 28,"status": 0}
@@ -296,7 +298,8 @@
         "Reset_All_PWM_Motor",
         "Clear_NO3_SensorRoom_To_MixRoom",
         "Clear_NH4_SensorRoom_To_MixRoom",
-        "Clear_MixRoom_75sec"
+        "Clear_MixRoom_40sec",
+        "Clear_MixRoom_40sec"
       ]
     },
     "GetPool1SimpleStep_1": {
@@ -355,7 +358,8 @@
         "Push_MixRoom_To_NH4_SensorRoom",
         "Clear_NO3_SensorRoom_To_MixRoom",
         "Clear_NH4_SensorRoom_To_MixRoom",
-        "Clear_MixRoom_75sec"
+        "Clear_MixRoom_40sec",
+        "Clear_MixRoom_40sec"
       ]
     },
     "Wash_All_Path_With_Sample_2": {
