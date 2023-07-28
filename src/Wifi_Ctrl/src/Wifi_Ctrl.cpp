@@ -27,6 +27,7 @@
 #include <map>
 #include <vector>
 #include "esp_task_wdt.h"
+#include "StorgeSystemExternalFunction.h"
 
 
 #include "../../Machine_Ctrl/src/Machine_Ctrl.h"
@@ -627,7 +628,14 @@ void CWIFI_Ctrler::setAPIs()
     }
   );
 
+  asyncServer.on("/api/piplines", HTTP_GET, [&](AsyncWebServerRequest *request){
 
+    String pipelineFilesList;
+    serializeJsonPretty(ExFile_listDir(SD,"/pipelines"), pipelineFilesList);
+
+    AsyncWebServerResponse* response = request->beginResponse(200, "application/json", pipelineFilesList);
+    SendHTTPesponse(request, response);
+  });
 
   asyncServer.on("/api/wifi/Connect", HTTP_POST, [&](AsyncWebServerRequest *request){
     AsyncWebServerResponse* response = request->beginResponse(200, "application/json", "OK");

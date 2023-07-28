@@ -122,11 +122,6 @@ JsonObject BuildEventJSONItem(String S_thisEventKey, JsonObject D_thisEventSetti
       WaitItem["wait"].set(eventItem["wait"].as<int>());
       L_eventList.add(WaitItem.as<JsonObject>());
     }
-    else if (eventItem.containsKey("upload")) {
-      DynamicJsonDocument UploadItem(200);
-      UploadItem.createNestedObject("upload");
-      L_eventList.add(UploadItem.as<JsonObject>());
-    }
   }
   return eventGroupItem.as<JsonObject>();
 }
