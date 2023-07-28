@@ -658,7 +658,7 @@ void LOADED_ACTION(void* parameter)
                   }
                   String DataFileFullPath = Machine_Ctrl.SensorDataFolder + Machine_Ctrl.GetDateString("") + "_data.csv";
                   Machine_Ctrl.SaveSensorData_photometer(
-                    DataFileFullPath, spectrophotometerName, "123", GainStr, targetChannel,
+                    DataFileFullPath,Machine_Ctrl.GetDatetimeString() ,spectrophotometerName, "123", GainStr, targetChannel,
                     value_name, dilutionValue, (*Machine_Ctrl.sensorDataSave)[poolID][value_name].as<double>(), (*Machine_Ctrl.sensorDataSave)[poolID]["NO2"].as<double>()
                   );
                 }
@@ -1217,7 +1217,7 @@ String SMachine_Ctrl::ReWriteDeviceSetting()
 //! SD卡系統相關
 
 void SMachine_Ctrl::SaveSensorData_photometer(
-  String filePath, String title, String desp, String Gain, String Channel,
+  String filePath, String dataTime, String title, String desp, String Gain, String Channel,
   String ValueName, double dilution, double result, double ppm
 )
 {
@@ -1230,8 +1230,8 @@ void SMachine_Ctrl::SaveSensorData_photometer(
     SaveFile = SD.open(filePath, FILE_APPEND);
   }
   SaveFile.printf(
-    "%s,%s,%s,%s,%s,%.2f,%.2f,%.2f\n",
-    title.c_str(), desp.c_str(), Gain.c_str(), Channel.c_str(), ValueName.c_str(), dilution, result, ppm
+    "%s, %s,%s,%s,%s,%s,%.2f,%.2f,%.2f\n",
+    dataTime.c_str(), title.c_str(), desp.c_str(), Gain.c_str(), Channel.c_str(), ValueName.c_str(), dilution, result, ppm
   );
   SaveFile.close();
 }

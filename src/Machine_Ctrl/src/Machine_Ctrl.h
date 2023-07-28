@@ -103,7 +103,7 @@ class SMachine_Ctrl
     String LastDataSaveFilePath = SensorDataFolder+"/temp.json";
     //? 儲存正式的光度計測量數據
     void SaveSensorData_photometer(
-      String filePath, String title, String desp, String Gain, String Channel,
+      String filePath, String dataTime, String title, String desp, String Gain, String Channel,
       String ValueName, double dilution, double result, double ppm
     );
     //? 更新最新資料儲存檔案
