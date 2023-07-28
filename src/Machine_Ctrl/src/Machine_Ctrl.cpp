@@ -143,7 +143,6 @@ bool SMachine_Ctrl::LoadJsonConfig(fs::FS& fileSystem, String FilePath, JsonDocu
 
 void SMachine_Ctrl::LoadPiplineConfig()
 {
-  serializeJsonPretty(ExFile_listDir(SD,"/pipelines"), Serial);
   if (
     LoadJsonConfig(SD, SD__piplineConfigsFileFullPath, *(spiffs.DeviceSetting)) == false
   ) {
@@ -318,138 +317,6 @@ int SMachine_Ctrl::PeristalticMotorIDToMotorIndex(String motorID)
     return DeviceSetting["peristaltic_motor"][motorID]["index"];
   } else {
     return -1;
-  }
-}
-
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//! 流程設定相關
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-//? pipeline task詳細執行過程
-void PiplelineFlowTask(void* parameter)
-{ 
-  char* stepsGroupName = (char*)parameter;
-  String stepsGroupNameString = String(stepsGroupName);
-  ESP_LOGI("", "建立 %s 的 Task", stepsGroupNameString.c_str());
-
-  //? 如果有"same"這個key值，則 steps 要繼承其他設定內容
-  if ((*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString].containsKey("same")) {
-    (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["steps"].set(
-      (*Machine_Ctrl.pipelineConfig)["steps_group"][
-        (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["same"].as<String>()
-      ]["steps"].as<JsonArray>()
-    );
-  }
-
-  //? 如果沒有"trigger"這個key值，則預設task觸發條件為"allDone"
-  if (!(*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString].containsKey("trigger")) {
-    (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["trigger"].set("allDone");
-  }
-
-  //? 這個 Task 要執行的 steps_group 的 list
-  JsonArray stepsGroupArray = (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["steps"].as<JsonArray>();
-
-  //? 這個 Task 要執行的 parent list
-  JsonObject parentList = (*Machine_Ctrl.pipelineConfig)["pipline"][stepsGroupNameString]["parentList"].as<JsonObject>();
-  
-  //? 如果這個Task沒有Parent，則可以直接執行
-  if (parentList.size() == 0) {
-  } else {
-    //? 如果是 child 擇要等待 Parent 達成條件
-    bool loopLock = true;
-    while (loopLock) {
-      loopLock = false;
-      for (JsonPair parentItem : parentList ) {
-        String parentName = String(parentItem.key().c_str());
-        if ((*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>()=="WAIT" or (*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>()==NULL ) {
-          loopLock = true;
-        }
-      }
-      vTaskDelay(100);
-    }
-    ESP_LOGI("", "%s 的 parent都執行完畢，準備執行", stepsGroupNameString.c_str());
-  }
-
-  for (String eventChose : stepsGroupArray) {
-    //? eventChose: 待執行的event名稱
-    ESP_LOGI("", " 執行: %s - %s", stepsGroupNameString.c_str(), eventChose.c_str());
-    JsonArray eventList = (*Machine_Ctrl.pipelineConfig)["events"][eventChose]["event"].as<JsonArray>();
-    for (JsonObject eventItem : eventList) {
-      //! 伺服馬達控制設定
-      if (eventItem.containsKey("pwm_motor_list")) {
-        pinMode(4, OUTPUT);
-        digitalWrite(4, HIGH);
-        for (JsonObject pwmMotorItem : eventItem["pwm_motor_list"].as<JsonArray>()) {
-          ESP_LOGI("LOADED_ACTION","       - %d 轉至 %d 度", 
-            pwmMotorItem["index"].as<int>(), 
-            pwmMotorItem["status"].as<int>()
-          );
-          // Machine_Ctrl.motorCtrl.SetMotorTo(pwmMotorItem["index"].as<int>(), pwmMotorItem["status"].as<int>());
-        }
-        vTaskDelay(2000/portTICK_PERIOD_MS);
-        digitalWrite(4, LOW);
-      }
-      //! 蠕動馬達控制設定
-      else if (eventItem.containsKey("peristaltic_motor_list")) {
-        for (JsonObject peristalticMotorItem : eventItem["peristaltic_motor_list"].as<JsonArray>()) {
-          ESP_LOGI("LOADED_ACTION","       - (%d) %s 持續 %.2f 秒", 
-            peristalticMotorItem["index"].as<int>(), 
-            peristalticMotorItem["status"].as<int>()==-1 ? "正轉" : "反轉", 
-            peristalticMotorItem["time"].as<float>()
-          );
-        }
-      }
-      //! 分光光度計控制設定
-      else if (eventItem.containsKey("spectrophotometer_list")) {
-        for (JsonObject spectrophotometerItem : eventItem["spectrophotometer_list"].as<JsonArray>()) {
-          int spectrophotometerIndex = spectrophotometerItem["index"].as<int>();
-          String GainStr = spectrophotometerItem["gain"].as<String>();
-          String targetChannel = spectrophotometerItem["channel"].as<String>();
-          String value_name = spectrophotometerItem["value_name"].as<String>();
-          int target = spectrophotometerItem["target"].as<int>();
-          double dilutionValue = spectrophotometerItem["dilution"].as<double>();
-
-          ESP_LOGI("LOADED_ACTION","       - %d 測量倍率: %s, 稀釋倍率: %.2f，並紀錄為: %s", 
-            spectrophotometerIndex, 
-            GainStr.c_str(), 
-            dilutionValue,
-            value_name.c_str()
-          );
-        }
-      }
-      else if (eventItem.containsKey("ph_meter")) {
-        Serial.println("ph_meter");
-      }
-      else if (eventItem.containsKey("wait")) {
-        Serial.println("wait");
-      }
-    }
-
-
-    vTaskDelay(500);
-  }
-
-  (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("SUCCESS");
-  free(stepsGroupName);
-  vTaskDelete(NULL);
-}
-
-//? 建立新的流程Task
-void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
-{
-  if ((*pipelineConfig)["steps_group"].containsKey(stepsGroupName)) {
-    TaskHandle_t *thisTaskHandle_t = new TaskHandle_t();
-    pipelineTaskHandleMap[stepsGroupName] = thisTaskHandle_t;
-    int nameLength = stepsGroupName.length();
-    char* charPtr = (char*)malloc((nameLength + 1) * sizeof(char));
-    strcpy(charPtr, stepsGroupName.c_str());
-    xTaskCreate(
-      PiplelineFlowTask, NULL,
-      10000, (void*)charPtr, configMAX_PRIORITIES-1, thisTaskHandle_t
-    );
-  }
-  else {
-    ESP_LOGE("", "設定中找不到名為: %s 的 steps group", stepsGroupName.c_str());
   }
 }
 
@@ -842,7 +709,7 @@ void LOADED_ACTION(void* parameter)
               if (D_loadedActionJSON["data_type"].as<String>() == "RUN") {
                 (*Machine_Ctrl.sensorDataSave)[poolID]["pH_volt"].set(PH_RowValue);
                 (*Machine_Ctrl.sensorDataSave)[poolID]["pH"].set(pHValue);
-                (*Machine_Ctrl.sensorDataSave)[poolID]["Data_datetime"].set(Machine_Ctrl.GetNowTimeString());
+                // (*Machine_Ctrl.sensorDataSave)[poolID]["Data_datetime"].set(Machine_Ctrl.GetNowTimeString());
               }
               poolSensorData[poolID]["pH"]["pH_volt"].set(PH_RowValue);
               poolSensorData[poolID]["pH"]["pH"].set(pHValue);
@@ -861,6 +728,26 @@ void LOADED_ACTION(void* parameter)
             else if (eventItem.containsKey("wait")) {
               ESP_LOGI("LOADED_ACTION","      [%d-%d-%d]等待",stepCount,eventGroupCount,eventCount);
               vTaskDelay(eventItem["wait"].as<int>()*1000/portTICK_PERIOD_MS);
+            }
+            //! 上傳資料 (NewData)
+            else if (eventItem.containsKey("upload")) {
+              ESP_LOGI("LOADED_ACTION","      [%d-%d-%d]廣播感測器資料",stepCount,eventGroupCount,eventCount);
+              JsonObject D_baseInfoJSON = Machine_Ctrl.BackendServer.GetBaseWSReturnData("Auto").as<JsonObject>();
+              D_baseInfoJSON["device_status"].set("Idle");
+              D_baseInfoJSON["cmd"].set("poolData");
+              if (D_loadedActionJSON["data_type"].as<String>() == String("TEST")) {
+                D_baseInfoJSON["action"]["target"].set("TEST_PoolSensorData");
+                D_baseInfoJSON["action"]["message"].set("獲得測試用數據");
+                D_baseInfoJSON["parameter"].set(poolSensorData);
+                D_baseInfoJSON["action"]["method"].set("Update");
+                D_baseInfoJSON["action"]["status"].set("OK");
+                String AfterSensorData;
+                serializeJsonPretty(D_baseInfoJSON, AfterSensorData);
+                Machine_Ctrl.BackendServer.ws_->binaryAll(AfterSensorData);
+              } else {
+                (*Machine_Ctrl.sensorDataSave)[poolID]["Data_datetime"].set(Machine_Ctrl.GetDatetimeString());
+                Machine_Ctrl.BroadcastNewPoolData(poolID);
+              }
             }
             //! 例外檢查
             else {
@@ -904,23 +791,23 @@ void LOADED_ACTION(void* parameter)
   vTaskDelay(100/portTICK_PERIOD_MS);
 
 
-  if (AnySensorData) {
-    JsonObject D_baseInfoJSON = Machine_Ctrl.BackendServer.GetBaseWSReturnData("Auto").as<JsonObject>();
-    D_baseInfoJSON["device_status"].set("Idle");
-    D_baseInfoJSON["cmd"].set("poolData");
-    if (D_loadedActionJSON["data_type"].as<String>() == String("TEST")) {
-      D_baseInfoJSON["action"]["target"].set("TEST_PoolSensorData");
-      D_baseInfoJSON["action"]["message"].set("獲得測試用數據");
-      D_baseInfoJSON["parameter"].set(poolSensorData);
-      D_baseInfoJSON["action"]["method"].set("Update");
-      D_baseInfoJSON["action"]["status"].set("OK");
-      String AfterSensorData;
-      serializeJsonPretty(D_baseInfoJSON, AfterSensorData);
-      Machine_Ctrl.BackendServer.ws_->binaryAll(AfterSensorData);
-    } else {
-      Machine_Ctrl.BroadcastNewPoolData(poolID);
-    }
-  }
+  // if (AnySensorData) {
+  //   JsonObject D_baseInfoJSON = Machine_Ctrl.BackendServer.GetBaseWSReturnData("Auto").as<JsonObject>();
+  //   D_baseInfoJSON["device_status"].set("Idle");
+  //   D_baseInfoJSON["cmd"].set("poolData");
+  //   if (D_loadedActionJSON["data_type"].as<String>() == String("TEST")) {
+  //     D_baseInfoJSON["action"]["target"].set("TEST_PoolSensorData");
+  //     D_baseInfoJSON["action"]["message"].set("獲得測試用數據");
+  //     D_baseInfoJSON["parameter"].set(poolSensorData);
+  //     D_baseInfoJSON["action"]["method"].set("Update");
+  //     D_baseInfoJSON["action"]["status"].set("OK");
+  //     String AfterSensorData;
+  //     serializeJsonPretty(D_baseInfoJSON, AfterSensorData);
+  //     Machine_Ctrl.BackendServer.ws_->binaryAll(AfterSensorData);
+  //   } else {
+  //     Machine_Ctrl.BroadcastNewPoolData(poolID);
+  //   }
+  // }
   
   vTaskDelete(NULL);
 }
