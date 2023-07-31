@@ -313,6 +313,9 @@ void ws_GetAllPoolData(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
   }
 
   for (JsonPair D_poolItem : (*Machine_Ctrl.spiffs.DeviceSetting)["pools"].as<JsonObject>()) {
+    if ((*Machine_Ctrl.sensorDataSave)[D_poolItem.key()].containsKey("Data_datetime") == false) {
+      (*Machine_Ctrl.sensorDataSave)[D_poolItem.key()]["Data_datetime"].set("");
+    }
     (*D_baseInfo)["parameter"][D_poolItem.key()].set((*Machine_Ctrl.sensorDataSave)[D_poolItem.key()]);
   }
   String returnString;
