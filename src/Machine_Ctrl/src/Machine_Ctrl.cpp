@@ -768,7 +768,7 @@ void LOADED_ACTION(void* parameter)
                     (*Machine_Ctrl.sensorDataSave)[poolID][value_name].set(sensorData.CH_1);
                   }
                   
-                  (*Machine_Ctrl.sensorDataSave)[poolID]["Data_datetime"].set(datetimeChar);
+                  // (*Machine_Ctrl.sensorDataSave)[poolID]["Data_datetime"].set(datetimeChar);
 
 
                   if (value_name == "NH4_test_volt") {
@@ -1148,9 +1148,9 @@ DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String descri
 void SMachine_Ctrl::BroadcastNewPoolData(String poolID)
 {
   DynamicJsonDocument D_baseInfo = BackendServer.GetBaseWSReturnData("");
-  D_baseInfo["cmd"].set("poolData");
+  D_baseInfo["cmd"].set("SinglePoolData");
   D_baseInfo["action"]["message"].set("NewData");
-  D_baseInfo["action"]["target"].set("PoolData");
+  D_baseInfo["action"]["target"].set("SinglePoolData");
   D_baseInfo["action"]["method"].set("Update");
   D_baseInfo["action"]["status"].set("OK");
   D_baseInfo["parameter"][poolID].set((*sensorDataSave)[poolID]);
