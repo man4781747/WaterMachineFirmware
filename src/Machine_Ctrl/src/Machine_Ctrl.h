@@ -140,7 +140,7 @@ class SMachine_Ctrl
     // For 互動相關
     ////////////////////////////////////////////////////
 
-    DynamicJsonDocument SetLog(int Level, String Title, String description, AsyncWebSocket *server=NULL, AsyncWebSocketClient *client=NULL);
+    DynamicJsonDocument SetLog(int Level, String Title, String description, AsyncWebSocket *server=NULL, AsyncWebSocketClient *client=NULL, bool Save=true);
 
     //* 廣播指定池的感測器資料出去
     //!! 注意，這個廣撥出去的資料是會進資料庫的

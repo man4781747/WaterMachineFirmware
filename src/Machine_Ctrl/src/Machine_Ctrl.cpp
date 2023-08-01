@@ -1065,7 +1065,7 @@ void SMachine_Ctrl::Stop_AllPeristalticMotor()
  * @param wsBroadcast 
  * @return DynamicJsonDocument 
  */
-DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String description, AsyncWebSocket *server, AsyncWebSocketClient *client)
+DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String description, AsyncWebSocket *server, AsyncWebSocketClient *client, bool Save)
 {
   DynamicJsonDocument logItem(500);
   String timeString = GetDatetimeString();
@@ -1074,25 +1074,33 @@ DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String descri
   logItem["title"].set(Title);
   logItem["desp"].set(description);
   
-  String logFileFullPath = LogFolder + GetDateString("") + "_log.csv";
-  File logFile;
-  if (SD.exists(logFileFullPath)) {
-    logFile = SD.open(logFileFullPath, FILE_APPEND);
-  } else {
-    ExSD_CreateFile(SD, logFileFullPath);
-    logFile = SD.open(logFileFullPath, FILE_APPEND);
-    logFile.print("\xEF\xBB\xBF");
-  }
-  logFile.printf("%d,%s,%s,%s\n",
-    Level, timeString.c_str(),
-    Title.c_str(), description.c_str()
-  );
-  logFile.close();
+  if (Save==true) {
+    String logFileFullPath = LogFolder + GetDateString("") + "_log.csv";
+    File logFile;
+    if (SD.exists(logFileFullPath)) {
+      logFile = SD.open(logFileFullPath, FILE_APPEND);
+    } else {
+      ExSD_CreateFile(SD, logFileFullPath);
+      logFile = SD.open(logFileFullPath, FILE_APPEND);
+      logFile.print("\xEF\xBB\xBF");
+    }
+    logFile.printf("%d,%s,%s,%s\n",
+      Level, timeString.c_str(),
+      Title.c_str(), description.c_str()
+    );
+    logFile.close();
+    
+    (*Machine_Ctrl.DeviceLogSave)["Log"].add(logItem);
+    if ((*Machine_Ctrl.DeviceLogSave)["Log"].size() > 100) {
+      (*Machine_Ctrl.DeviceLogSave)["Log"].remove(0);
+    }
 
-  logArray.add(logItem);
-  if (logArray.size() > 100) {
-    logArray.remove(0);
+    // logArray.add(logItem);
+    // if (logArray.size() > 100) {
+    //   logArray.remove(0);
+    // }
   }
+
   if (server != NULL or client != NULL) {
     DynamicJsonDocument D_baseInfo = BackendServer.GetBaseWSReturnData("LOG");
     D_baseInfo["cmd"].set("log");
