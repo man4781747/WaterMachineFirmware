@@ -351,6 +351,7 @@
     "Wash_All_Path_With_Sample_1": {
       "title": "第一次-池水清洗儀器",
       "desp": "",
+      "trigger": "allSuccess",
       "steps": [
         "Reset_All_PWM_Motor",
         "FORWASH_Push_RO_Liquid_To_MixRoom",
@@ -364,14 +365,17 @@
     },
     "Wash_All_Path_With_Sample_2": {
       "same": "Wash_All_Path_With_Sample_1",
+      "trigger": "allSuccess",
       "title": "第二次-池水清洗儀器"
     },
     "Wash_All_Path_With_Sample_3": {
       "same": "Wash_All_Path_With_Sample_1",
+      "trigger": "allSuccess",
       "title": "第三次-池水清洗儀器"
     },
     "Wash_All_Path_With_Sample_4": {
       "same": "Wash_All_Path_With_Sample_1",
+      "trigger": "allSuccess",
       "title": "第四次-池水清洗儀器"
     },
     "NO3_Original_Value_Get": {

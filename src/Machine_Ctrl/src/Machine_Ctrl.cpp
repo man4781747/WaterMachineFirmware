@@ -328,6 +328,8 @@ int SMachine_Ctrl::PeristalticMotorIDToMotorIndex(String motorID)
 //? pipeline task詳細執行過程
 void PiplelineFlowTask(void* parameter)
 { 
+  //! TASK 有以下數種狀態
+  //! 1. WAIT、2. NORUN、3. FAIL、4. SUCCESS、5. RUNNING 
   char* stepsGroupName = (char*)parameter;
   String stepsGroupNameString = String(stepsGroupName);
   ESP_LOGI("", "建立 %s 的 Task", stepsGroupNameString.c_str());
@@ -340,63 +342,126 @@ void PiplelineFlowTask(void* parameter)
       ]["steps"].as<JsonArray>()
     );
   }
-
-  //? 如果沒有"trigger"這個key值，則預設task觸發條件為"allDone"
-  if (!(*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString].containsKey("trigger")) {
-    (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["trigger"].set("allDone");
-  }
-
+  //TODO 暫時不判斷
+  // //? 如果沒有"trigger"這個key值，則預設task觸發條件為"allDone"
+  // if (!(*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString].containsKey("trigger")) {
+  //   (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["trigger"].set("allDone");
+  // } else {
+  //   Serial.println((*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["trigger"].as<String>());
+  // }
   //? 這個 Task 要執行的 steps_group 的 list
   JsonArray stepsGroupArray = (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["steps"].as<JsonArray>();
 
   //? 這個 Task 要執行的 parent list
   JsonObject parentList = (*Machine_Ctrl.pipelineConfig)["pipline"][stepsGroupNameString]["parentList"].as<JsonObject>();
   
+  //TODO 暫時不判斷
   //? 如果這個Task沒有Parent，則可以直接執行
-  if (parentList.size() == 0) {
-  } else {
-    //? 如果是 child 擇要等待 Parent 達成條件
-    bool loopLock = true;
-    while (loopLock) {
-      loopLock = false;
-      for (JsonPair parentItem : parentList ) {
-        String parentName = String(parentItem.key().c_str());
-        if ((*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>()=="WAIT" or (*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>()==NULL ) {
-          loopLock = true;
-        }
-      }
-      vTaskDelay(100);
-    }
-    ESP_LOGI("", "%s 的 parent都執行完畢，準備執行", stepsGroupNameString.c_str());
-  }
+  // if (parentList.size() == 0) {
+  // } else {
+  //   //? 如果是 child 擇要等待 Parent 達成條件
+
+  //   //? loopLock: while跑完一圈時，若loopLock是false，則開始執行Task
+  //   bool loopLock = true;
+  //   String TrigerRule = (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["trigger"].as<String>();
+  //   while (loopLock) {
+  //     loopLock = false;
+  //     //? 如果觸發條件是 allDone，則會等待parents都不為 "WAIT"、"RUNNING"、"NORUN" 時則會開始執行
+  //     //? 而若任何一個parent為 "NORUN" 時，則本Task則視為不再需要執行，立刻設定為 "NORUN"，並且刪除Task
+  //     if (TrigerRule == "allDone") {
+  //       for (JsonPair parentItem : parentList ) {
+  //         String parentName = String(parentItem.key().c_str());
+  //         String parentResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
+  //         if (parentResult=="WAIT" or parentResult=="RUNNING") {
+  //           loopLock = true;
+  //         } else if ( parentResult=="NORUN") {
+  //           ESP_LOGW("", "Task不符合 allDone 的執行條件，關閉此Task");
+  //           //! Task完畢必做事項
+  //           (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("NORUN");
+  //           free(stepsGroupName);
+  //           vTaskDelete(NULL);
+  //           //! Task完畢必做事項
+  //         }
+  //       }
+  //     }
+  //     //? 如果觸發條件是 oneFail，則會等待parent任何一項的RESULT變成 "FAIL" 就執行
+  //     //? 而若所有parent都不是 "FAIL" 並且不為 "WAIT"、"RUNNING" 時，則本Task則視為不再需要執行，立刻設定為 "NORUN"，並且刪除Task
+  //     else if (TrigerRule == "oneFail") {
+  //       //? 若跑完for迴圈，norunCheck為true，則代表本Task不可能達成執行條件
+  //       bool norunCheck = true;
+  //       for (JsonPair parentItem : parentList ) {
+  //         String parentName = String(parentItem.key().c_str());
+  //         String parentResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
+  //         if (parentResult=="FAIL") {
+  //           loopLock = false;
+  //           norunCheck = false;
+  //           break;
+  //         } else if (parentResult=="WAIT" or parentResult=="RUNNING") {
+  //           loopLock = true;
+  //           norunCheck = false;
+  //         }
+  //       }
+  //       if (norunCheck) {
+  //         ESP_LOGW("", "Task不符合 oneFail 的執行條件，關閉此Task");
+  //         //! Task完畢必做事項
+  //         (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("NORUN");
+  //         free(stepsGroupName);
+  //         vTaskDelete(NULL);
+  //         //! Task完畢必做事項
+  //       }
+  //     }
+  //     //? 如果觸發條件是 allSuccess，則會等待所有parent的RESULT變成 "SUCCESS" 就執行
+  //     //? 如果任何一個parent為 "WAIT"、"RUNNING"，則繼續等待
+  //     //? 如果任何一個parent為 "NORUN"、、"FAIL" 時，則本Task則視為不再需要執行，立刻設定為 "NORUN"，並且刪除Task
+  //     else if (TrigerRule == "allSuccess") {
+  //       for (JsonPair parentItem : parentList ) {
+  //         String parentName = String(parentItem.key().c_str());
+  //         String parentResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
+  //         if (parentResult=="NORUN" or parentResult=="FAIL") {
+  //           ESP_LOGW("", "Task不符合 allSuccess 的執行條件，關閉此Task");
+  //           //! Task完畢必做事項
+  //           (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("NORUN");
+  //           free(stepsGroupName);
+  //           vTaskDelete(NULL);
+  //           //! Task完畢必做事項
+  //         } else if (parentResult=="WAIT" or parentResult=="RUNNING") {
+  //           loopLock = true;
+  //         }
+  //       }
+  //     }
+  //     vTaskDelay(100);
+  //   }
+  //   // ESP_LOGI("", "%s 的 parent都執行完畢，準備執行", stepsGroupNameString.c_str());
+  // }
 
   for (String eventChose : stepsGroupArray) {
     //? eventChose: 待執行的event名稱
     ESP_LOGI("", " 執行: %s - %s", stepsGroupNameString.c_str(), eventChose.c_str());
     JsonArray eventList = (*Machine_Ctrl.pipelineConfig)["events"][eventChose]["event"].as<JsonArray>();
+    String taskResult = "SUCCESS";
     for (JsonObject eventItem : eventList) {
       //! 伺服馬達控制設定
       if (eventItem.containsKey("pwm_motor_list")) {
         pinMode(4, OUTPUT);
         digitalWrite(4, HIGH);
         for (JsonObject pwmMotorItem : eventItem["pwm_motor_list"].as<JsonArray>()) {
-          ESP_LOGI("LOADED_ACTION","       - %d 轉至 %d 度", 
-            pwmMotorItem["index"].as<int>(), 
-            pwmMotorItem["status"].as<int>()
-          );
+          // ESP_LOGI("LOADED_ACTION","       - %d 轉至 %d 度", 
+          //   pwmMotorItem["index"].as<int>(), 
+          //   pwmMotorItem["status"].as<int>()
+          // );
           // Machine_Ctrl.motorCtrl.SetMotorTo(pwmMotorItem["index"].as<int>(), pwmMotorItem["status"].as<int>());
         }
-        vTaskDelay(2000/portTICK_PERIOD_MS);
+        // vTaskDelay(2000/portTICK_PERIOD_MS);
         digitalWrite(4, LOW);
       }
       //! 蠕動馬達控制設定
       else if (eventItem.containsKey("peristaltic_motor_list")) {
         for (JsonObject peristalticMotorItem : eventItem["peristaltic_motor_list"].as<JsonArray>()) {
-          ESP_LOGI("LOADED_ACTION","       - (%d) %s 持續 %.2f 秒", 
-            peristalticMotorItem["index"].as<int>(), 
-            peristalticMotorItem["status"].as<int>()==-1 ? "正轉" : "反轉", 
-            peristalticMotorItem["time"].as<float>()
-          );
+          // ESP_LOGI("LOADED_ACTION","       - (%d) %s 持續 %.2f 秒", 
+          //   peristalticMotorItem["index"].as<int>(), 
+          //   peristalticMotorItem["status"].as<int>()==-1 ? "正轉" : "反轉", 
+          //   peristalticMotorItem["time"].as<float>()
+          // );
         }
       }
       //! 分光光度計控制設定
@@ -409,27 +474,26 @@ void PiplelineFlowTask(void* parameter)
           int target = spectrophotometerItem["target"].as<int>();
           double dilutionValue = spectrophotometerItem["dilution"].as<double>();
 
-          ESP_LOGI("LOADED_ACTION","       - %d 測量倍率: %s, 稀釋倍率: %.2f，並紀錄為: %s", 
-            spectrophotometerIndex, 
-            GainStr.c_str(), 
-            dilutionValue,
-            value_name.c_str()
-          );
+          // ESP_LOGI("LOADED_ACTION","       - %d 測量倍率: %s, 稀釋倍率: %.2f，並紀錄為: %s", 
+          //   spectrophotometerIndex, 
+          //   GainStr.c_str(), 
+          //   dilutionValue,
+          //   value_name.c_str()
+          // );
         }
       }
       else if (eventItem.containsKey("ph_meter")) {
-        Serial.println("ph_meter");
+        // Serial.println("ph_meter");
       }
       else if (eventItem.containsKey("wait")) {
-        Serial.println("wait");
       }
     }
-
-
     vTaskDelay(500);
   }
 
   (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("SUCCESS");
+  Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
+  Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
   free(stepsGroupName);
   vTaskDelete(NULL);
 }
@@ -438,24 +502,231 @@ void PiplelineFlowTask(void* parameter)
 void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
 {
   if ((*pipelineConfig)["steps_group"].containsKey(stepsGroupName)) {
+    ESP_LOGI("","RUN: %s", stepsGroupName.c_str());
     TaskHandle_t *thisTaskHandle_t = new TaskHandle_t();
+    BaseType_t xReturned;
     pipelineTaskHandleMap[stepsGroupName] = thisTaskHandle_t;
     int nameLength = stepsGroupName.length();
     char* charPtr = (char*)malloc((nameLength + 1) * sizeof(char));
     strcpy(charPtr, stepsGroupName.c_str());
-    xTaskCreate(
+    (*pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("RUNNING");
+    xReturned = xTaskCreate(
       PiplelineFlowTask, NULL,
-      10000, (void*)charPtr, configMAX_PRIORITIES-1, thisTaskHandle_t
+      4000, (void*)charPtr, 3, thisTaskHandle_t
     );
+    if (xReturned != pdPASS) {
+      Serial.println("Create Fail");
+    }
   }
   else {
     ESP_LOGE("", "設定中找不到名為: %s 的 steps group", stepsGroupName.c_str());
   }
 }
 
+//? 清空以下Task
+//? 1. TASK__pipelineFlowScan
+//? 2. pipelineTaskHandleMap 裡面所有的TASK
+void SMachine_Ctrl::CleanAllStepTask()
+{
+  if (TASK__pipelineFlowScan != NULL) {
+    vTaskSuspend(TASK__pipelineFlowScan);
+    vTaskDelete(TASK__pipelineFlowScan);
+    TASK__pipelineFlowScan = NULL;
+  }
+  for (const auto& pipelineTaskHandle : pipelineTaskHandleMap) {
+    TaskHandle_t* taskChose = pipelineTaskHandle.second;
+    String stepName = pipelineTaskHandle.first;
+    Serial.println(stepName);
+    vTaskSuspend(*taskChose);
+    vTaskDelete(*taskChose);
+    pipelineTaskHandleMap.erase(stepName);
+  }
+}
+
+//? 負責檢查Pipeline目前進度，以及判斷是否要執行
+void PipelineFlowScan(void* parameter)
+{ 
+  JsonObject stepsGroup = (*Machine_Ctrl.pipelineConfig)["steps_group"].as<JsonObject>();
+  //? isAllDone: 用來判斷是否所有流程都運行完畢，如果都完畢，則此TASK也可以關閉
+  //? 判斷完畢的邏輯: 全部step都不為 "WAIT"、"RUNNING" 則代表完畢
+  bool isAllDone = false;
+  while(isAllDone == false) {
+    isAllDone = true;
+    for (JsonPair stepsGroupItem : stepsGroup) {
+      //? stepsGroupName: 流程名稱
+      String stepsGroupName = String(stepsGroupItem.key().c_str());
+      //? stepsGroupResult: 此流程的運行狀態
+      String stepsGroupResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].as<String>();
+      //? 只有在"WAIT"時，才有必要判斷是否要執行
+      if (stepsGroupResult == "WAIT") {
+        isAllDone = false;
+        //? parentList: 此流程的parentList
+        JsonObject parentList = (*Machine_Ctrl.pipelineConfig)["pipline"][stepsGroupName]["parentList"].as<JsonObject>();
+        //? 如果此step狀態是WAIT並且parent數量為0，則直接觸發
+        if (parentList.size() == 0) {
+          Machine_Ctrl.AddNewPiplelineFlowTask(stepsGroupName);
+          continue;
+        }
+
+        //? 程式執行到這邊，代表都不是ENTEY POINT
+        //? TrigerRule: 此流程的觸發條件
+        String TrigerRule = (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["trigger"].as<String>();
+        //? 如果觸發條件是 allDone，則會等待parents都不為 "WAIT"、"RUNNING"、"NORUN" 時則會開始執行
+        //? 而若任何一個parent為 "NORUN" 時，則本step則視為不再需要執行，立刻設定為 "NORUN"
+        if (TrigerRule == "allDone") {
+          bool stepRun = true;
+          for (JsonPair parentItem : parentList ) {
+            String parentName = String(parentItem.key().c_str());
+            String parentResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
+            if (parentResult=="WAIT" or parentResult=="RUNNING") {
+              //? 有任何一個parent還沒執行完畢，跳出
+              stepRun = false;
+              break; 
+            } else if ( parentResult=="NORUN") {
+              //? 有任何一個parent不需執行，此step也不再需執行
+              ESP_LOGW("", "Task %s 不符合 allDone 的執行條件，關閉此Task", stepsGroupName.c_str());
+              (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("NORUN");
+              stepRun = false;
+              break; 
+            }
+          }
+          if (stepRun) {
+            Machine_Ctrl.AddNewPiplelineFlowTask(stepsGroupName);
+            continue;
+          }
+        }
+        //? 如果觸發條件是 oneFail，則會等待parent任何一項的RESULT變成 "FAIL" 就執行
+        //? 而若所有parent都不是 "FAIL" 並且不為 "WAIT"、"RUNNING" 時，則本Step則視為不再需要執行，立刻設定為 "NORUN"
+        else if (TrigerRule == "oneFail") {
+          bool setNoRun = true;
+          for (JsonPair parentItem : parentList ) {
+            String parentName = String(parentItem.key().c_str());
+            String parentResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
+            if (parentResult=="FAIL") {
+              Machine_Ctrl.AddNewPiplelineFlowTask(stepsGroupName);
+              setNoRun = false;
+              break;
+            } else if (parentResult=="WAIT" or parentResult=="RUNNING") {
+              setNoRun = false;
+              break;
+            }
+          }
+          if (setNoRun) {
+            ESP_LOGW("", "Task %s 不符合 oneFail 的執行條件，關閉此Task", stepsGroupName.c_str());
+            (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("NORUN");
+          }
+        }
+        //? 如果觸發條件是 allSuccess，則會等待所有parent的RESULT變成 "SUCCESS" 就執行
+        //? 如果任何一個parent為 "WAIT"、"RUNNING"，則繼續等待
+        //? 如果任何一個parent為 "NORUN"、、"FAIL" 時，則本Task則視為不再需要執行，立刻設定為 "NORUN"，並且刪除Task
+        else if (TrigerRule == "allSuccess") {
+          bool stepRun = true;
+          for (JsonPair parentItem : parentList ) {
+            String parentName = String(parentItem.key().c_str());
+            String parentResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
+            if (parentResult=="NORUN" or parentResult=="FAIL") {
+              ESP_LOGW("", "Task %s 不符合 allSuccess 的執行條件，關閉此Task", stepsGroupName.c_str());
+              (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("NORUN");
+              stepRun = false;
+              break;
+            }
+            else if (parentResult=="WAIT" or parentResult=="RUNNING") {
+              stepRun = false;
+              break;
+            }
+          }
+          if (stepRun) {
+            Machine_Ctrl.AddNewPiplelineFlowTask(stepsGroupName);
+            continue;
+          }
+        }
+      } 
+      else if (stepsGroupResult == "RUNNING") {isAllDone = false;}
+    };
+  }
+
+  ESP_LOGI("", "所有流程已執行完畢");
+  Machine_Ctrl.TASK__pipelineFlowScan = NULL;
+  vTaskDelete(NULL);
+}
+//? 建立Pipeline排程的控制Task
+void SMachine_Ctrl::CreatePipelineFlowScanTask() 
+{
+  if (TASK__pipelineFlowScan == NULL) {
+    xTaskCreate(
+      PipelineFlowScan, "PipelineScan",
+      5000, NULL, 4, &TASK__pipelineFlowScan
+    );
+    vTaskDelay(100);
+  }
+  else {
+
+  }
+}
+
 ////////////////////////////////////////////////////
 // For 事件執行
 ////////////////////////////////////////////////////
+
+bool SMachine_Ctrl::LOAD__ACTION_V2(String pipelineConfigFileFullPath)
+{
+  (*pipelineConfig).clear();
+  File pipelineConfigFile = SD.open(pipelineConfigFileFullPath);
+  if (!pipelineConfigFile) {
+    return false;
+  }
+  DeserializationError error = deserializeJson(*pipelineConfig, pipelineConfigFile,  DeserializationOption::NestingLimit(20));
+  pipelineConfigFile.close();
+  if (error) {
+    Serial.print("deserializeJson() failed: ");
+    Serial.println(error.c_str());
+    return false;
+  }
+
+  //? 讀取設定檔完成後，還要將設定檔內容做準備
+  //? 將原本的pipeline流程設定轉換成後面Task好追蹤的格式
+  JsonArray piplineArray = (*pipelineConfig)["pipline"].as<JsonArray>();
+  DynamicJsonDocument piplineSave(65525);
+  for (JsonArray singlePiplineArray : piplineArray) {
+    String ThisNodeNameString = singlePiplineArray[0].as<String>();
+    if (!piplineSave.containsKey(ThisNodeNameString)) {
+      piplineSave[ThisNodeNameString]["Name"] = ThisNodeNameString;
+      piplineSave[ThisNodeNameString].createNestedObject("childList");
+      piplineSave[ThisNodeNameString].createNestedObject("parentList");
+    }
+    for (String piplineChildName :  singlePiplineArray[1].as<JsonArray>()) {
+      if (!piplineSave.containsKey(piplineChildName)) {
+        piplineSave[piplineChildName]["Name"] = piplineChildName;
+        piplineSave[piplineChildName].createNestedObject("childList");
+        piplineSave[piplineChildName].createNestedObject("parentList");
+      }
+      if (!piplineSave[ThisNodeNameString]["childList"].containsKey(piplineChildName)){
+        piplineSave[ThisNodeNameString]["childList"].createNestedObject(piplineChildName);
+        // ESP_LOGI("", "%s 新增一個 child: %s", ThisNodeNameString.c_str(), piplineChildName.c_str());
+      }
+
+      if (!piplineSave[piplineChildName]["parentList"].containsKey(ThisNodeNameString)){
+        piplineSave[piplineChildName]["parentList"].createNestedObject(ThisNodeNameString);
+        // ESP_LOGI("", "%s 新增一個 parent: %s", piplineChildName.c_str(), ThisNodeNameString.c_str());
+      }
+    }
+  }
+  (*Machine_Ctrl.pipelineConfig)["pipline"].set(piplineSave);
+
+  //? 將 steps_group 內的資料多加上key值: RESULT 來讓後續Task可以判斷流程是否正確執行
+  //? 如果沒有"trigger"這個key值，則預設task觸發條件為"allDone"
+  JsonObject stepsGroup = (*Machine_Ctrl.pipelineConfig)["steps_group"].as<JsonObject>();
+  for (JsonPair stepsGroupItem : stepsGroup) {
+    String stepsGroupName = String(stepsGroupItem.key().c_str());
+    (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("WAIT");
+    if (!(*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName].containsKey("trigger")) {
+      (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["trigger"].set("allDone");
+    }
+  };
+  CreatePipelineFlowScanTask();
+  return true;
+}
+
 
 typedef struct {
   String message;

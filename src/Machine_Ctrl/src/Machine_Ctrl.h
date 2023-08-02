@@ -84,8 +84,14 @@ class SMachine_Ctrl
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     DynamicJsonDocument *pipelineConfig = new DynamicJsonDocument(65525);
+    //? pipelineTaskHandleMap: 記錄了當前正在執行的Step，Key為Step名稱、Value為TaskHandle_t
     std::map<String, TaskHandle_t*> pipelineTaskHandleMap;
+    bool LOAD__ACTION_V2(String pipelineConfigFileFullPath);
     void AddNewPiplelineFlowTask(String stepsGroupName);
+    void CleanAllStepTask();
+    void CreatePipelineFlowScanTask();
+    //? 排程狀態檢視Task，負責檢查排程進度、觸發排程執行
+    TaskHandle_t TASK__pipelineFlowScan = NULL;
 
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //! SPIFFS系統相關
@@ -123,6 +129,7 @@ class SMachine_Ctrl
     ////////////////////////////////////////////////////
 
     // EVENT_RESULT RUN__PWMMotorTestEvent(String motorID);
+    
 
     void LOAD__ACTION(String actionJSONString);
     void LOAD__ACTION(JsonObject actionJSON);

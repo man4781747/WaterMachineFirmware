@@ -181,7 +181,8 @@ JsonObject BuildPipelineJSONItem(String S_thisPipelineKey, JsonObject D_thisPipe
  */
 void ws_StopAllActionTask(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
 {
-  Machine_Ctrl.StopDeviceAndINIT();
+  // Machine_Ctrl.StopDeviceAndINIT();
+  Machine_Ctrl.CleanAllStepTask();
   Machine_Ctrl.SetLog(
     2,
     "儀器排程被強制停止",
@@ -2108,6 +2109,39 @@ void ws_RunPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynami
   }
 
 }
+
+void ws_v2_RunPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
+{
+  String TargetName = D_PathParameter->as<JsonObject>()["name"];
+  // Serial.println(TargetName);
+  String FullFilePath = "/pipelines/"+TargetName+".json";
+  if (SD.exists(FullFilePath)) {
+    if (Machine_Ctrl.LOAD__ACTION_V2(FullFilePath)) {
+      Machine_Ctrl.SetLog(
+        5,
+        "即將執行流程",
+        "流程設定讀取成功",
+        NULL, client, false
+      );
+    } else {
+      Machine_Ctrl.SetLog(
+        1,
+        "流程設定失敗",
+        "檔案讀取失敗",
+        NULL, client, false
+      );
+    }
+  } else {
+    Machine_Ctrl.SetLog(
+      1,
+      "流程設定失敗",
+      "找不到流程設定檔案: " + TargetName+".json",
+      NULL, client, false
+    );
+  }
+}
+
+
 
 void ws_TestPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
 {
