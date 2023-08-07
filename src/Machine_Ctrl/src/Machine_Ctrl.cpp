@@ -298,6 +298,15 @@ void SMachine_Ctrl::StopDeviceAndINIT()
   MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
 }
 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! 儀器基礎設定
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+void SMachine_Ctrl::LoadspectrophotometerConfig()
+{
+  LoadJsonConfig(SD, spectrophotometerConfigFileFullPath, *spectrophotometerConfig);
+}
+
 ////////////////////////////////////////////////////
 // For 數值轉換
 ////////////////////////////////////////////////////  
@@ -453,13 +462,14 @@ void PiplelineFlowTask(void* parameter)
         pinMode(4, OUTPUT);
         digitalWrite(4, HIGH);
         for (JsonObject pwmMotorItem : eventItem["pwm_motor_list"].as<JsonArray>()) {
-          // ESP_LOGI("LOADED_ACTION","       - %d 轉至 %d 度", 
-          //   pwmMotorItem["index"].as<int>(), 
-          //   pwmMotorItem["status"].as<int>()
-          // );
-          // Machine_Ctrl.motorCtrl.SetMotorTo(pwmMotorItem["index"].as<int>(), pwmMotorItem["status"].as<int>());
+          ESP_LOGI("LOADED_ACTION","       - %d 轉至 %d 度", 
+            pwmMotorItem["index"].as<int>(), 
+            pwmMotorItem["status"].as<int>()
+          );
+          Machine_Ctrl.motorCtrl.SetMotorTo(pwmMotorItem["index"].as<int>(), pwmMotorItem["status"].as<int>());
+          vTaskDelay(50/portTICK_PERIOD_MS);
         }
-        // vTaskDelay(2000/portTICK_PERIOD_MS);
+        vTaskDelay(2000/portTICK_PERIOD_MS);
         digitalWrite(4, LOW);
       }
       //! 蠕動馬達控制設定
@@ -476,9 +486,6 @@ void PiplelineFlowTask(void* parameter)
           float runTime = peristalticMotorItem["time"].as<String>().toFloat();
           bool isTimeoutFail = peristalticMotorItem["timeoutFail"].as<bool>();
           String untilString = peristalticMotorItem["until"].as<String>();
-          // serializeJsonPretty(peristalticMotorItem, Serial);
-          // Serial.println(peristalticMotorItem["time"].as<float>());
-          // delay(1000);
 
           if (endTimeCheckList.containsKey(motorIndexString)) {
             continue;
@@ -574,67 +581,25 @@ void PiplelineFlowTask(void* parameter)
             vTaskDelay(100);
           }
         }
-
-
-
-        // while (!endTimeCheckList.empty()) {
-        //   for (const auto& pair : endTimeCheckList) {
-        //     // int untilUnm = pair.second.until;
-        //     // Serial.println(untilUnm);
-        //     // //? 若馬達執行時間達到最大時間
-        //     // if (millis() >= pair.second.endTime) {
-        //     //   //? 執行到這，代表馬達執行到最大執行時間，如果timeoutFail是true，則代表執行觸發失敗
-        //     //   if (pair.second.timeoutFail) {
-        //     //     ESP_LOGE("", "蠕動馬達Timeout錯誤，停止step");
-        //     //     for (const auto& pairAlive : endTimeCheckList) {
-        //     //       //? 強制停止當前step執行的馬達
-        //     //       //TODO 記得加上馬達控制停止
-        //     //     }
-        //     //     (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
-        //     //     Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
-        //     //     Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
-        //     //     free(stepsGroupName);
-        //     //     vTaskDelete(NULL);
-        //     //   }
-        //     //   //? 若非，則正常停止馬達運行
-        //     //   //TODO 記得加上馬達控制停止
-        //     //   ESP_LOGV("", "蠕動馬達執行至最大時間");
-        //     //   endTimeCheckList.erase(pair.first);
-        //     // }
-        //     // //? 若要判斷滿水浮球狀態
-        //     // else if (pair.second.until != -1) {
-        //     //   pinMode(pair.second.until, INPUT);
-        //     //   int value = digitalRead(pair.second.until);
-        //     //   if (value == HIGH) {
-        //     //     //TODO 記得加上馬達控制停止
-        //     //     ESP_LOGV("", "浮球觸發，關閉蠕動馬達");
-        //     //     endTimeCheckList.erase(pair.first);
-        //     //   }
-        //     // }
-        //   }
-        //   vTaskDelay(1000);
-        // }
-
-
-
       }
       //! 分光光度計控制設定
       else if (eventItem.containsKey("spectrophotometer_list")) {
         // JsonObject spectrophotometerConfig = 
         for (JsonObject spectrophotometerItem : eventItem["spectrophotometer_list"].as<JsonArray>()) {
           int spectrophotometerIndex = spectrophotometerItem["index"].as<int>();
+          JsonObject spectrophotometerConfigChose = (*Machine_Ctrl.spectrophotometerConfig)[spectrophotometerIndex].as<JsonObject>();
+
+          String spectrophotometerTitle = spectrophotometerConfigChose["title"].as<String>();
+          double mValue = spectrophotometerConfigChose["calibration"][0]["ret"]["m"].as<double>();
+          double bValue = spectrophotometerConfigChose["calibration"][0]["ret"]["b"].as<double>();
+
           String GainStr = spectrophotometerItem["gain"].as<String>();
           String targetChannel = spectrophotometerItem["channel"].as<String>();
           String value_name = spectrophotometerItem["value_name"].as<String>();
           int targetLevel = spectrophotometerItem["target"].as<int>();
-          double dilutionValue = spectrophotometerItem["dilution"].as<double>();
-
-          ESP_LOGI("LOADED_ACTION","       - %d 測量倍率: %s, 指定頻道: %s, 稀釋倍率: %.2f，並紀錄為: %s", 
-            spectrophotometerIndex, 
-            GainStr.c_str(), 
-            targetChannel.c_str(),
-            dilutionValue,
-            value_name.c_str()
+          double dilutionValue = spectrophotometerItem["dilution"].as<String>().toDouble();
+          ESP_LOGI("LOADED_ACTION","       - (%d)%s 測量倍率: %s, 指定頻道: %s, 稀釋倍率: %s, 並紀錄為: %s",
+            spectrophotometerIndex, spectrophotometerTitle.c_str(), GainStr.c_str(), targetChannel.c_str(), String(dilutionValue, 1).c_str(), value_name.c_str()
           );
           //? 開啟指定index模組
           Machine_Ctrl.WireOne.beginTransmission(0x70);
@@ -673,7 +638,7 @@ void PiplelineFlowTask(void* parameter)
           if (targetLevel == -1) {
             Machine_Ctrl.WireOne.beginTransmission(0x2F);
             Machine_Ctrl.WireOne.write(0b00000000);
-            Machine_Ctrl.WireOne.write((*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometerIndex]["level"].as<int>());
+            Machine_Ctrl.WireOne.write(spectrophotometerConfigChose["level"].as<int>());
             Machine_Ctrl.WireOne.endTransmission();
             for (int i=0;i<30;i++) {
               sensorData = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
@@ -685,7 +650,7 @@ void PiplelineFlowTask(void* parameter)
           }
           //? 反之，則為測量0ppm並將光強度調整至指定數值
           else {
-            ESP_LOGI("LOADED_ACTION","         * 調整可變電阻，直到數值接近: %d", targetChannel);
+            ESP_LOGI("LOADED_ACTION","         * 調整可變電阻，直到數值接近: %d", targetLevel);
             for (int i=0;i<256;i++) {
               Machine_Ctrl.WireOne.beginTransmission(0x2F);
               Machine_Ctrl.WireOne.write(0b00000000);
@@ -696,8 +661,8 @@ void PiplelineFlowTask(void* parameter)
                 Serial.printf("%d:%d -> %d\r",i, sensorData.CH_0, targetLevel);
                 if (sensorData.CH_0 >= targetLevel) {
                   ESP_LOGI("LOADED_ACTION","      CH0 已將強度調整為:%d", sensorData.CH_0);
-                  (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometerIndex]["level"].set(i);
-                  Machine_Ctrl.ReWriteDeviceSetting();
+                  spectrophotometerConfigChose["level"].set(i);
+                  //TODO 記得加上重寫 spectrophotometerConfig 檔案的功能
                   break;
                 }
               }
@@ -705,8 +670,8 @@ void PiplelineFlowTask(void* parameter)
                 Serial.printf("%d:%d -> %d\r",i, sensorData.CH_1, targetLevel);
                 if (sensorData.CH_1 >= targetLevel) {
                   ESP_LOGI("LOADED_ACTION","      CH1 已將強度調整為:%d", sensorData.CH_1);
-                  (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometerIndex]["level"].set(i);
-                  Machine_Ctrl.ReWriteDeviceSetting();
+                  spectrophotometerConfigChose["level"].set(i);
+                  //TODO 記得加上重寫 spectrophotometerConfig 檔案的功能
                   break;
                 }
               }
@@ -715,8 +680,18 @@ void PiplelineFlowTask(void* parameter)
             CH1_result = (double)sensorData.CH_1;
           }
           Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
+          
+          Serial.println(bValue);
+          Serial.println(mValue);
+
+          CH0_after = (-log10(CH0_result/50000.)-bValue)/mValue * dilutionValue;
+          CH1_after = (-log10(CH1_result/50000.)-bValue)/mValue * dilutionValue;
+
+
           Serial.println(CH0_result);
           Serial.println(CH1_result);
+          Serial.println(CH0_after);
+          Serial.println(CH1_after);
 
         }
       }
@@ -724,6 +699,16 @@ void PiplelineFlowTask(void* parameter)
         // Serial.println("ph_meter");
       }
       else if (eventItem.containsKey("wait")) {
+      }
+      //! log發出
+      else if (eventItem.containsKey("log")) {
+        JsonObject logAction = eventItem["log"].as<JsonObject>();
+        int logLevel = logAction["level"].as<int>();
+        String logTitle = logAction["title"].as<String>() ;
+        String logDesp  = logAction["desp"].as<String>();
+        Machine_Ctrl.SetLog(
+          logLevel, logTitle, logDesp, Machine_Ctrl.BackendServer.ws_, NULL
+        );
       }
     }
     vTaskDelay(10);
@@ -750,7 +735,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
     (*pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("RUNNING");
     xReturned = xTaskCreate(
       PiplelineFlowTask, NULL,
-      4000, (void*)charPtr, 3, thisTaskHandle_t
+      6000, (void*)charPtr, 3, thisTaskHandle_t
     );
     if (xReturned != pdPASS) {
       Serial.println("Create Fail");
@@ -1623,13 +1608,14 @@ void SMachine_Ctrl::Stop_AllPeristalticMotor()
  */
 DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String description, AsyncWebSocket *server, AsyncWebSocketClient *client, bool Save)
 {
+  
   DynamicJsonDocument logItem(500);
   String timeString = GetDatetimeString();
   logItem["level"].set(Level);
   logItem["time"].set(timeString);
   logItem["title"].set(Title);
   logItem["desp"].set(description);
-  
+  serializeJsonPretty(logItem, Serial);
   if (Save==true) {
     String logFileFullPath = LogFolder + GetDateString("") + "_log.csv";
     File logFile;
@@ -1640,21 +1626,17 @@ DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String descri
       logFile = SD.open(logFileFullPath, FILE_APPEND);
       logFile.print("\xEF\xBB\xBF");
     }
+    Serial.println("Write");
     logFile.printf("%d,%s,%s,%s\n",
       Level, timeString.c_str(),
       Title.c_str(), description.c_str()
     );
     logFile.close();
-    
+
     (*Machine_Ctrl.DeviceLogSave)["Log"].add(logItem);
     if ((*Machine_Ctrl.DeviceLogSave)["Log"].size() > 100) {
       (*Machine_Ctrl.DeviceLogSave)["Log"].remove(0);
     }
-
-    // logArray.add(logItem);
-    // if (logArray.size() > 100) {
-    //   logArray.remove(0);
-    // }
   }
 
   if (server != NULL or client != NULL) {

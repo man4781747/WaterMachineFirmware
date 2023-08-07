@@ -172,7 +172,7 @@
       "desp": "測量純水光強度，並調整靠近50000",
       "event": [
         {"spectrophotometer_list": [
-          {"id": "B","gain": "96X","channel": "CH1","value_name": "NO2_wash_volt","target": 50000,"dilution": 10}
+          {"index": 1,"gain": "96X","channel": "CH1","value_name": "NO2_wash_volt","target": 50000,"dilution": 10}
         ]}
       ]
     },
@@ -181,7 +181,7 @@
       "desp": "亞硝酸鹽量測數值獲得",
       "event": [
         {"spectrophotometer_list": [
-          {"id": "B","gain": "96X","channel": "CH1","value_name": "NO2_test_volt","target": -1,"dilution": 10}
+          {"index": 1,"gain": "96X","channel": "CH1","value_name": "NO2_test_volt","target": -1,"dilution": 10}
         ]}
       ]
     },
@@ -190,7 +190,7 @@
       "desp": "測量純水光強度，並調整靠近50000",
       "event": [
         {"spectrophotometer_list": [
-          {"id": "A","gain": "48X","channel": "CH0","value_name": "NH4_wash_volt","target": 50000,"dilution": 2}
+          {"index": 0,"gain": "48X","channel": "CH0","value_name": "NH4_wash_volt","target": 50000,"dilution": 2}
         ]}
       ]
     },
@@ -199,7 +199,7 @@
       "desp": "",
       "event": [
         {"spectrophotometer_list": [
-          {"id": "A","gain": "48X","channel": "CH0","value_name": "NH4_test_volt","target": -1,"dilution": 2}
+          {"index": 0,"gain": "48X","channel": "CH0","value_name": "NH4_test_volt","target": -1,"dilution": 2}
         ]}
       ]
     },
@@ -421,7 +421,7 @@
       "desp": "",
       "event": [
         {"ph_meter": [
-          {"id": "A"}
+          {"index": 0}
         ]}
       ]
     },
@@ -463,9 +463,7 @@
       "title": "發出錯誤訊息",
       "desp": "",
       "event": [
-        {"fail_action": [
-          {"action": "log", "level": 1, "title": "發現錯誤", "desp": "-"}
-        ]}
+        {"log":{"level": 1, "title": "發現錯誤", "desp": "-"}}
       ]
     }
   },

@@ -74,6 +74,14 @@ class SMachine_Ctrl
     //? 緊急終止所有動作，並且回歸初始狀態
     void StopDeviceAndINIT();
 
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //! 儀器基礎設定
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    String spectrophotometerConfigFileFullPath = "/config/spectrophotometer_config.json";
+    DynamicJsonDocument *spectrophotometerConfig = new DynamicJsonDocument(10000);
+    void LoadspectrophotometerConfig();
+
+
     ////////////////////////////////////////////////////
     // For 數值轉換
     ////////////////////////////////////////////////////  
@@ -125,6 +133,7 @@ class SMachine_Ctrl
     );
     //? 更新最新資料儲存檔案
     void ReWriteLastDataSaveFile(String filePath, JsonObject tempData);
+
 
 
     ////////////////////////////////////////////////////
