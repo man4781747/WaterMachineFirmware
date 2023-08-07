@@ -620,20 +620,104 @@ void PiplelineFlowTask(void* parameter)
       }
       //! 分光光度計控制設定
       else if (eventItem.containsKey("spectrophotometer_list")) {
+        // JsonObject spectrophotometerConfig = 
         for (JsonObject spectrophotometerItem : eventItem["spectrophotometer_list"].as<JsonArray>()) {
           int spectrophotometerIndex = spectrophotometerItem["index"].as<int>();
           String GainStr = spectrophotometerItem["gain"].as<String>();
           String targetChannel = spectrophotometerItem["channel"].as<String>();
           String value_name = spectrophotometerItem["value_name"].as<String>();
-          int target = spectrophotometerItem["target"].as<int>();
+          int targetLevel = spectrophotometerItem["target"].as<int>();
           double dilutionValue = spectrophotometerItem["dilution"].as<double>();
 
-          // ESP_LOGI("LOADED_ACTION","       - %d 測量倍率: %s, 稀釋倍率: %.2f，並紀錄為: %s", 
-          //   spectrophotometerIndex, 
-          //   GainStr.c_str(), 
-          //   dilutionValue,
-          //   value_name.c_str()
-          // );
+          ESP_LOGI("LOADED_ACTION","       - %d 測量倍率: %s, 指定頻道: %s, 稀釋倍率: %.2f，並紀錄為: %s", 
+            spectrophotometerIndex, 
+            GainStr.c_str(), 
+            targetChannel.c_str(),
+            dilutionValue,
+            value_name.c_str()
+          );
+          //? 開啟指定index模組
+          Machine_Ctrl.WireOne.beginTransmission(0x70);
+          Machine_Ctrl.WireOne.write(1 << spectrophotometerIndex);
+          Machine_Ctrl.WireOne.endTransmission();
+          vTaskDelay(1000/portTICK_PERIOD_MS);
+          Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(spectrophotometerIndex);
+          vTaskDelay(1000/portTICK_PERIOD_MS);
+
+          //? 依放大倍率設定調整
+          if (GainStr == "1X") {
+            Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_1X);
+          }
+          else if (GainStr == "2X") {
+            Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_2X);
+          }
+          else if (GainStr == "4X") {
+            Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_4X);
+          }
+          else if (GainStr == "8X") {
+            Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_8X);
+          }
+          else if (GainStr == "48X") {
+            Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_48X);
+          }
+          else if (GainStr == "96X") {
+            Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_96X);
+          }
+
+          ALS_01_Data_t sensorData;
+          uint16_t CH0_Buff [30];
+          uint16_t CH1_Buff [30];
+          double CH0_result, CH1_result;
+          double CH0_after, CH1_after;
+          //?  如果targetLevel不為-1 則代表為測量數值
+          if (targetLevel == -1) {
+            Machine_Ctrl.WireOne.beginTransmission(0x2F);
+            Machine_Ctrl.WireOne.write(0b00000000);
+            Machine_Ctrl.WireOne.write((*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometerIndex]["level"].as<int>());
+            Machine_Ctrl.WireOne.endTransmission();
+            for (int i=0;i<30;i++) {
+              sensorData = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+              CH0_Buff[i] = sensorData.CH_0;
+              CH1_Buff[i] = sensorData.CH_1;
+            }
+            CH0_result = afterFilterValue(CH0_Buff, 30);
+            CH1_result = afterFilterValue(CH1_Buff, 30);
+          }
+          //? 反之，則為測量0ppm並將光強度調整至指定數值
+          else {
+            ESP_LOGI("LOADED_ACTION","         * 調整可變電阻，直到數值接近: %d", targetChannel);
+            for (int i=0;i<256;i++) {
+              Machine_Ctrl.WireOne.beginTransmission(0x2F);
+              Machine_Ctrl.WireOne.write(0b00000000);
+              Machine_Ctrl.WireOne.write(i);
+              Machine_Ctrl.WireOne.endTransmission();
+              sensorData = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+              if (targetChannel == "CH0") {
+                Serial.printf("%d:%d -> %d\r",i, sensorData.CH_0, targetLevel);
+                if (sensorData.CH_0 >= targetLevel) {
+                  ESP_LOGI("LOADED_ACTION","      CH0 已將強度調整為:%d", sensorData.CH_0);
+                  (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometerIndex]["level"].set(i);
+                  Machine_Ctrl.ReWriteDeviceSetting();
+                  break;
+                }
+              }
+              else if (targetChannel == "CH1") {
+                Serial.printf("%d:%d -> %d\r",i, sensorData.CH_1, targetLevel);
+                if (sensorData.CH_1 >= targetLevel) {
+                  ESP_LOGI("LOADED_ACTION","      CH1 已將強度調整為:%d", sensorData.CH_1);
+                  (*Machine_Ctrl.spiffs.DeviceSetting)["spectrophotometer"][spectrophotometerIndex]["level"].set(i);
+                  Machine_Ctrl.ReWriteDeviceSetting();
+                  break;
+                }
+              }
+            }
+            CH0_result = (double)sensorData.CH_0;
+            CH1_result = (double)sensorData.CH_1;
+          }
+          Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
+          Serial.println(CH0_result);
+          Serial.println(CH1_result);
+
         }
       }
       else if (eventItem.containsKey("ph_meter")) {
