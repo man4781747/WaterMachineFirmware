@@ -34,6 +34,7 @@
 #include <variant>
 #include <functional>
 #include <random>
+#include <map>
 #include <ctime>
 
 TaskHandle_t TASK_SwitchMotorScan = NULL;
@@ -334,6 +335,7 @@ void PiplelineFlowTask(void* parameter)
   String stepsGroupNameString = String(stepsGroupName);
   ESP_LOGI("", "建立 %s 的 Task", stepsGroupNameString.c_str());
 
+  //TODO 暫時不判斷
   //? 如果有"same"這個key值，則 steps 要繼承其他設定內容
   if ((*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString].containsKey("same")) {
     (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["steps"].set(
@@ -343,12 +345,17 @@ void PiplelineFlowTask(void* parameter)
     );
   }
   //TODO 暫時不判斷
+
+  //TODO 暫時不判斷
   // //? 如果沒有"trigger"這個key值，則預設task觸發條件為"allDone"
   // if (!(*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString].containsKey("trigger")) {
   //   (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["trigger"].set("allDone");
   // } else {
   //   Serial.println((*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["trigger"].as<String>());
   // }
+  //TODO 暫時不判斷 - END
+
+
   //? 這個 Task 要執行的 steps_group 的 list
   JsonArray stepsGroupArray = (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["steps"].as<JsonArray>();
 
@@ -433,6 +440,7 @@ void PiplelineFlowTask(void* parameter)
   //   }
   //   // ESP_LOGI("", "%s 的 parent都執行完畢，準備執行", stepsGroupNameString.c_str());
   // }
+  //TODO 暫時不判斷 - END
 
   for (String eventChose : stepsGroupArray) {
     //? eventChose: 待執行的event名稱
@@ -456,13 +464,159 @@ void PiplelineFlowTask(void* parameter)
       }
       //! 蠕動馬達控制設定
       else if (eventItem.containsKey("peristaltic_motor_list")) {
+        // DynamicJsonDocument *loadedAction = new DynamicJsonDocument(1000000);
+        //? endTimeCheckList: 記錄各蠕動馬達最大運行結束時間
+        DynamicJsonDocument endTimeCheckList(10000);
+        // std::map<int, Peristaltic_task_config> endTimeCheckList;
+        
         for (JsonObject peristalticMotorItem : eventItem["peristaltic_motor_list"].as<JsonArray>()) {
-          // ESP_LOGI("LOADED_ACTION","       - (%d) %s 持續 %.2f 秒", 
-          //   peristalticMotorItem["index"].as<int>(), 
-          //   peristalticMotorItem["status"].as<int>()==-1 ? "正轉" : "反轉", 
-          //   peristalticMotorItem["time"].as<float>()
-          // );
+          int motorIndex = peristalticMotorItem["index"].as<int>();
+          String motorIndexString = String(motorIndex);
+          PeristalticMotorStatus ststus = peristalticMotorItem["status"].as<int>() == 1 ? PeristalticMotorStatus::FORWARD : PeristalticMotorStatus::REVERSR;
+          float runTime = peristalticMotorItem["time"].as<String>().toFloat();
+          bool isTimeoutFail = peristalticMotorItem["timeoutFail"].as<bool>();
+          String untilString = peristalticMotorItem["until"].as<String>();
+          // serializeJsonPretty(peristalticMotorItem, Serial);
+          // Serial.println(peristalticMotorItem["time"].as<float>());
+          // delay(1000);
+
+          if (endTimeCheckList.containsKey(motorIndexString)) {
+            continue;
+          }
+          ESP_LOGI("LOADED_ACTION","       - (%d) %s 持續 %.2f 秒或是直到%s觸發，超時標記為錯誤:%s", 
+            motorIndex, 
+            peristalticMotorItem["status"].as<int>()==-1 ? "正轉" : "反轉", 
+            runTime,
+            untilString.c_str(),
+            isTimeoutFail==true ? "是" : "否"
+          );
+
+          endTimeCheckList[motorIndexString]["index"] = motorIndex;
+          endTimeCheckList[motorIndexString]["status"] = ststus;
+          endTimeCheckList[motorIndexString]["time"] = runTime;
+          endTimeCheckList[motorIndexString]["timeoutFail"] = isTimeoutFail;
+          endTimeCheckList[motorIndexString]["finish"] = false;
+          
+          if (untilString == "RO") {
+            endTimeCheckList[motorIndexString]["until"] = 1;
+          } 
+          else if (untilString == "SAMPLE") {
+            endTimeCheckList[motorIndexString]["until"] = 2;
+          }
+          else {
+            endTimeCheckList[motorIndexString]["until"] = -1;
+          }
+          endTimeCheckList[motorIndexString]["startTime"] = millis();
+          endTimeCheckList[motorIndexString]["endTime"] = millis() + (long)(runTime*1000);
+
+          // Peristaltic_task_config config_;
+          // config_.index = peristalticMotorItem["peristaltic_motor"]["index"].as<int>();
+          // config_.status = peristalticMotorItem["status"].as<int>() == 1 ? PeristalticMotorStatus::FORWARD : PeristalticMotorStatus::REVERSR;
+          // config_.time = peristalticMotorItem["time"].as<float>();
+          // config_.timeoutFail = peristalticMotorItem["timeoutFail"].as<bool>();
+          // // String untilString = peristalticMotorItem["until"].as<String>();
+          // if (untilString == "RO") {
+          //   config_.until = 1;
+          // } 
+          // else if (untilString == "SAMPLE") {
+          //   config_.until = 2;
+          // }
+          // else {
+          //   config_.until = -1;
+          // }
+          vTaskDelay(100/portTICK_PERIOD_MS);
         }
+
+        //? 開始loop所有馬達狀態，來決定是否繼續執行、停下、觸發錯誤...等等等
+        bool allFinish = false;
+        while (allFinish == false){
+          allFinish = true;
+          for (const auto& endTimeCheck : endTimeCheckList.as<JsonObject>()) {
+            JsonObject endTimeCheckJSON = endTimeCheck.value().as<JsonObject>();
+            if (endTimeCheckJSON["finish"] == true) {
+              continue;
+            }
+            allFinish = false;
+            long endTime = endTimeCheckJSON["endTime"].as<long>();
+            int until = endTimeCheckJSON["until"].as<int>();
+            //? 若馬達執行時間達到最大時間
+            if (millis() >= endTime) {
+            // if (millis() >= 0) {  // timeout測試
+              //? 執行到這，代表馬達執行到最大執行時間，如果timeoutFail是true，則代表執行觸發失敗
+              if (endTimeCheckJSON["timeoutFail"].as<bool>()) {
+                ESP_LOGE("", "蠕動馬達Timeout錯誤，停止step");
+                for (const auto& motorChose : endTimeCheckList.as<JsonObject>()) {
+                  //? 強制停止當前step執行的馬達
+                  //TODO 記得加上馬達控制停止
+                }
+                endTimeCheckJSON["finish"].set(true);
+                (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
+                Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
+                Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
+                free(stepsGroupName);
+                vTaskDelete(NULL);
+              }
+              //? 若非，則正常停止馬達運行
+              //TODO 記得加上馬達控制停止
+              ESP_LOGV("", "蠕動馬達執行至最大時間");
+              endTimeCheckJSON["finish"].set(true);
+            }
+            //? 若要判斷滿水浮球狀態
+            else if (until != -1) {
+              pinMode(until, INPUT);
+              int value = digitalRead(until);
+              if (value == HIGH) {
+                //TODO 記得加上馬達控制停止
+                ESP_LOGV("", "浮球觸發，關閉蠕動馬達");
+                endTimeCheckJSON["finish"].set(true);
+              }
+            }
+            vTaskDelay(100);
+          }
+        }
+
+
+
+        // while (!endTimeCheckList.empty()) {
+        //   for (const auto& pair : endTimeCheckList) {
+        //     // int untilUnm = pair.second.until;
+        //     // Serial.println(untilUnm);
+        //     // //? 若馬達執行時間達到最大時間
+        //     // if (millis() >= pair.second.endTime) {
+        //     //   //? 執行到這，代表馬達執行到最大執行時間，如果timeoutFail是true，則代表執行觸發失敗
+        //     //   if (pair.second.timeoutFail) {
+        //     //     ESP_LOGE("", "蠕動馬達Timeout錯誤，停止step");
+        //     //     for (const auto& pairAlive : endTimeCheckList) {
+        //     //       //? 強制停止當前step執行的馬達
+        //     //       //TODO 記得加上馬達控制停止
+        //     //     }
+        //     //     (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
+        //     //     Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
+        //     //     Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
+        //     //     free(stepsGroupName);
+        //     //     vTaskDelete(NULL);
+        //     //   }
+        //     //   //? 若非，則正常停止馬達運行
+        //     //   //TODO 記得加上馬達控制停止
+        //     //   ESP_LOGV("", "蠕動馬達執行至最大時間");
+        //     //   endTimeCheckList.erase(pair.first);
+        //     // }
+        //     // //? 若要判斷滿水浮球狀態
+        //     // else if (pair.second.until != -1) {
+        //     //   pinMode(pair.second.until, INPUT);
+        //     //   int value = digitalRead(pair.second.until);
+        //     //   if (value == HIGH) {
+        //     //     //TODO 記得加上馬達控制停止
+        //     //     ESP_LOGV("", "浮球觸發，關閉蠕動馬達");
+        //     //     endTimeCheckList.erase(pair.first);
+        //     //   }
+        //     // }
+        //   }
+        //   vTaskDelay(1000);
+        // }
+
+
+
       }
       //! 分光光度計控制設定
       else if (eventItem.containsKey("spectrophotometer_list")) {
@@ -488,7 +642,7 @@ void PiplelineFlowTask(void* parameter)
       else if (eventItem.containsKey("wait")) {
       }
     }
-    vTaskDelay(500);
+    vTaskDelay(10);
   }
 
   (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("SUCCESS");
@@ -643,6 +797,7 @@ void PipelineFlowScan(void* parameter)
       } 
       else if (stepsGroupResult == "RUNNING") {isAllDone = false;}
     };
+    vTaskDelay(100/portTICK_PERIOD_MS);
   }
 
   ESP_LOGI("", "所有流程已執行完畢");
@@ -668,8 +823,10 @@ void SMachine_Ctrl::CreatePipelineFlowScanTask()
 // For 事件執行
 ////////////////////////////////////////////////////
 
-bool SMachine_Ctrl::LOAD__ACTION_V2(String pipelineConfigFileFullPath)
+bool SMachine_Ctrl::LOAD__ACTION_V2(String pipelineConfigFileFullPath, String onlyStepGroup, String onlyEvent)
 {
+  //! onlyStepGroup: 指定只執行哪一個流程，若為NULL則代表不指定
+  //! onlyEvent: 指定只執行流程中的哪一個Event，若為NULL則代表不指定
   (*pipelineConfig).clear();
   File pipelineConfigFile = SD.open(pipelineConfigFileFullPath);
   if (!pipelineConfigFile) {
@@ -682,49 +839,93 @@ bool SMachine_Ctrl::LOAD__ACTION_V2(String pipelineConfigFileFullPath)
     Serial.println(error.c_str());
     return false;
   }
-
-  //? 讀取設定檔完成後，還要將設定檔內容做準備
-  //? 將原本的pipeline流程設定轉換成後面Task好追蹤的格式
-  JsonArray piplineArray = (*pipelineConfig)["pipline"].as<JsonArray>();
   DynamicJsonDocument piplineSave(65525);
-  for (JsonArray singlePiplineArray : piplineArray) {
-    String ThisNodeNameString = singlePiplineArray[0].as<String>();
-    if (!piplineSave.containsKey(ThisNodeNameString)) {
-      piplineSave[ThisNodeNameString]["Name"] = ThisNodeNameString;
-      piplineSave[ThisNodeNameString].createNestedObject("childList");
-      piplineSave[ThisNodeNameString].createNestedObject("parentList");
-    }
-    for (String piplineChildName :  singlePiplineArray[1].as<JsonArray>()) {
-      if (!piplineSave.containsKey(piplineChildName)) {
-        piplineSave[piplineChildName]["Name"] = piplineChildName;
-        piplineSave[piplineChildName].createNestedObject("childList");
-        piplineSave[piplineChildName].createNestedObject("parentList");
+  //! 不指定StepGroup執行
+  if (onlyStepGroup == "") {
+    //? 讀取設定檔完成後，還要將設定檔內容做準備
+    //? 將原本的pipeline流程設定轉換成後面Task好追蹤的格式
+    JsonArray piplineArray = (*pipelineConfig)["pipline"].as<JsonArray>();
+    for (JsonArray singlePiplineArray : piplineArray) {
+      String ThisNodeNameString = singlePiplineArray[0].as<String>();
+      if (!piplineSave.containsKey(ThisNodeNameString)) {
+        piplineSave[ThisNodeNameString]["Name"] = ThisNodeNameString;
+        piplineSave[ThisNodeNameString].createNestedObject("childList");
+        piplineSave[ThisNodeNameString].createNestedObject("parentList");
       }
-      if (!piplineSave[ThisNodeNameString]["childList"].containsKey(piplineChildName)){
-        piplineSave[ThisNodeNameString]["childList"].createNestedObject(piplineChildName);
-        // ESP_LOGI("", "%s 新增一個 child: %s", ThisNodeNameString.c_str(), piplineChildName.c_str());
-      }
+      for (String piplineChildName :  singlePiplineArray[1].as<JsonArray>()) {
+        if (!piplineSave.containsKey(piplineChildName)) {
+          piplineSave[piplineChildName]["Name"] = piplineChildName;
+          piplineSave[piplineChildName].createNestedObject("childList");
+          piplineSave[piplineChildName].createNestedObject("parentList");
+        }
+        if (!piplineSave[ThisNodeNameString]["childList"].containsKey(piplineChildName)){
+          piplineSave[ThisNodeNameString]["childList"].createNestedObject(piplineChildName);
+          // ESP_LOGI("", "%s 新增一個 child: %s", ThisNodeNameString.c_str(), piplineChildName.c_str());
+        }
 
-      if (!piplineSave[piplineChildName]["parentList"].containsKey(ThisNodeNameString)){
-        piplineSave[piplineChildName]["parentList"].createNestedObject(ThisNodeNameString);
-        // ESP_LOGI("", "%s 新增一個 parent: %s", piplineChildName.c_str(), ThisNodeNameString.c_str());
+        if (!piplineSave[piplineChildName]["parentList"].containsKey(ThisNodeNameString)){
+          piplineSave[piplineChildName]["parentList"].createNestedObject(ThisNodeNameString);
+          // ESP_LOGI("", "%s 新增一個 parent: %s", piplineChildName.c_str(), ThisNodeNameString.c_str());
+        }
       }
+    }
+    (*Machine_Ctrl.pipelineConfig)["pipline"].set(piplineSave);
+
+    //? 將 steps_group 內的資料多加上key值: RESULT 來讓後續Task可以判斷流程是否正確執行
+    //? 如果沒有"trigger"這個key值，則預設task觸發條件為"allDone"
+    JsonObject stepsGroup = (*Machine_Ctrl.pipelineConfig)["steps_group"].as<JsonObject>();
+    for (JsonPair stepsGroupItem : stepsGroup) {
+      String stepsGroupName = String(stepsGroupItem.key().c_str());
+      //? 如果有"same"這個key值，則 steps 要繼承其他設定內容
+      if ((*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName].containsKey("same")) {
+        (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["steps"].set(
+          (*Machine_Ctrl.pipelineConfig)["steps_group"][
+            (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["same"].as<String>()
+          ]["steps"].as<JsonArray>()
+        );
+      }
+      (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("WAIT");
+      if (!(*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName].containsKey("trigger")) {
+        (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["trigger"].set("allDone");
+      }
+    };
+    CreatePipelineFlowScanTask();
+    return true;
+  } 
+  //! 指定StepGroup執行
+  else {
+    JsonObject piplineArray = (*pipelineConfig)["steps_group"].as<JsonObject>();
+    if (piplineArray.containsKey(onlyStepGroup)) {
+      piplineSave[onlyStepGroup]["Name"] = onlyStepGroup;
+      piplineSave[onlyStepGroup].createNestedObject("childList");
+      piplineSave[onlyStepGroup].createNestedObject("parentList");
+
+      (*Machine_Ctrl.pipelineConfig)["pipline"].set(piplineSave);
+      (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["RESULT"].set("WAIT");
+
+
+      if ((*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup].containsKey("same")) {
+        (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["steps"].set(
+          (*Machine_Ctrl.pipelineConfig)["steps_group"][
+            (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["same"].as<String>()
+          ]["steps"].as<JsonArray>()
+        );
+      }
+      if (onlyEvent != "") {
+        (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["steps"].clear();
+        (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["steps"].add(onlyEvent);
+      }
+      serializeJsonPretty(piplineSave, Serial);
+      Serial.println();
+      serializeJsonPretty((*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["steps"], Serial);
+      Serial.println();
+      CreatePipelineFlowScanTask();
+      return true;
+    }
+    else {
+      return false;
     }
   }
-  (*Machine_Ctrl.pipelineConfig)["pipline"].set(piplineSave);
-
-  //? 將 steps_group 內的資料多加上key值: RESULT 來讓後續Task可以判斷流程是否正確執行
-  //? 如果沒有"trigger"這個key值，則預設task觸發條件為"allDone"
-  JsonObject stepsGroup = (*Machine_Ctrl.pipelineConfig)["steps_group"].as<JsonObject>();
-  for (JsonPair stepsGroupItem : stepsGroup) {
-    String stepsGroupName = String(stepsGroupItem.key().c_str());
-    (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("WAIT");
-    if (!(*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName].containsKey("trigger")) {
-      (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["trigger"].set("allDone");
-    }
-  };
-  CreatePipelineFlowScanTask();
-  return true;
 }
 
 
@@ -1280,7 +1481,7 @@ EVENT_RESULT SMachine_Ctrl::RUN__PeristalticMotorEvent(Peristaltic_task_config *
 
   xTaskCreate(
     PeristalticMotorEvent, "MOTOR_RUN",
-    10000, config_, 1, NULL
+    5000, config_, 1, NULL
   );
   returnData.message = "OK";
   return returnData;

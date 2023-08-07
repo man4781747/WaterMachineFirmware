@@ -2112,11 +2112,19 @@ void ws_RunPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynami
 
 void ws_v2_RunPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
 {
+  String stepChose = "";
+  String eventChose = "";
+  if ((*D_QueryParameter).containsKey("step")) {
+    stepChose = (*D_QueryParameter)["step"].as<String>();
+    if ((*D_QueryParameter).containsKey("event")) {
+      eventChose = (*D_QueryParameter)["event"].as<String>();
+    }
+  }
   String TargetName = D_PathParameter->as<JsonObject>()["name"];
   // Serial.println(TargetName);
   String FullFilePath = "/pipelines/"+TargetName+".json";
   if (SD.exists(FullFilePath)) {
-    if (Machine_Ctrl.LOAD__ACTION_V2(FullFilePath)) {
+    if (Machine_Ctrl.LOAD__ACTION_V2(FullFilePath, stepChose, eventChose)) {
       Machine_Ctrl.SetLog(
         5,
         "即將執行流程",

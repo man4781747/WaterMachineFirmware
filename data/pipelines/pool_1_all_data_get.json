@@ -74,7 +74,7 @@
           {"index": 28,"status": 0}
         ]},
         {"peristaltic_motor_list": [
-          {"index": 0,"status": 1,"time": 120,"until": "SAMPLE"}
+          {"index": 0,"status": 1,"time": 120,"until": "SAMPLE", "timeoutFail": true}
         ]}
       ]
     },
@@ -86,7 +86,7 @@
           {"index": 28,"status": 0}
         ]},
         {"peristaltic_motor_list": [
-          {"index": 1,"status": 1,"time": 120,"until": "RO"}
+          {"index": 1,"status": 1,"time": 120,"until": "RO", "timeoutFail": true}
         ]}
       ]
     },
@@ -194,9 +194,18 @@
         ]}
       ]
     },
+    "NH4_Test_Value_Get": {
+      "title": "[檢測-氨氮] 氨氮量測數值獲得",
+      "desp": "",
+      "event": [
+        {"spectrophotometer_list": [
+          {"id": "A","gain": "48X","channel": "CH0","value_name": "NH4_test_volt","target": -1,"dilution": 2}
+        ]}
+      ]
+    },
     "FORNO3_Push_RO_Liquid_To_MixRoom": {
       "title": "[檢測-亞硝酸鹽] 抽取RO水(22.5秒)至混合室",
-      "desp": "抽取試劑水/RO溶液 22.5秒 並傳輸至混合室",
+      "desp": "",
       "event": [
         {"pwm_motor_list": [
           {"index": 23,"status": 180},
@@ -242,6 +251,82 @@
         ]}
       ]
     },
+    "FORNH4_Push_RO_Liquid_To_MixRoom": {
+      "title": "[檢測-氨氮] 抽取RO水(12.5秒)至混合室",
+      "desp": "-",
+      "event": [
+        {"pwm_motor_list": [
+          {"index": 23,"status": 180},
+          {"index": 22,"status": 90},
+          {"index": 21,"status": 90},
+          {"index": 20,"status": 90},
+          {"index": 7,"status": 90},
+          {"index": 6,"status": 90},
+          {"index": 5,"status": 90},
+          {"index": 4,"status": 90}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 4,"status": 1,"time": 12.5,"until": "-"}
+        ]},
+        {"pwm_motor_list": [
+          {"index": 23,"status": 90}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 4,"status": 1,"time": 10,"until": "-"}
+        ]}
+      ]
+    },
+    "FORNH4_Push_Sample_Liquid": {
+      "title": "[檢測-氨氮] 抽取樣本水(12.5秒)至混合室",
+      "desp": "",
+      "event": [
+        {"pwm_motor_list": [
+          {"index": 21,"status": 180},
+          {"index": 20,"status": 90},
+          {"index": 7,"status": 90},
+          {"index": 6,"status": 90},
+          {"index": 5,"status": 90},
+          {"index": 4,"status": 90}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 4,"status": 1,"time": 12.5,"until": "-"}
+        ]},
+        {"pwm_motor_list": [
+          {"index": 21,"status": 90}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 4,"status": 1,"time": 10,"until": "-"}
+        ]}
+      ]
+    },
+    "Push_NH4R1_Liquid_To_MixRoom": {
+      "title": "[檢測-氨氮] 抽取氨氮R1(0.5秒)至混合室",
+      "desp": "",
+      "event": [
+        {"pwm_motor_list": [
+          {"index": 5,"status": 180},
+          {"index": 4,"status": 90}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 4,"status": 1,"time": 1,"until": "-"}
+        ]},
+        {"pwm_motor_list": [
+          {"index": 5,"status": 90}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 4,"status": 1,"time": 10,"until": "-"}
+        ]}
+      ]
+    },
+    "Push_NH4R2_Liquid_To_MixRoom":{
+      "title": "[檢測-氨氮] 抽取氨氮R2(0.75秒)至混合室",
+      "desp": "",
+      "event": [
+        {"peristaltic_motor_list": [
+          {"index": 5,"status": 1,"time": 0.75,"until": "-"}
+        ]}
+      ]
+    },
     "Mix_Liquid_In_MixRoom": {
       "title": "混合混合室的液體 (10秒)",
       "desp": "",
@@ -258,7 +343,7 @@
     },
     "Push_NO2_Liquid_To_MixRoom": {
       "title": "[檢測-亞硝酸鹽] 抽取亞硝酸鹽R1(1秒)至混合室",
-      "desp": "抽取亞硝酸鹽試劑 1秒 至混合室",
+      "desp": "",
       "event": [
         {"pwm_motor_list": [
           {"index": 7,"status": 180},
@@ -284,9 +369,103 @@
         {"wait": 300}
       ]
     },
-    "FailAction": {
+    "Clear_PH_Sensor_To_MixRoom": {
+      "title": "清空PH檢測儀與混和室",
+      "desp": "",
       "event": [
-        {"fail_action": []}
+        {"pwm_motor_list": [
+          {"index": 22,"status": 180},
+          {"index": 21,"status": 90},
+          {"index": 20,"status": 90},
+          {"index": 7,"status": 90},
+          {"index": 6,"status": 90},
+          {"index": 5,"status": 90},
+          {"index": 4,"status": 90},
+          {"index": 11,"status": 0},
+          {"index": 14,"status": 0}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 2,"status": -1,"time": 35,"until": "-"},
+          {"index": 3,"status": 1,"time": 40,"until": "-"},
+          {"index": 4,"status": 1,"time": 35,"until": "-"}
+        ]},
+        {"pwm_motor_list": [
+          {"index": 21,"status": 90},
+          {"index": 11,"status": 90},
+          {"index": 14,"status": 90}
+        ]}
+      ]
+    },
+    "Push_Sample_Liquid_To_PH_Sensor": {
+      "title": "[檢測-PH] 抽取檢體至PH檢測儀",
+      "desp": "",
+      "event": [
+        {"pwm_motor_list": [
+          {"index": 22,"status": 0},
+          {"index": 21,"status": 180},
+          {"index": 11,"status": 0},
+          {"index": 14,"status": 0}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 2,"status": -1,"time": 15,"until": "-"}
+        ]},
+        {"pwm_motor_list": [
+          {"index": 21,"status": 90},
+          {"index": 11,"status": 90},
+          {"index": 14,"status": 90}
+        ]}
+      ]
+    },
+    "PH_Value_Get": {
+      "title": "[檢測-PH] PH值獲得",
+      "desp": "",
+      "event": [
+        {"ph_meter": [
+          {"id": "A"}
+        ]}
+      ]
+    },
+    "Push_RO_Liquid_To_PH_Sensor": {
+      "title": "[檢測-PH] 抽取RO水至PH檢測儀",
+      "desp": "",
+      "event": [
+        {"pwm_motor_list": [
+          {"index": 22,"status": 180},
+          {"index": 23,"status": 0},
+          {"index": 14,"status": 0}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 2,"status": 1,"time": 12,"until": "-"}
+        ]},
+        {"pwm_motor_list": [
+          {"index": 21,"status": 90},
+          {"index": 23,"status": 90},
+          {"index": 14,"status": 90}
+        ]}
+      ]
+    },
+    "Clean_Sample_Liquid_Room_To_POOL1_Water": {
+      "title": "檢體暫存水池退回池1",
+      "desp": "",
+      "event": [
+        {"pwm_motor_list": [
+          {"index": 28,"status": 0}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 0,"status": -1,"time": 120,"until": "-"}
+        ]},
+        {"pwm_motor_list": [
+          {"index": 28,"status": 90}
+        ]}
+      ]
+    },
+    "FailAction": {
+      "title": "發出錯誤訊息",
+      "desp": "",
+      "event": [
+        {"fail_action": [
+          {"action": "log", "level": 1, "title": "發現錯誤", "desp": "-"}
+        ]}
       ]
     }
   },
@@ -347,6 +526,24 @@
     "GetROWater_5": {
       "title": "第5次-抽取RO水",
       "same": "GetROWater_1"
+    },
+    "Wash_All_Path_With_RO_1": {
+      "title": "RO水清洗儀器",
+      "desp": "以RO水清洗1. 主管道、2. 混合室、3. 亞硝檢測室與氨氮檢測室",
+      "steps": [
+        "Reset_All_PWM_Motor",
+        "FORWASH_Push_RO_Liquid_To_MixRoom",
+        "Push_MixRoom_To_NO3_SensorRoom",
+        "Push_MixRoom_To_NH4_SensorRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
+        "Clear_NH4_SensorRoom_To_MixRoom",
+        "Clear_MixRoom_40sec",
+        "Clear_MixRoom_40sec"
+      ]
+    },
+    "Wash_All_Path_With_RO_2": {
+      "same": "Wash_All_Path_With_RO_1",
+      "title": "第二次-池水清洗儀器"
     },
     "Wash_All_Path_With_Sample_1": {
       "title": "第一次-池水清洗儀器",
@@ -410,6 +607,7 @@
     "NH4_Original_Value_Get": {
       "title": "氨氮原點檢測",
       "desp": "氨氮原點檢測",
+      "trigger": "allSuccess",
       "steps": [
         "Reset_All_PWM_Motor",
         "FORWASHVALUE__Push_Sample_Liquid_To_MixRoom",
@@ -419,10 +617,54 @@
         "Clear_MixRoom_40sec"
       ]
     },
+    "NH4_Sample_Value_Get": {
+      "title": "氨氮試劑檢測",
+      "desp": "OR水(12.5s)、池水(12.5s)、R1試劑(0.5s)、R2試劑(0.75s)",
+      "steps": [
+        "Reset_All_PWM_Motor",
+        "FORNH4_Push_RO_Liquid_To_MixRoom",
+        "FORNH4_Push_Sample_Liquid",
+        "Push_NH4R1_Liquid_To_MixRoom",
+        "Mix_Liquid_In_MixRoom",
+        "Push_NH4R2_Liquid_To_MixRoom",
+        "Mix_Liquid_In_MixRoom",
+        "Wait_5_Min",
+        "Push_MixRoom_To_NH4_SensorRoom",
+        "NH4_Test_Value_Get",
+        "Clear_NH4_SensorRoom_To_MixRoom",
+        "Clear_MixRoom_40sec"
+      ]
+    },
+    "PH_Value_Get": {
+      "title": "樣本PH數值獲得",
+      "desp": "",
+      "steps": [
+        "Reset_All_PWM_Motor",
+        "Clear_PH_Sensor_To_MixRoom",
+        "Push_Sample_Liquid_To_PH_Sensor",
+        "PH_Value_Get",
+        "Clear_PH_Sensor_To_MixRoom",
+        "Push_RO_Liquid_To_PH_Sensor",
+        "Clear_PH_Sensor_To_MixRoom",
+        "Push_RO_Liquid_To_PH_Sensor"
+      ]
+    },
+    "Return_To_Initial_From_Pool1_State": {
+      "title": "從檢測池1的流程中回歸初始",
+      "desp": "-",
+      "steps": [
+          "Reset_All_PWM_Motor",
+          "Clean_Sample_Liquid_Room_To_POOL1_Water",
+          "Clear_NO3_SensorRoom_To_MixRoom",
+          "Clear_NH4_SensorRoom_To_MixRoom",
+          "Clear_MixRoom_40sec"
+      ]
+    },
     "WhenGetFail": {
       "title": "錯誤偵測",
       "desp": "",
       "steps": [
+        "Reset_All_PWM_Motor",
         "FailAction"
       ],
       "trigger": "oneFail"
@@ -445,6 +687,11 @@
     ["GetROWater_4", ["WhenGetFail", "Wash_All_Path_With_Sample_4"]],
     ["Wash_All_Path_With_Sample_4", ["GetPool1SimpleStep_5", "GetROWater_5"]],
     ["GetPool1SimpleStep_5", ["WhenGetFail", "NH4_Original_Value_Get"]],
-    ["GetROWater_5", ["WhenGetFail", "NH4_Original_Value_Get"]]
+    ["GetROWater_5", ["WhenGetFail", "NH4_Original_Value_Get"]],
+    ["NH4_Original_Value_Get", ["NH4_Sample_Value_Get"]],
+    ["NH4_Sample_Value_Get", ["PH_Value_Get"]],
+    ["PH_Value_Get", ["Return_To_Initial_From_Pool1_State"]],
+    ["Return_To_Initial_From_Pool1_State", ["Wash_All_Path_With_RO_1"]],
+    ["Wash_All_Path_With_RO_1", ["Wash_All_Path_With_RO_2"]]
   ]
 }

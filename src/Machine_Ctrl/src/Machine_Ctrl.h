@@ -35,6 +35,9 @@ struct Peristaltic_task_config {
   int status;
   float time;
   int until;
+  bool timeoutFail = false;
+  long startTime;
+  long endTime;
 };
 
 
@@ -86,7 +89,7 @@ class SMachine_Ctrl
     DynamicJsonDocument *pipelineConfig = new DynamicJsonDocument(65525);
     //? pipelineTaskHandleMap: 記錄了當前正在執行的Step，Key為Step名稱、Value為TaskHandle_t
     std::map<String, TaskHandle_t*> pipelineTaskHandleMap;
-    bool LOAD__ACTION_V2(String pipelineConfigFileFullPath);
+    bool LOAD__ACTION_V2(String pipelineConfigFileFullPath, String onlyStepGroup="", String onlyEvent="");
     void AddNewPiplelineFlowTask(String stepsGroupName);
     void CleanAllStepTask();
     void CreatePipelineFlowScanTask();
