@@ -704,7 +704,8 @@ void LOADED_ACTION(void* parameter)
                 }
               }
               //* 計算ph數值
-              double pHValue = (PH_RowValue - b) / a;
+              // double pHValue = (PH_RowValue - b) / a;
+              double pHValue = 0.0022*PH_RowValue + 1.7498;
 
               if (D_loadedActionJSON["data_type"].as<String>() == "RUN") {
                 (*Machine_Ctrl.sensorDataSave)[poolID]["pH_volt"].set(PH_RowValue);
