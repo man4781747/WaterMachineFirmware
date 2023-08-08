@@ -50,6 +50,7 @@ void setup() {
   Machine_Ctrl.INIT_SPIFFS_config();
   Machine_Ctrl.LoadPiplineConfig();
   Machine_Ctrl.LoadspectrophotometerConfig();
+  Machine_Ctrl.LoadPHmeterConfig();
   Machine_Ctrl.INIT_I2C_Wires();
   Machine_Ctrl.INIT_PoolData();
   

@@ -78,9 +78,12 @@ class SMachine_Ctrl
     //! 儀器基礎設定
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     String spectrophotometerConfigFileFullPath = "/config/spectrophotometer_config.json";
-    DynamicJsonDocument *spectrophotometerConfig = new DynamicJsonDocument(10000);
+    DynamicJsonDocument *spectrophotometerConfig = new DynamicJsonDocument(4000);
     void LoadspectrophotometerConfig();
 
+    String PHmeterConfigFileFullPath = "/config/PHmeter_config.json";
+    DynamicJsonDocument *PHmeterConfig = new DynamicJsonDocument(2000);
+    void LoadPHmeterConfig();
 
     ////////////////////////////////////////////////////
     // For 數值轉換
