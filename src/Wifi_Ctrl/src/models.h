@@ -181,7 +181,7 @@ JsonObject BuildPipelineJSONItem(String S_thisPipelineKey, JsonObject D_thisPipe
  */
 void ws_StopAllActionTask(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
 {
-  // Machine_Ctrl.StopDeviceAndINIT();
+  Machine_Ctrl.StopDeviceAndINIT();
   Machine_Ctrl.CleanAllStepTask();
   Machine_Ctrl.SetLog(
     2,
