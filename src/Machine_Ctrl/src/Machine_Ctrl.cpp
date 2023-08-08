@@ -313,6 +313,11 @@ void SMachine_Ctrl::LoadspectrophotometerConfig()
   LoadJsonConfig(SD, spectrophotometerConfigFileFullPath, *spectrophotometerConfig);
 }
 
+void SMachine_Ctrl::LoadPHmeterConfig()
+{
+  LoadJsonConfig(SD, PHmeterConfigFileFullPath, *PHmeterConfig);
+}
+
 ////////////////////////////////////////////////////
 // For 數值轉換
 ////////////////////////////////////////////////////  
@@ -350,113 +355,12 @@ void PiplelineFlowTask(void* parameter)
   String stepsGroupNameString = String(stepsGroupName);
   ESP_LOGI("", "建立 %s 的 Task", stepsGroupNameString.c_str());
 
-  //TODO 暫時不判斷
-  //? 如果有"same"這個key值，則 steps 要繼承其他設定內容
-  // if ((*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString].containsKey("same")) {
-  //   (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["steps"].set(
-  //     (*Machine_Ctrl.pipelineConfig)["steps_group"][
-  //       (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["same"].as<String>()
-  //     ]["steps"].as<JsonArray>()
-  //   );
-  // }
-  //TODO 暫時不判斷
-
-  //TODO 暫時不判斷
-  // //? 如果沒有"trigger"這個key值，則預設task觸發條件為"allDone"
-  // if (!(*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString].containsKey("trigger")) {
-  //   (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["trigger"].set("allDone");
-  // } else {
-  //   Serial.println((*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["trigger"].as<String>());
-  // }
-  //TODO 暫時不判斷 - END
-
-
   //? 這個 Task 要執行的 steps_group 的 list
   JsonArray stepsGroupArray = (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["steps"].as<JsonArray>();
 
   //? 這個 Task 要執行的 parent list
   JsonObject parentList = (*Machine_Ctrl.pipelineConfig)["pipline"][stepsGroupNameString]["parentList"].as<JsonObject>();
   
-  //TODO 暫時不判斷
-  //? 如果這個Task沒有Parent，則可以直接執行
-  // if (parentList.size() == 0) {
-  // } else {
-  //   //? 如果是 child 擇要等待 Parent 達成條件
-
-  //   //? loopLock: while跑完一圈時，若loopLock是false，則開始執行Task
-  //   bool loopLock = true;
-  //   String TrigerRule = (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["trigger"].as<String>();
-  //   while (loopLock) {
-  //     loopLock = false;
-  //     //? 如果觸發條件是 allDone，則會等待parents都不為 "WAIT"、"RUNNING"、"NORUN" 時則會開始執行
-  //     //? 而若任何一個parent為 "NORUN" 時，則本Task則視為不再需要執行，立刻設定為 "NORUN"，並且刪除Task
-  //     if (TrigerRule == "allDone") {
-  //       for (JsonPair parentItem : parentList ) {
-  //         String parentName = String(parentItem.key().c_str());
-  //         String parentResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
-  //         if (parentResult=="WAIT" or parentResult=="RUNNING") {
-  //           loopLock = true;
-  //         } else if ( parentResult=="NORUN") {
-  //           ESP_LOGW("", "Task不符合 allDone 的執行條件，關閉此Task");
-  //           //! Task完畢必做事項
-  //           (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("NORUN");
-  //           free(stepsGroupName);
-  //           vTaskDelete(NULL);
-  //           //! Task完畢必做事項
-  //         }
-  //       }
-  //     }
-  //     //? 如果觸發條件是 oneFail，則會等待parent任何一項的RESULT變成 "FAIL" 就執行
-  //     //? 而若所有parent都不是 "FAIL" 並且不為 "WAIT"、"RUNNING" 時，則本Task則視為不再需要執行，立刻設定為 "NORUN"，並且刪除Task
-  //     else if (TrigerRule == "oneFail") {
-  //       //? 若跑完for迴圈，norunCheck為true，則代表本Task不可能達成執行條件
-  //       bool norunCheck = true;
-  //       for (JsonPair parentItem : parentList ) {
-  //         String parentName = String(parentItem.key().c_str());
-  //         String parentResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
-  //         if (parentResult=="FAIL") {
-  //           loopLock = false;
-  //           norunCheck = false;
-  //           break;
-  //         } else if (parentResult=="WAIT" or parentResult=="RUNNING") {
-  //           loopLock = true;
-  //           norunCheck = false;
-  //         }
-  //       }
-  //       if (norunCheck) {
-  //         ESP_LOGW("", "Task不符合 oneFail 的執行條件，關閉此Task");
-  //         //! Task完畢必做事項
-  //         (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("NORUN");
-  //         free(stepsGroupName);
-  //         vTaskDelete(NULL);
-  //         //! Task完畢必做事項
-  //       }
-  //     }
-  //     //? 如果觸發條件是 allSuccess，則會等待所有parent的RESULT變成 "SUCCESS" 就執行
-  //     //? 如果任何一個parent為 "WAIT"、"RUNNING"，則繼續等待
-  //     //? 如果任何一個parent為 "NORUN"、、"FAIL" 時，則本Task則視為不再需要執行，立刻設定為 "NORUN"，並且刪除Task
-  //     else if (TrigerRule == "allSuccess") {
-  //       for (JsonPair parentItem : parentList ) {
-  //         String parentName = String(parentItem.key().c_str());
-  //         String parentResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
-  //         if (parentResult=="NORUN" or parentResult=="FAIL") {
-  //           ESP_LOGW("", "Task不符合 allSuccess 的執行條件，關閉此Task");
-  //           //! Task完畢必做事項
-  //           (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("NORUN");
-  //           free(stepsGroupName);
-  //           vTaskDelete(NULL);
-  //           //! Task完畢必做事項
-  //         } else if (parentResult=="WAIT" or parentResult=="RUNNING") {
-  //           loopLock = true;
-  //         }
-  //       }
-  //     }
-  //     vTaskDelay(100);
-  //   }
-  //   // ESP_LOGI("", "%s 的 parent都執行完畢，準備執行", stepsGroupNameString.c_str());
-  // }
-  //TODO 暫時不判斷 - END
-
   for (String eventChose : stepsGroupArray) {
     //? eventChose: 待執行的event名稱
     ESP_LOGI("", " 執行: %s - %s", stepsGroupNameString.c_str(), eventChose.c_str());
@@ -590,6 +494,9 @@ void PiplelineFlowTask(void* parameter)
       }
       //! 分光光度計控制設定
       else if (eventItem.containsKey("spectrophotometer_list")) {
+        //? targetFail: 若光度計測量途中，遇到錯誤則此值為true，而後會觸發錯誤
+        bool targetFail = true;
+
         // JsonObject spectrophotometerConfig = 
         for (JsonObject spectrophotometerItem : eventItem["spectrophotometer_list"].as<JsonArray>()) {
           int spectrophotometerIndex = spectrophotometerItem["index"].as<int>();
@@ -602,6 +509,7 @@ void PiplelineFlowTask(void* parameter)
           String GainStr = spectrophotometerItem["gain"].as<String>();
           String targetChannel = spectrophotometerItem["channel"].as<String>();
           String value_name = spectrophotometerItem["value_name"].as<String>();
+          String poolChose = spectrophotometerItem["pool"].as<String>();
           int targetLevel = spectrophotometerItem["target"].as<int>();
           double dilutionValue = spectrophotometerItem["dilution"].as<String>().toDouble();
           ESP_LOGI("LOADED_ACTION","       - (%d)%s 測量倍率: %s, 指定頻道: %s, 稀釋倍率: %s, 並紀錄為: %s",
@@ -611,9 +519,9 @@ void PiplelineFlowTask(void* parameter)
           Machine_Ctrl.WireOne.beginTransmission(0x70);
           Machine_Ctrl.WireOne.write(1 << spectrophotometerIndex);
           Machine_Ctrl.WireOne.endTransmission();
-          vTaskDelay(1000/portTICK_PERIOD_MS);
+          vTaskDelay(500/portTICK_PERIOD_MS);
           Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(spectrophotometerIndex);
-          vTaskDelay(1000/portTICK_PERIOD_MS);
+          vTaskDelay(500/portTICK_PERIOD_MS);
 
           //? 依放大倍率設定調整
           if (GainStr == "1X") {
@@ -657,8 +565,6 @@ void PiplelineFlowTask(void* parameter)
           //? 反之，則為測量0ppm並將光強度調整至指定數值
           else {
             ESP_LOGI("LOADED_ACTION","         * 調整可變電阻，直到數值接近: %d", targetLevel);
-            //? targetFail: 若光度計測量途中，遇到錯誤則此值為true，而後會觸發錯誤
-            bool targetFail = true;
             for (int i=0;i<256;i++) {
               Machine_Ctrl.WireOne.beginTransmission(0x2F);
               Machine_Ctrl.WireOne.write(0b00000000);
@@ -688,32 +594,94 @@ void PiplelineFlowTask(void* parameter)
             }
             CH0_result = (double)sensorData.CH_0;
             CH1_result = (double)sensorData.CH_1;
-            if (targetFail) {
-              (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
-              Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
-              Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
-              free(stepsGroupName);
-              vTaskDelete(NULL);
-            }
           }
           Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
           
-          Serial.println(bValue);
-          Serial.println(mValue);
-
           CH0_after = (-log10(CH0_result/50000.)-bValue)/mValue * dilutionValue;
           CH1_after = (-log10(CH1_result/50000.)-bValue)/mValue * dilutionValue;
 
+          //? 接下來依照 value_name 的不同分成不同行為
+          if (value_name == "NO2_wash_volt") {
+            //? 亞硝酸鹽清洗數值記錄
+            if (targetChannel == "CH0") {
+              (*Machine_Ctrl.sensorDataSave)[poolChose]["NO2_wash_volt"].set(CH0_result);
+            } else {
+              (*Machine_Ctrl.sensorDataSave)[poolChose]["NO2_wash_volt"].set(CH1_result);
+            }
+          }
+          else if (value_name == "NO2_test_volt") {
+            //? 亞硝酸鹽樣本數值記錄
+            if (targetChannel == "CH0") {
+              (*Machine_Ctrl.sensorDataSave)[poolChose]["NO2_test_volt"].set(CH0_result);
+              (*Machine_Ctrl.sensorDataSave)[poolChose]["NO2"].set(CH0_after);
+            } else {
+              (*Machine_Ctrl.sensorDataSave)[poolChose]["NO2_test_volt"].set(CH1_result);
+              (*Machine_Ctrl.sensorDataSave)[poolChose]["NO2"].set(CH1_after);
+            }
+          }
+          else if (value_name == "NH4_wash_volt") {
+            //? 亞硝酸鹽樣本數值記錄
+            if (targetChannel == "CH0") {
+              (*Machine_Ctrl.sensorDataSave)[poolChose]["NH4_wash_volt"].set(CH0_result);
+            } else {
+              (*Machine_Ctrl.sensorDataSave)[poolChose]["NH4_wash_volt"].set(CH1_result);
+            }
+          }
+          else if (value_name == "NH4_test_volt") {
+            //? 亞硝酸鹽樣本數值記錄
+            if (targetChannel == "CH0") {
+              (*Machine_Ctrl.sensorDataSave)[poolChose]["NH4_test_volt"].set(CH0_result);
+              (*Machine_Ctrl.sensorDataSave)[poolChose]["NH4"].set(CH0_after);
+            } else {
+              (*Machine_Ctrl.sensorDataSave)[poolChose]["NH4_test_volt"].set(CH1_result);
+              (*Machine_Ctrl.sensorDataSave)[poolChose]["NH4"].set(CH1_after);
+            }
+          }
 
           Serial.println(CH0_result);
           Serial.println(CH1_result);
           Serial.println(CH0_after);
           Serial.println(CH1_after);
+        }
+        Machine_Ctrl.WireOne.beginTransmission(0x70);
+        Machine_Ctrl.WireOne.write(1 << 7);
+        Machine_Ctrl.WireOne.endTransmission();
+        vTaskDelay(500/portTICK_PERIOD_MS);
+        Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
+        vTaskDelay(500/portTICK_PERIOD_MS);
 
+        if (targetFail) {
+          (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
+          Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
+          Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
+          free(stepsGroupName);
+          vTaskDelete(NULL);
         }
       }
       else if (eventItem.containsKey("ph_meter")) {
         // Serial.println("ph_meter");
+        //TODO 目前因為水質機只會有一個PH計，因此先以寫死的方式來做
+        ESP_LOGI("LOADED_ACTION","      PH計控制");
+        for (JsonObject PHmeterItem : eventItem["ph_meter"].as<JsonArray>()) {
+          pinMode(15, INPUT);
+          pinMode(7, OUTPUT);
+          digitalWrite(7, HIGH);
+          vTaskDelay(1000/portTICK_PERIOD_MS);
+          String poolChose = PHmeterItem["pool"].as<String>();
+          uint16_t phValue[30];
+          for (int i=0;i<30;i++) {
+            phValue[i] = analogRead(15);
+          }
+          //* 原始電壓數值獲得
+          double PH_RowValue = afterFilterValue(phValue, 30);
+          double m = (*Machine_Ctrl.PHmeterConfig)[0]["calibration"][0]["ret"]["m"].as<String>().toDouble();
+          double b = (*Machine_Ctrl.PHmeterConfig)[0]["calibration"][0]["ret"]["b"].as<String>().toDouble();
+          double pHValue = m*PH_RowValue + b;
+          (*Machine_Ctrl.sensorDataSave)[poolChose]["pH_volt"].set(PH_RowValue);
+          (*Machine_Ctrl.sensorDataSave)[poolChose]["pH"].set(pHValue);
+          digitalWrite(7, LOW);
+        }
+
       }
       else if (eventItem.containsKey("wait")) {
       }
@@ -730,6 +698,8 @@ void PiplelineFlowTask(void* parameter)
     }
     vTaskDelay(10);
   }
+
+
 
   (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("SUCCESS");
   Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
@@ -886,8 +856,12 @@ void PipelineFlowScan(void* parameter)
     vTaskDelay(100/portTICK_PERIOD_MS);
   }
 
-  ESP_LOGI("", "所有流程已執行完畢");
   Machine_Ctrl.TASK__pipelineFlowScan = NULL;
+  ESP_LOGI("", "所有流程已執行完畢");
+  vTaskDelay(100/portTICK_PERIOD_MS);
+  Machine_Ctrl.SetLog(
+    3, "所有流程已執行完畢", (*Machine_Ctrl.pipelineConfig)["Title"].as<String>(), Machine_Ctrl.BackendServer.ws_, NULL
+  );
   vTaskDelete(NULL);
 }
 //? 建立Pipeline排程的控制Task
