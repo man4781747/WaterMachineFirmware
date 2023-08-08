@@ -39,7 +39,7 @@
 
 void testWeb(int index, int type, String desp);
 
-const char* FIRMWARE_VERSION = "V2.23.73.2";
+const char* FIRMWARE_VERSION = "V2.23.82.1";
 
 void scanI2C();
 

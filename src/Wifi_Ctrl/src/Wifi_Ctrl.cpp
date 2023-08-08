@@ -156,7 +156,7 @@ DynamicJsonDocument CWIFI_Ctrler::GetBaseWSReturnData(String MessageString)
   BaseWSReturnData["action"]["status"].set("看到這行代表API設定時忘記設定本項目了，請通知工程師修正，謝謝");
   BaseWSReturnData.createNestedObject("parameter");
   BaseWSReturnData["cmd_detail"].set(MessageString);
-  if (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
+  if (Machine_Ctrl.TASK__NOW_ACTION != NULL | Machine_Ctrl.TASK__pipelineFlowScan != NULL) {
     BaseWSReturnData["device_status"].set("Busy");
   } else {
     BaseWSReturnData["device_status"].set("Idle");
@@ -657,10 +657,10 @@ void CWIFI_Ctrler::setAPIs()
         Serial.printf("檔案 %s 接收完成， len: %d ，共 %d/%d bytes\n", filename.c_str(), len ,index + len, request->contentLength());
         newConfigUpdateFileBufferLen = index + len;
 
-        // File configTempFile;
-        // configTempFile = SD.open("/config/event_config_upload_temp.json", FILE_WRITE);
-        // configTempFile.write(newConfigUpdateFileBuffer ,index + len);
-        // configTempFile.close();
+        File configTempFile;
+        configTempFile = SD.open("/pipelines/"+filename, FILE_WRITE);
+        configTempFile.write(newConfigUpdateFileBuffer ,index + len);
+        configTempFile.close();
 
       } 
       else {

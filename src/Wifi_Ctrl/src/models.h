@@ -2124,18 +2124,27 @@ void ws_v2_RunPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
   // Serial.println(TargetName);
   String FullFilePath = "/pipelines/"+TargetName+".json";
   if (SD.exists(FullFilePath)) {
-    if (Machine_Ctrl.LOAD__ACTION_V2(FullFilePath, stepChose, eventChose)) {
-      Machine_Ctrl.SetLog(
-        5,
-        "即將執行流程",
-        "流程設定讀取成功",
-        NULL, client, false
-      );
+    if (Machine_Ctrl.TASK__pipelineFlowScan == NULL) {
+      if (Machine_Ctrl.LOAD__ACTION_V2(FullFilePath, stepChose, eventChose)) {
+        Machine_Ctrl.SetLog(
+          5,
+          "即將執行流程",
+          "流程設定讀取成功",
+          NULL, client, false
+        );
+      } else {
+        Machine_Ctrl.SetLog(
+          1,
+          "流程設定失敗",
+          "檔案讀取失敗",
+          NULL, client, false
+        );
+      }
     } else {
       Machine_Ctrl.SetLog(
         1,
         "流程設定失敗",
-        "檔案讀取失敗",
+        "儀器忙碌中，請稍後",
         NULL, client, false
       );
     }
@@ -2147,6 +2156,11 @@ void ws_v2_RunPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
       NULL, client, false
     );
   }
+
+
+
+
+  
 }
 
 
