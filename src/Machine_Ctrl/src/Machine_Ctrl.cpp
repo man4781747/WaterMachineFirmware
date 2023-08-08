@@ -65,6 +65,12 @@ void SMachine_Ctrl::INIT_SD_Card()
     ESP_LOGE("SD", "initialization failed!");
   } else {
     ESP_LOGV("SD", "initialization done.");
+
+    // SdFile::dateTimeCallback();
+
+
+
+
   }
 }
 
@@ -144,7 +150,7 @@ bool SMachine_Ctrl::LoadJsonConfig(fs::FS& fileSystem, String FilePath, JsonDocu
 
 void SMachine_Ctrl::LoadPiplineConfig()
 {
-  serializeJsonPretty(ExFile_listDir(SD,"/pipelines"), Serial);
+  // serializeJsonPretty(ExFile_listDir(SD,"/pipelines"), Serial);
   if (
     LoadJsonConfig(SD, SD__piplineConfigsFileFullPath, *(spiffs.DeviceSetting)) == false
   ) {
@@ -346,13 +352,13 @@ void PiplelineFlowTask(void* parameter)
 
   //TODO 暫時不判斷
   //? 如果有"same"這個key值，則 steps 要繼承其他設定內容
-  if ((*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString].containsKey("same")) {
-    (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["steps"].set(
-      (*Machine_Ctrl.pipelineConfig)["steps_group"][
-        (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["same"].as<String>()
-      ]["steps"].as<JsonArray>()
-    );
-  }
+  // if ((*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString].containsKey("same")) {
+  //   (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["steps"].set(
+  //     (*Machine_Ctrl.pipelineConfig)["steps_group"][
+  //       (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["same"].as<String>()
+  //     ]["steps"].as<JsonArray>()
+  //   );
+  // }
   //TODO 暫時不判斷
 
   //TODO 暫時不判斷
@@ -651,6 +657,8 @@ void PiplelineFlowTask(void* parameter)
           //? 反之，則為測量0ppm並將光強度調整至指定數值
           else {
             ESP_LOGI("LOADED_ACTION","         * 調整可變電阻，直到數值接近: %d", targetLevel);
+            //? targetFail: 若光度計測量途中，遇到錯誤則此值為true，而後會觸發錯誤
+            bool targetFail = true;
             for (int i=0;i<256;i++) {
               Machine_Ctrl.WireOne.beginTransmission(0x2F);
               Machine_Ctrl.WireOne.write(0b00000000);
@@ -662,6 +670,7 @@ void PiplelineFlowTask(void* parameter)
                 if (sensorData.CH_0 >= targetLevel) {
                   ESP_LOGI("LOADED_ACTION","      CH0 已將強度調整為:%d", sensorData.CH_0);
                   spectrophotometerConfigChose["level"].set(i);
+                  targetFail = false;
                   //TODO 記得加上重寫 spectrophotometerConfig 檔案的功能
                   break;
                 }
@@ -671,6 +680,7 @@ void PiplelineFlowTask(void* parameter)
                 if (sensorData.CH_1 >= targetLevel) {
                   ESP_LOGI("LOADED_ACTION","      CH1 已將強度調整為:%d", sensorData.CH_1);
                   spectrophotometerConfigChose["level"].set(i);
+                  targetFail = false;
                   //TODO 記得加上重寫 spectrophotometerConfig 檔案的功能
                   break;
                 }
@@ -678,6 +688,13 @@ void PiplelineFlowTask(void* parameter)
             }
             CH0_result = (double)sensorData.CH_0;
             CH1_result = (double)sensorData.CH_1;
+            if (targetFail) {
+              (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
+              Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
+              Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
+              free(stepsGroupName);
+              vTaskDelete(NULL);
+            }
           }
           Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
           
@@ -1378,7 +1395,8 @@ void LOADED_ACTION(void* parameter)
                 }
               }
               //* 計算ph數值
-              double pHValue = (PH_RowValue - b) / a;
+              // double pHValue = (PH_RowValue - b) / a;
+              double pHValue = 0.0022*PH_RowValue + 1.7498;
 
               if (D_loadedActionJSON["data_type"].as<String>() == "RUN") {
                 (*Machine_Ctrl.sensorDataSave)[poolID]["pH_volt"].set(PH_RowValue);
