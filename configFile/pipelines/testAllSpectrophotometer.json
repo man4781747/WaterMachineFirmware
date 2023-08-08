@@ -1,0 +1,94 @@
+{
+  "title": "測試所有光度檢測模組",
+  "desp": "注意! 同時只能操作一個光度模組",
+  "events": {
+    "GetNO3WashValue": {
+      "title": "亞硝酸鹽清洗數值獲得",
+      "desp": "基準: 50000",
+      "event": [
+        {"spectrophotometer_list": [
+          {"index": 1,"gain": "96X","channel": "CH1","value_name": "NO2_wash_volt","target": 50000,"dilution": 10}
+        ]}
+      ]
+    },
+    "GetNO3WashValueWarning": {
+      "title": "亞硝酸鹽清洗數值異常",
+      "desp": "",
+      "event": [
+        {"log":{"level": 2, "title": "亞硝酸鹽清洗數值測量過成功，調整光強度過程中，強度無法達到要求數值", "desp": "要求數值: 50000"}}
+      ]
+    },
+    "NO3TestValueGet": {
+      "title": "亞硝酸鹽量測數值獲得",
+      "desp": "吸光度A0數值以50000記",
+      "event": [
+        {"spectrophotometer_list": [
+          {"index": 1,"gain": "96X","channel": "CH1","value_name": "NO2_test_volt","target": -1,"dilution": 10}
+        ]}
+      ]
+    },
+    "GetNH4WashValue": {
+      "title": "氨氮清洗數值獲得",
+      "desp": "基準: 50000",
+      "event": [
+        {"spectrophotometer_list": [
+          {"index": 0,"gain": "48X","channel": "CH0","value_name": "NH4_wash_volt","target": 50000,"dilution": 2}
+        ]}
+      ]
+    },
+    "GetNH4WashValueWarning": {
+      "title": "氨氮清洗數值異常",
+      "desp": "",
+      "event": [
+        {"log":{"level": 2, "title": "氨氮清洗數值測量過成功，調整光強度過程中，強度無法達到要求數值", "desp": "要求數值: 50000"}}
+      ]
+    },
+    "NH4TestValueGet": {
+      "title": "氨氮量測數值獲得",
+      "desp": "吸光度A0數值以50000記",
+      "event": [
+        {"spectrophotometer_list": [
+          {"index": 0,"gain": "48X","channel": "CH0","value_name": "NH4_test_volt","target": -1,"dilution": 2}
+        ]}
+      ]
+    }
+  },
+  "steps_group": {
+    "NO3Test": {
+      "title": "亞硝酸鹽測試",
+      "desp": "",
+      "steps": [
+        "GetNO3WashValue",
+        "NO3TestValueGet"
+      ]
+    },
+    "NO3TestWarning": {
+      "title": "亞硝酸鹽清洗數值異常警告",
+      "desp": "",
+      "trigger": "oneFail",
+      "steps": [
+        "GetNO3WashValueWarning"
+      ]
+    },
+    "NH4Test": {
+      "title": "氨氮測試",
+      "desp": "",
+      "steps": [
+        "GetNH4WashValue",
+        "NH4TestValueGet"
+      ]
+    },
+    "NH4TestWarning": {
+      "title": "氨氮清洗數值異常警告",
+      "desp": "",
+      "trigger": "oneFail",
+      "steps": [
+        "GetNH4WashValueWarning"
+      ]
+    }
+  },
+  "pipline": [
+    ["NO3Test", ["NH4Test","NO3TestWarning"]],
+    ["NH4Test", ["NH4TestWarning"]]
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "title": "測試所有伺服馬達",
+  "desp": "",
+  "events": {
+    "ResetAllServoMotor": {
+      "title": "伺服馬達全數歸位",
+      "desp": "",
+      "event": [
+        {"pwm_motor_list": [
+          {"index": 28,"status": 90},
+          {"index": 29,"status": 90},
+          {"index": 30,"status": 90},
+          {"index": 31,"status": 90},
+          {"index": 23,"status": 90},
+          {"index": 22,"status": 90},
+          {"index": 21,"status": 90},
+          {"index": 20,"status": 90},
+          {"index": 7,"status": 90},
+          {"index": 6,"status": 90},
+          {"index": 5,"status": 90},
+          {"index": 4,"status": 90},
+          {"index": 11,"status": 0 },
+          {"index": 12,"status": 90},
+          {"index": 13,"status": 90},
+          {"index": 14,"status": 90},
+          {"index": 15,"status": 90}
+        ]}
+      ]
+    },
+    "RunAllServoMotor": {
+      "title": "伺服馬達測試",
+      "desp": "",
+      "event": [
+        {"pwm_motor_list": [
+          {"index": 28,"status": 0},
+          {"index": 29,"status": 0},
+          {"index": 30,"status": 0},
+          {"index": 31,"status": 0},
+          {"index": 23,"status": 0},
+          {"index": 22,"status": 0},
+          {"index": 21,"status": 0},
+          {"index": 20,"status": 0},
+          {"index": 7,"status": 0},
+          {"index": 6,"status": 0},
+          {"index": 5,"status": 0},
+          {"index": 4,"status": 0},
+          {"index": 11,"status": 0 },
+          {"index": 12,"status": 0},
+          {"index": 13,"status": 0},
+          {"index": 14,"status": 0},
+          {"index": 15,"status": 0}
+        ]},
+        {"pwm_motor_list": [
+          {"index": 28,"status": 90},
+          {"index": 29,"status": 90},
+          {"index": 30,"status": 90},
+          {"index": 31,"status": 90},
+          {"index": 23,"status": 90},
+          {"index": 22,"status": 90},
+          {"index": 21,"status": 90},
+          {"index": 20,"status": 90},
+          {"index": 7,"status": 90},
+          {"index": 6,"status": 90},
+          {"index": 5,"status": 90},
+          {"index": 4,"status": 90},
+          {"index": 11,"status": 90},
+          {"index": 12,"status": 90},
+          {"index": 13,"status": 90},
+          {"index": 14,"status": 90},
+          {"index": 15,"status": 90}
+        ]},
+        {"pwm_motor_list": [
+          {"index": 28,"status": 180},
+          {"index": 29,"status": 180},
+          {"index": 30,"status": 180},
+          {"index": 31,"status": 180},
+          {"index": 23,"status": 180},
+          {"index": 22,"status": 180},
+          {"index": 21,"status": 180},
+          {"index": 20,"status": 180},
+          {"index": 7,"status": 180},
+          {"index": 6,"status": 180},
+          {"index": 5,"status": 180},
+          {"index": 4,"status": 180},
+          {"index": 11,"status": 180},
+          {"index": 12,"status": 180},
+          {"index": 13,"status": 180},
+          {"index": 14,"status": 180},
+          {"index": 15,"status": 180}
+        ]}
+      ]
+    }
+  },
+  "steps_group": {
+    "TestAllServoMotor": {
+      "title": "測試所有伺服馬達",
+      "desp": "-",
+      "steps": [
+        "RunAllServoMotor"
+      ]
+    },
+    "End": {
+      "title": "儀器初始化",
+      "desp": "馬達回歸原點",
+      "steps": [
+        "ResetAllServoMotor"
+      ]
+    }
+  },
+  "pipline": [
+    ["TestAllServoMotor", ["End"]]
+  ]
+}
