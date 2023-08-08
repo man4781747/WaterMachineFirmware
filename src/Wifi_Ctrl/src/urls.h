@@ -100,7 +100,7 @@ void setAPI(CWIFI_Ctrler &WIFI_Ctrler)
   WIFI_Ctrler.AddWebsocketAPI("/api/Pipeline", "POST", &ws_AddNewPipelineInfo);
 
   //! 流程設定V2
-  WIFI_Ctrler.AddWebsocketAPI("/api/Pipeline/(<name>.*)/RUN", "GET", &ws_v2_RunPipeline);
+  WIFI_Ctrler.AddWebsocketAPI("/api/v2/Pipeline/(<name>.*)/RUN", "GET", &ws_v2_RunPipeline);
 
 
 }
