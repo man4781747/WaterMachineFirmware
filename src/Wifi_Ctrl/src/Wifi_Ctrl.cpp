@@ -628,6 +628,49 @@ void CWIFI_Ctrler::setAPIs()
     }
   );
 
+  asyncServer.on("/api/pipeline/config", HTTP_POST, 
+    [&](AsyncWebServerRequest *request)
+    { 
+      String FileContent = String(newConfigUpdateFileBuffer ,newConfigUpdateFileBufferLen);
+      free(newConfigUpdateFileBuffer);
+      DynamicJsonDocument NewDeviceSetting(300000);
+      DeserializationError error = deserializeJson(NewDeviceSetting, FileContent);
+      if (error) {
+        Serial.print("deserializeJson() failed: ");
+        Serial.println(error.f_str());
+        AsyncWebServerResponse* response = request->beginResponse(400, "application/json", "{\"Result\":\"FAIL\"}");
+        SendHTTPesponse(request, response);
+      }
+      else {
+        AsyncWebServerResponse* response = request->beginResponse(200, "application/json", FileContent);
+        SendHTTPesponse(request, response);
+      }
+
+    },
+    [&](AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+    {
+      if (index == 0) {
+        newConfigUpdateFileBuffer = (uint8_t *)malloc(request->contentLength());
+      }
+      memcpy(newConfigUpdateFileBuffer + index, data, len);
+      if (final) {
+        Serial.printf("檔案 %s 接收完成， len: %d ，共 %d/%d bytes\n", filename.c_str(), len ,index + len, request->contentLength());
+        newConfigUpdateFileBufferLen = index + len;
+
+        // File configTempFile;
+        // configTempFile = SD.open("/config/event_config_upload_temp.json", FILE_WRITE);
+        // configTempFile.write(newConfigUpdateFileBuffer ,index + len);
+        // configTempFile.close();
+
+      } 
+      else {
+        Serial.printf("檔案 %s 正在傳輸， len: %d ，目前已接收 %d/%d bytes\n", filename.c_str(), len, index + len, request->contentLength());
+      }
+    }
+  );
+
+
+
   asyncServer.on("/api/piplines", HTTP_GET, [&](AsyncWebServerRequest *request){
 
     String pipelineFilesList;
