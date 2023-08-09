@@ -34,10 +34,13 @@
         {"pwm_motor_list": [
           {"index": 11,"status": 180},
           {"index": 12,"status": 90 },
-          {"index": 13,"status": 0  }
+          {"index": 13,"status": 0}
         ]},
         {"peristaltic_motor_list": [
           {"index": 3,"status": -1,"time": 13,"until": "-"}
+        ]},
+        {"pwm_motor_list": [
+          {"index": 13,"status": 90}
         ]}
       ]
     },
@@ -51,6 +54,9 @@
         ]},
         {"peristaltic_motor_list": [
           {"index": 3,"status": -1,"time": 20,"until": "-"}
+        ]},
+        {"pwm_motor_list": [
+          {"index": 12,"status": 90}
         ]}
       ]
     },
@@ -82,9 +88,6 @@
       "title": "抽取RO水",
       "desp": "",
       "event": [
-        {"pwm_motor_list": [
-          {"index": 28,"status": 0}
-        ]},
         {"peristaltic_motor_list": [
           {"index": 1,"status": 1,"time": 120,"until": "RO", "timeoutFail": true}
         ]}

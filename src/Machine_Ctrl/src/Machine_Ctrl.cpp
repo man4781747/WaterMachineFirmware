@@ -302,6 +302,7 @@ void SMachine_Ctrl::StopDeviceAndINIT()
   }
   Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
   MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
+  digitalWrite(48, LOW);
 }
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -352,8 +353,13 @@ void PiplelineFlowTask(void* parameter)
   //! TASK 有以下數種狀態
   //! 1. WAIT、2. NORUN、3. FAIL、4. SUCCESS、5. RUNNING 
   char* stepsGroupName = (char*)parameter;
+  String ThisPipelineTitle = (*Machine_Ctrl.pipelineConfig)["title"].as<String>();
   String stepsGroupNameString = String(stepsGroupName);
-  ESP_LOGI("", "建立 %s 的 Task", stepsGroupNameString.c_str());
+  String ThisStepGroupTitle = (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["title"].as<String>();
+  ESP_LOGI("", "建立 %s 的 Task", ThisStepGroupTitle.c_str());
+  Machine_Ctrl.SetLog(
+    3, "執行流程: "+ThisStepGroupTitle,"Pipeline: "+ThisPipelineTitle, Machine_Ctrl.BackendServer.ws_, NULL
+  );
 
   //? 這個 Task 要執行的 steps_group 的 list
   JsonArray stepsGroupArray = (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["steps"].as<JsonArray>();
@@ -363,7 +369,12 @@ void PiplelineFlowTask(void* parameter)
   
   for (String eventChose : stepsGroupArray) {
     //? eventChose: 待執行的event名稱
-    ESP_LOGI("", " 執行: %s - %s", stepsGroupNameString.c_str(), eventChose.c_str());
+
+    String thisEventTitle = (*Machine_Ctrl.pipelineConfig)["events"][eventChose]["title"].as<String>();
+
+    ESP_LOGI("", " 執行: %s - %s", ThisStepGroupTitle.c_str(), thisEventTitle.c_str());
+    Machine_Ctrl.SetLog(3, "執行事件: "+thisEventTitle,"流程: "+ThisStepGroupTitle, Machine_Ctrl.BackendServer.ws_, NULL);
+
     JsonArray eventList = (*Machine_Ctrl.pipelineConfig)["events"][eventChose]["event"].as<JsonArray>();
     String taskResult = "SUCCESS";
     for (JsonObject eventItem : eventList) {
@@ -372,10 +383,10 @@ void PiplelineFlowTask(void* parameter)
         pinMode(4, OUTPUT);
         digitalWrite(4, HIGH);
         for (JsonObject pwmMotorItem : eventItem["pwm_motor_list"].as<JsonArray>()) {
-          ESP_LOGI("LOADED_ACTION","       - %d 轉至 %d 度", 
-            pwmMotorItem["index"].as<int>(), 
-            pwmMotorItem["status"].as<int>()
-          );
+          // ESP_LOGI("LOADED_ACTION","       - %d 轉至 %d 度", 
+          //   pwmMotorItem["index"].as<int>(), 
+          //   pwmMotorItem["status"].as<int>()
+          // );
           Machine_Ctrl.motorCtrl.SetMotorTo(pwmMotorItem["index"].as<int>(), pwmMotorItem["status"].as<int>());
           vTaskDelay(50/portTICK_PERIOD_MS);
         }
@@ -384,6 +395,8 @@ void PiplelineFlowTask(void* parameter)
       }
       //! 蠕動馬達控制設定
       else if (eventItem.containsKey("peristaltic_motor_list")) {
+        pinMode(48, OUTPUT);
+        digitalWrite(48, HIGH);
         // DynamicJsonDocument *loadedAction = new DynamicJsonDocument(1000000);
         //? endTimeCheckList: 記錄各蠕動馬達最大運行結束時間
         DynamicJsonDocument endTimeCheckList(10000);
@@ -425,7 +438,8 @@ void PiplelineFlowTask(void* parameter)
           }
           endTimeCheckList[motorIndexString]["startTime"] = millis();
           endTimeCheckList[motorIndexString]["endTime"] = millis() + (long)(runTime*1000);
-
+          Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(motorIndex, ststus);
+          Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
           // Peristaltic_task_config config_;
           // config_.index = peristalticMotorItem["peristaltic_motor"]["index"].as<int>();
           // config_.status = peristalticMotorItem["status"].as<int>() == 1 ? PeristalticMotorStatus::FORWARD : PeristalticMotorStatus::REVERSR;
@@ -456,6 +470,7 @@ void PiplelineFlowTask(void* parameter)
             allFinish = false;
             long endTime = endTimeCheckJSON["endTime"].as<long>();
             int until = endTimeCheckJSON["until"].as<int>();
+            int motorIndex = endTimeCheckJSON["index"].as<int>();
             //? 若馬達執行時間達到最大時間
             if (millis() >= endTime) {
             // if (millis() >= 0) {  // timeout測試
@@ -464,7 +479,8 @@ void PiplelineFlowTask(void* parameter)
                 ESP_LOGE("", "蠕動馬達Timeout錯誤，停止step");
                 for (const auto& motorChose : endTimeCheckList.as<JsonObject>()) {
                   //? 強制停止當前step執行的馬達
-                  //TODO 記得加上馬達控制停止
+                  Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(motorIndex, PeristalticMotorStatus::STOP);
+                  Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
                 }
                 endTimeCheckJSON["finish"].set(true);
                 (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
@@ -474,7 +490,8 @@ void PiplelineFlowTask(void* parameter)
                 vTaskDelete(NULL);
               }
               //? 若非，則正常停止馬達運行
-              //TODO 記得加上馬達控制停止
+              Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(motorIndex, PeristalticMotorStatus::STOP);
+              Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
               ESP_LOGV("", "蠕動馬達執行至最大時間");
               endTimeCheckJSON["finish"].set(true);
             }
@@ -483,7 +500,8 @@ void PiplelineFlowTask(void* parameter)
               pinMode(until, INPUT);
               int value = digitalRead(until);
               if (value == HIGH) {
-                //TODO 記得加上馬達控制停止
+                Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(motorIndex, PeristalticMotorStatus::STOP);
+                Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
                 ESP_LOGV("", "浮球觸發，關閉蠕動馬達");
                 endTimeCheckJSON["finish"].set(true);
               }
@@ -491,6 +509,7 @@ void PiplelineFlowTask(void* parameter)
             vTaskDelay(100);
           }
         }
+        digitalWrite(48, LOW);
       }
       //! 分光光度計控制設定
       else if (eventItem.containsKey("spectrophotometer_list")) {
@@ -722,7 +741,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
     (*pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("RUNNING");
     xReturned = xTaskCreate(
       PiplelineFlowTask, NULL,
-      6000, (void*)charPtr, 3, thisTaskHandle_t
+      10000, (void*)charPtr, 3, thisTaskHandle_t
     );
     if (xReturned != pdPASS) {
       Serial.println("Create Fail");
@@ -872,7 +891,7 @@ void SMachine_Ctrl::CreatePipelineFlowScanTask()
       PipelineFlowScan, "PipelineScan",
       5000, NULL, 4, &TASK__pipelineFlowScan
     );
-    vTaskDelay(100);
+    vTaskDelay(500);
   }
   else {
 
@@ -1589,6 +1608,8 @@ void SMachine_Ctrl::Stop_AllPeristalticMotor()
 // For 互動相關
 ////////////////////////////////////////////////////
 
+SemaphoreHandle_t SetLog_xMutex = xSemaphoreCreateMutex();
+
 /**
  * @brief 
  * 
@@ -1607,27 +1628,31 @@ DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String descri
   logItem["time"].set(timeString);
   logItem["title"].set(Title);
   logItem["desp"].set(description);
-  serializeJsonPretty(logItem, Serial);
+  // serializeJsonPretty(logItem, Serial);
   if (Save==true) {
-    String logFileFullPath = LogFolder + GetDateString("") + "_log.csv";
-    File logFile;
-    if (SD.exists(logFileFullPath)) {
-      logFile = SD.open(logFileFullPath, FILE_APPEND);
-    } else {
-      ExSD_CreateFile(SD, logFileFullPath);
-      logFile = SD.open(logFileFullPath, FILE_APPEND);
-      logFile.print("\xEF\xBB\xBF");
-    }
-    Serial.println("Write");
-    logFile.printf("%d,%s,%s,%s\n",
-      Level, timeString.c_str(),
-      Title.c_str(), description.c_str()
-    );
-    logFile.close();
+    // vTaskDelay(10);
+    if (xSemaphoreTake(SetLog_xMutex, portMAX_DELAY) == pdTRUE) {
+      String logFileFullPath = LogFolder + GetDateString("") + "_log.csv";
+      File logFile;
+      if (SD.exists(logFileFullPath)) {
+        logFile = SD.open(logFileFullPath, FILE_APPEND);
+      } else {
+        ExSD_CreateFile(SD, logFileFullPath);
+        logFile = SD.open(logFileFullPath, FILE_APPEND);
+        logFile.print("\xEF\xBB\xBF");
+      }
+      // Serial.println("Write");
+      logFile.printf("%d,%s,%s,%s\n",
+        Level, timeString.c_str(),
+        Title.c_str(), description.c_str()
+      );
+      logFile.close();
+      xSemaphoreGive(SetLog_xMutex);
+      (*Machine_Ctrl.DeviceLogSave)["Log"].add(logItem);
+      if ((*Machine_Ctrl.DeviceLogSave)["Log"].size() > 100) {
+        (*Machine_Ctrl.DeviceLogSave)["Log"].remove(0);
+      }
 
-    (*Machine_Ctrl.DeviceLogSave)["Log"].add(logItem);
-    if ((*Machine_Ctrl.DeviceLogSave)["Log"].size() > 100) {
-      (*Machine_Ctrl.DeviceLogSave)["Log"].remove(0);
     }
   }
 

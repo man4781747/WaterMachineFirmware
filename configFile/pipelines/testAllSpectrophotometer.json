@@ -7,7 +7,7 @@
       "desp": "基準: 50000",
       "event": [
         {"spectrophotometer_list": [
-          {"index": 1,"gain": "96X","channel": "CH1","value_name": "NO2_wash_volt","target": 50000,"dilution": 10}
+          {"index": 1,"gain": "96X","channel": "CH1","value_name": "NO2_wash_volt","target": 50000,"dilution": 10, "pool":"pool-1"}
         ]}
       ]
     },
@@ -23,7 +23,7 @@
       "desp": "吸光度A0數值以50000記",
       "event": [
         {"spectrophotometer_list": [
-          {"index": 1,"gain": "96X","channel": "CH1","value_name": "NO2_test_volt","target": -1,"dilution": 10}
+          {"index": 1,"gain": "96X","channel": "CH1","value_name": "NO2_test_volt","target": -1,"dilution": 10, "pool":"pool-1"}
         ]}
       ]
     },
@@ -32,7 +32,7 @@
       "desp": "基準: 50000",
       "event": [
         {"spectrophotometer_list": [
-          {"index": 0,"gain": "48X","channel": "CH0","value_name": "NH4_wash_volt","target": 50000,"dilution": 2}
+          {"index": 0,"gain": "48X","channel": "CH0","value_name": "NH4_wash_volt","target": 50000,"dilution": 2, "pool":"pool-1"}
         ]}
       ]
     },
@@ -48,17 +48,23 @@
       "desp": "吸光度A0數值以50000記",
       "event": [
         {"spectrophotometer_list": [
-          {"index": 0,"gain": "48X","channel": "CH0","value_name": "NH4_test_volt","target": -1,"dilution": 2}
+          {"index": 0,"gain": "48X","channel": "CH0","value_name": "NH4_test_volt","target": -1,"dilution": 2, "pool":"pool-1"}
         ]}
       ]
     }
   },
   "steps_group": {
-    "NO3Test": {
-      "title": "亞硝酸鹽測試",
+    "NO3WashValueTest": {
+      "title": "亞硝酸鹽A0檢測",
       "desp": "",
       "steps": [
-        "GetNO3WashValue",
+        "GetNO3WashValue"
+      ]
+    },
+    "NO3ValueTest": {
+      "title": "亞硝酸鹽樣本檢測",
+      "desp": "",
+      "steps": [
         "NO3TestValueGet"
       ]
     },
@@ -70,11 +76,19 @@
         "GetNO3WashValueWarning"
       ]
     },
+
+    "NH4WashValueTest": {
+      "title": "氨氮A0檢測",
+      "desp": "",
+      "steps": [
+        "GetNH4WashValue"
+      ]
+    },
+
     "NH4Test": {
       "title": "氨氮測試",
       "desp": "",
       "steps": [
-        "GetNH4WashValue",
         "NH4TestValueGet"
       ]
     },
@@ -88,7 +102,8 @@
     }
   },
   "pipline": [
-    ["NO3Test", ["NH4Test","NO3TestWarning"]],
-    ["NH4Test", ["NH4TestWarning"]]
+    ["NO3WashValueTest", ["NO3ValueTest", "NO3TestWarning"]],
+    ["NO3ValueTest", ["NH4WashValueTest"]],
+    ["NH4WashValueTest", ["NH4Test", "NH4TestWarning"]]
   ]
 }
