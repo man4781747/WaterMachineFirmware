@@ -780,6 +780,16 @@ void PiplelineFlowTask(void* parameter)
 
       }
       else if (eventItem.containsKey("wait")) {
+        int waitSeconds = eventItem["wait"].as<int>();
+        ESP_LOGI("LOADED_ACTION","      等待 %d 秒",waitSeconds);
+        vTaskDelay(waitSeconds*1000/portTICK_PERIOD_MS);
+      }
+      else if (eventItem.containsKey("upload")) {
+        serializeJsonPretty(eventItem, Serial);
+        String poolChose = eventItem["upload"][0]["pool"].as<String>();
+        ESP_LOGI("LOADED_ACTION","      更新 %s 資料時間",poolChose.c_str());
+        (*Machine_Ctrl.sensorDataSave)[poolChose]["Data_datetime"].set(Machine_Ctrl.GetDatetimeString());
+        Machine_Ctrl.BroadcastNewPoolData(poolChose);
       }
       //! log發出
       else if (eventItem.containsKey("log")) {
