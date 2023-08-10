@@ -80,7 +80,7 @@
           {"index": 28,"status": 0}
         ]},
         {"peristaltic_motor_list": [
-          {"index": 0,"status": 1,"time": 120,"until": "SAMPLE", "timeoutFail": true}
+          {"index": 0,"status": 1,"time": 120,"until": "SAMPLE", "failType": "timeout", "failAction": "stopImmediately"}
         ]}
       ]
     },
@@ -89,7 +89,7 @@
       "desp": "",
       "event": [
         {"peristaltic_motor_list": [
-          {"index": 1,"status": 1,"time": 120,"until": "RO", "timeoutFail": true}
+          {"index": 1,"status": 1,"time": 120,"until": "RO", "failType": "timeout", "failAction": "stopImmediately"}
         ]}
       ]
     },

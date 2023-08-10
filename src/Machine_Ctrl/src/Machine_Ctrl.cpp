@@ -361,6 +361,8 @@ void PiplelineFlowTask(void* parameter)
     3, "執行流程: "+ThisStepGroupTitle,"Pipeline: "+ThisPipelineTitle, Machine_Ctrl.BackendServer.ws_, NULL
   );
 
+  (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("RUNNING");
+
   //? 這個 Task 要執行的 steps_group 的 list
   JsonArray stepsGroupArray = (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["steps"].as<JsonArray>();
 
@@ -397,34 +399,44 @@ void PiplelineFlowTask(void* parameter)
       else if (eventItem.containsKey("peristaltic_motor_list")) {
         pinMode(48, OUTPUT);
         digitalWrite(48, HIGH);
-        // DynamicJsonDocument *loadedAction = new DynamicJsonDocument(1000000);
         //? endTimeCheckList: 記錄各蠕動馬達最大運行結束時間
         DynamicJsonDocument endTimeCheckList(10000);
-        // std::map<int, Peristaltic_task_config> endTimeCheckList;
         
         for (JsonObject peristalticMotorItem : eventItem["peristaltic_motor_list"].as<JsonArray>()) {
           int motorIndex = peristalticMotorItem["index"].as<int>();
           String motorIndexString = String(motorIndex);
           PeristalticMotorStatus ststus = peristalticMotorItem["status"].as<int>() == 1 ? PeristalticMotorStatus::FORWARD : PeristalticMotorStatus::REVERSR;
           float runTime = peristalticMotorItem["time"].as<String>().toFloat();
-          bool isTimeoutFail = peristalticMotorItem["timeoutFail"].as<bool>();
+          
           String untilString = peristalticMotorItem["until"].as<String>();
+          //? failType: 錯誤判斷的準則，目前有幾種類型
+          //? 1. no: 無錯誤判斷
+          //? 2. timeout: 超時
+          //? 3. connect: 指定pin導通
+          String failType = peristalticMotorItem["failType"].as<String>();
+
+          //? failAction: 觸發錯誤判斷時的反應，目前有幾種類型
+          //? 1. continue: 繼續執行，但最後流程Task完成後會標記為Fail
+          //? 2. stepStop: 當前流程Task關閉
+          //? 3. stopImmediately: 整台機器停止動作
+          String failAction = peristalticMotorItem["failAction"].as<String>();
 
           if (endTimeCheckList.containsKey(motorIndexString)) {
             continue;
           }
-          ESP_LOGI("LOADED_ACTION","       - (%d) %s 持續 %.2f 秒或是直到%s觸發，超時標記為錯誤:%s", 
+          ESP_LOGI("LOADED_ACTION","       - (%d) %s 持續 %.2f 秒或是直到%s被觸發,failType: %s, failAction: %s", 
             motorIndex, 
             peristalticMotorItem["status"].as<int>()==-1 ? "正轉" : "反轉", 
             runTime,
-            untilString.c_str(),
-            isTimeoutFail==true ? "是" : "否"
+            untilString.c_str(),  
+            failType.c_str(), failAction.c_str()
           );
 
           endTimeCheckList[motorIndexString]["index"] = motorIndex;
           endTimeCheckList[motorIndexString]["status"] = ststus;
           endTimeCheckList[motorIndexString]["time"] = runTime;
-          endTimeCheckList[motorIndexString]["timeoutFail"] = isTimeoutFail;
+          endTimeCheckList[motorIndexString]["failType"] = failType;
+          endTimeCheckList[motorIndexString]["failAction"] = failAction;
           endTimeCheckList[motorIndexString]["finish"] = false;
           
           if (untilString == "RO") {
@@ -440,21 +452,6 @@ void PiplelineFlowTask(void* parameter)
           endTimeCheckList[motorIndexString]["endTime"] = millis() + (long)(runTime*1000);
           Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(motorIndex, ststus);
           Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
-          // Peristaltic_task_config config_;
-          // config_.index = peristalticMotorItem["peristaltic_motor"]["index"].as<int>();
-          // config_.status = peristalticMotorItem["status"].as<int>() == 1 ? PeristalticMotorStatus::FORWARD : PeristalticMotorStatus::REVERSR;
-          // config_.time = peristalticMotorItem["time"].as<float>();
-          // config_.timeoutFail = peristalticMotorItem["timeoutFail"].as<bool>();
-          // // String untilString = peristalticMotorItem["until"].as<String>();
-          // if (untilString == "RO") {
-          //   config_.until = 1;
-          // } 
-          // else if (untilString == "SAMPLE") {
-          //   config_.until = 2;
-          // }
-          // else {
-          //   config_.until = -1;
-          // }
           vTaskDelay(100/portTICK_PERIOD_MS);
         }
 
@@ -471,29 +468,43 @@ void PiplelineFlowTask(void* parameter)
             long endTime = endTimeCheckJSON["endTime"].as<long>();
             int until = endTimeCheckJSON["until"].as<int>();
             int motorIndex = endTimeCheckJSON["index"].as<int>();
+            String thisFailType = endTimeCheckJSON["failType"].as<String>();
+            String thisFailAction = endTimeCheckJSON["failAction"].as<String>();
+
             //? 若馬達執行時間達到最大時間
             if (millis() >= endTime) {
-            // if (millis() >= 0) {  // timeout測試
-              //? 執行到這，代表馬達執行到最大執行時間，如果timeoutFail是true，則代表執行觸發失敗
-              if (endTimeCheckJSON["timeoutFail"].as<bool>()) {
-                ESP_LOGE("", "蠕動馬達Timeout錯誤，停止step");
-                for (const auto& motorChose : endTimeCheckList.as<JsonObject>()) {
-                  //? 強制停止當前step執行的馬達
-                  Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(motorIndex, PeristalticMotorStatus::STOP);
-                  Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
-                }
-                endTimeCheckJSON["finish"].set(true);
+              //? 執行到這，代表馬達執行到最大執行時間，如果 failType 是 timeout，則代表觸發失敗判斷
+              if (thisFailType == "timeout") {
+                ESP_LOGE("", "蠕動馬達觸發Timeout錯誤");
                 (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
-                Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
-                Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
-                free(stepsGroupName);
-                vTaskDelete(NULL);
+                if (thisFailAction=="stepStop") {
+                  for (const auto& motorChose : endTimeCheckList.as<JsonObject>()) {
+                    //? 強制停止當前step執行的馬達
+                    Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(motorIndex, PeristalticMotorStatus::STOP);
+                    Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
+                  }
+                  endTimeCheckJSON["finish"].set(true);
+                  Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
+                  Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
+                  free(stepsGroupName);
+                  vTaskDelete(NULL);
+                }
+                else if (thisFailAction=="stopImmediately") {
+                  Machine_Ctrl.StopDeviceAndINIT();
+                }
+                //? 若非，則正常停止馬達運行
+                Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(motorIndex, PeristalticMotorStatus::STOP);
+                Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
+                ESP_LOGV("", "蠕動馬達執行至最大時間");
+                endTimeCheckJSON["finish"].set(true);
               }
-              //? 若非，則正常停止馬達運行
-              Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(motorIndex, PeristalticMotorStatus::STOP);
-              Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
-              ESP_LOGV("", "蠕動馬達執行至最大時間");
-              endTimeCheckJSON["finish"].set(true);
+              else {
+                //? 若非，則正常停止馬達運行
+                Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(motorIndex, PeristalticMotorStatus::STOP);
+                Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
+                ESP_LOGV("", "蠕動馬達執行至最大時間");
+                endTimeCheckJSON["finish"].set(true);
+              }
             }
             //? 若要判斷滿水浮球狀態
             else if (until != -1) {
@@ -503,6 +514,26 @@ void PiplelineFlowTask(void* parameter)
                 Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(motorIndex, PeristalticMotorStatus::STOP);
                 Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
                 ESP_LOGV("", "浮球觸發，關閉蠕動馬達");
+                //? 判斷是否有觸發錯誤
+                if (thisFailType == "connect") {
+                  ESP_LOGE("", "蠕動馬達觸發connect錯誤");
+                  (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
+                  if (thisFailAction=="stepStop") {
+                    for (const auto& motorChose : endTimeCheckList.as<JsonObject>()) {
+                      //? 強制停止當前step執行的馬達
+                      Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(motorIndex, PeristalticMotorStatus::STOP);
+                      Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
+                    }
+                    endTimeCheckJSON["finish"].set(true);
+                    Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
+                    Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
+                    free(stepsGroupName);
+                    vTaskDelete(NULL);
+                  }
+                  else if (thisFailAction=="stopImmediately") {
+                    Machine_Ctrl.StopDeviceAndINIT();
+                  }
+                }
                 endTimeCheckJSON["finish"].set(true);
               }
             }
@@ -608,6 +639,7 @@ void PiplelineFlowTask(void* parameter)
                   targetFail = false;
                   //TODO 記得加上重寫 spectrophotometerConfig 檔案的功能
                   break;
+                  
                 }
               }
             }
@@ -656,11 +688,6 @@ void PiplelineFlowTask(void* parameter)
               (*Machine_Ctrl.sensorDataSave)[poolChose]["NH4"].set(CH1_after);
             }
           }
-
-          Serial.println(CH0_result);
-          Serial.println(CH1_result);
-          Serial.println(CH0_after);
-          Serial.println(CH1_after);
         }
         Machine_Ctrl.WireOne.beginTransmission(0x70);
         Machine_Ctrl.WireOne.write(1 << 7);
@@ -671,10 +698,6 @@ void PiplelineFlowTask(void* parameter)
 
         if (targetFail) {
           (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
-          Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
-          Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
-          free(stepsGroupName);
-          vTaskDelete(NULL);
         }
       }
       else if (eventItem.containsKey("ph_meter")) {
@@ -719,8 +742,12 @@ void PiplelineFlowTask(void* parameter)
   }
 
 
+  if (
+    (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].as<String>() == String("RUNNING")
+  ) {
+    (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("SUCCESS");
+  }
 
-  (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("SUCCESS");
   Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
   Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
   free(stepsGroupName);
