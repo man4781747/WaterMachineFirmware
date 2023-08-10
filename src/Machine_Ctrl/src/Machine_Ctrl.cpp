@@ -2,6 +2,7 @@
 #include <esp_log.h>
 #include "esp_random.h"
 
+#include <String.h>
 #include "CalcFunction.h"
 #include "../../lib/StorgeSystemExternalFunction/SD_ExternalFuncion.h"
 
@@ -448,10 +449,10 @@ void PiplelineFlowTask(void* parameter)
           else {
             endTimeCheckList[motorIndexString]["until"] = -1;
           }
-          endTimeCheckList[motorIndexString]["startTime"] = millis();
-          endTimeCheckList[motorIndexString]["endTime"] = millis() + (long)(runTime*1000);
           Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(motorIndex, ststus);
           Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
+          endTimeCheckList[motorIndexString]["startTime"] = millis();
+          endTimeCheckList[motorIndexString]["endTime"] = millis() + (long)(runTime*1000);
           vTaskDelay(100/portTICK_PERIOD_MS);
         }
 
@@ -540,31 +541,26 @@ void PiplelineFlowTask(void* parameter)
             vTaskDelay(100);
           }
         }
-        digitalWrite(48, LOW);
+        if (Machine_Ctrl.peristalticMotorsCtrl.IsAllStop()) {
+          digitalWrite(48, LOW);
+        }
       }
       //! 分光光度計控制設定
       else if (eventItem.containsKey("spectrophotometer_list")) {
-        //? targetFail: 若光度計測量途中，遇到錯誤則此值為true，而後會觸發錯誤
-        bool targetFail = true;
-
-        // JsonObject spectrophotometerConfig = 
         for (JsonObject spectrophotometerItem : eventItem["spectrophotometer_list"].as<JsonArray>()) {
           int spectrophotometerIndex = spectrophotometerItem["index"].as<int>();
           JsonObject spectrophotometerConfigChose = (*Machine_Ctrl.spectrophotometerConfig)[spectrophotometerIndex].as<JsonObject>();
-
           String spectrophotometerTitle = spectrophotometerConfigChose["title"].as<String>();
-          double mValue = spectrophotometerConfigChose["calibration"][0]["ret"]["m"].as<double>();
-          double bValue = spectrophotometerConfigChose["calibration"][0]["ret"]["b"].as<double>();
-
           String GainStr = spectrophotometerItem["gain"].as<String>();
           String targetChannel = spectrophotometerItem["channel"].as<String>();
           String value_name = spectrophotometerItem["value_name"].as<String>();
           String poolChose = spectrophotometerItem["pool"].as<String>();
-          int targetLevel = spectrophotometerItem["target"].as<int>();
-          double dilutionValue = spectrophotometerItem["dilution"].as<String>().toDouble();
-          ESP_LOGI("LOADED_ACTION","       - (%d)%s 測量倍率: %s, 指定頻道: %s, 稀釋倍率: %s, 並紀錄為: %s",
-            spectrophotometerIndex, spectrophotometerTitle.c_str(), GainStr.c_str(), targetChannel.c_str(), String(dilutionValue, 1).c_str(), value_name.c_str()
-          );
+          //? type: 光度計動作類型，當前有兩種
+          //? 1. Adjustment:  調整數位電阻數值，有錯誤判斷，當數值不達標時有觸發錯誤機制
+          //? 2. Measurement: 不調整電阻並量測出PPM數值
+          String type = spectrophotometerItem["type"].as<String>();
+          String failAction = spectrophotometerItem["failAction"].as<String>();
+
           //? 開啟指定index模組
           Machine_Ctrl.WireOne.beginTransmission(0x70);
           Machine_Ctrl.WireOne.write(1 << spectrophotometerIndex);
@@ -593,13 +589,100 @@ void PiplelineFlowTask(void* parameter)
             Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.SetGain(ALS_Gain::Gain_96X);
           }
 
-          ALS_01_Data_t sensorData;
-          uint16_t CH0_Buff [30];
-          uint16_t CH1_Buff [30];
-          double CH0_result, CH1_result;
-          double CH0_after, CH1_after;
-          //?  如果targetLevel不為-1 則代表為測量數值
-          if (targetLevel == -1) {
+          //! 調整數值
+          if (type == "Adjustment") {
+            int targetLevel = spectrophotometerItem["target"].as<int>();
+
+            char logBuffer[1000];
+            sprintf(
+              logBuffer, 
+              "(%d)%s 測量倍率: %s, 指定頻道: %s, 調整強度目標: %d, 並紀錄為: %s, 若不達標觸發錯誤行為: %s",
+              spectrophotometerIndex, spectrophotometerTitle.c_str(), GainStr.c_str(), targetChannel.c_str(), targetLevel, value_name.c_str(), failAction.c_str()
+            );
+            Machine_Ctrl.SetLog(3, "調整光強度,並記錄A0數值", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
+            ESP_LOGI("LOADED_ACTION","       - %s",String(logBuffer).c_str());
+
+            bool fail = true;
+            uint16_t checkNum;
+            for (int i=0;i<256;i++) {
+              Machine_Ctrl.WireOne.beginTransmission(0x2F);
+              Machine_Ctrl.WireOne.write(0b00000000);
+              Machine_Ctrl.WireOne.write(i);
+              Machine_Ctrl.WireOne.endTransmission();
+              ALS_01_Data_t sensorData = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+              if (targetChannel == "CH0") {
+                checkNum = sensorData.CH_0;
+                Serial.printf("%d:%d -> %d\r",i, sensorData.CH_0, targetLevel);
+                if (sensorData.CH_0 >= targetLevel) {
+                  spectrophotometerConfigChose["level"].set(i);
+                  fail = false;
+                  //TODO 記得加上重寫 spectrophotometerConfig 檔案的功能
+                  break;
+                }
+              }
+              else if (targetChannel == "CH1") {
+                checkNum = sensorData.CH_1;
+                Serial.printf("%d:%d -> %d\r",i, sensorData.CH_1, targetLevel);
+                if (sensorData.CH_1 >= targetLevel) {
+                  spectrophotometerConfigChose["level"].set(i);
+                  fail = false;
+                  //TODO 記得加上重寫 spectrophotometerConfig 檔案的功能
+                  break;
+                }
+              }
+            }
+            Machine_Ctrl.WireOne.beginTransmission(0x70);
+            Machine_Ctrl.WireOne.write(1 << 7);
+            Machine_Ctrl.WireOne.endTransmission();
+            Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
+            sprintf(logBuffer, "調整結果: 強度為: %d, 光強度數值為: %d",spectrophotometerConfigChose["level"].as<int>(), checkNum);
+            Machine_Ctrl.SetLog(3, "調整光強度,並記錄A0數值", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
+            ESP_LOGI("LOADED_ACTION","       - %s",String(logBuffer).c_str());
+
+
+            if (fail) {
+              sprintf(logBuffer, "最終強度: %d, 無法調整至指定強度: %d",checkNum, targetLevel);
+              Machine_Ctrl.SetLog(3, "調整光強度過程中發現錯誤", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
+              ESP_LOGI("LOADED_ACTION","       - %s",String(logBuffer).c_str());
+              (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
+              if (failAction == "stepStop") {
+                //? 當前step流程中止
+                Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
+                Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
+                free(stepsGroupName);
+                vTaskDelete(NULL);
+              }
+              else if (failAction == "stopImmediately") {
+                Machine_Ctrl.StopDeviceAndINIT();
+              }
+            }
+          }
+          //! 數據測量
+          else if (type=="Measurement") {
+            double dilution = spectrophotometerItem["dilution"].as<String>().toDouble();
+            double max = spectrophotometerItem["max"].as<String>().toDouble();
+            double min = spectrophotometerItem["min"].as<String>().toDouble();
+            double mValue = spectrophotometerConfigChose["calibration"][0]["ret"]["m"].as<double>();
+            double bValue = spectrophotometerConfigChose["calibration"][0]["ret"]["b"].as<double>();
+            String TargetType = value_name.substring(0,3); 
+
+            char logBuffer[1000];
+            sprintf(
+              logBuffer, 
+              "(%d)%s 測量倍率: %s, 指定頻道: %s, 量測數值, 並紀錄為: %s, 若數值不介於 %s - %s 則觸發錯誤行為: %s, 最後算出PPM數值: %s",
+              spectrophotometerIndex, spectrophotometerTitle.c_str(), GainStr.c_str(), targetChannel.c_str(), value_name.c_str(), 
+              String(min, 1).c_str(), String(max, 1).c_str(), failAction.c_str(), TargetType.c_str()
+            );
+            String logString = String(logBuffer);
+
+            ESP_LOGI("LOADED_ACTION","       - %s", logString.c_str());
+            Machine_Ctrl.SetLog(3, "測量PPM數值", logString, Machine_Ctrl.BackendServer.ws_);
+
+            ALS_01_Data_t sensorData;
+            uint16_t CH0_Buff [30];
+            uint16_t CH1_Buff [30];
+            double CH0_result, CH1_result;
+            double CH0_after, CH1_after;
             Machine_Ctrl.WireOne.beginTransmission(0x2F);
             Machine_Ctrl.WireOne.write(0b00000000);
             Machine_Ctrl.WireOne.write(spectrophotometerConfigChose["level"].as<int>());
@@ -611,93 +694,64 @@ void PiplelineFlowTask(void* parameter)
             }
             CH0_result = afterFilterValue(CH0_Buff, 30);
             CH1_result = afterFilterValue(CH1_Buff, 30);
-          }
-          //? 反之，則為測量0ppm並將光強度調整至指定數值
-          else {
-            ESP_LOGI("LOADED_ACTION","         * 調整可變電阻，直到數值接近: %d", targetLevel);
-            for (int i=0;i<256;i++) {
-              Machine_Ctrl.WireOne.beginTransmission(0x2F);
-              Machine_Ctrl.WireOne.write(0b00000000);
-              Machine_Ctrl.WireOne.write(i);
-              Machine_Ctrl.WireOne.endTransmission();
-              sensorData = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
-              if (targetChannel == "CH0") {
-                Serial.printf("%d:%d -> %d\r",i, sensorData.CH_0, targetLevel);
-                if (sensorData.CH_0 >= targetLevel) {
-                  ESP_LOGI("LOADED_ACTION","      CH0 已將強度調整為:%d", sensorData.CH_0);
-                  spectrophotometerConfigChose["level"].set(i);
-                  targetFail = false;
-                  //TODO 記得加上重寫 spectrophotometerConfig 檔案的功能
-                  break;
-                }
-              }
-              else if (targetChannel == "CH1") {
-                Serial.printf("%d:%d -> %d\r",i, sensorData.CH_1, targetLevel);
-                if (sensorData.CH_1 >= targetLevel) {
-                  ESP_LOGI("LOADED_ACTION","      CH1 已將強度調整為:%d", sensorData.CH_1);
-                  spectrophotometerConfigChose["level"].set(i);
-                  targetFail = false;
-                  //TODO 記得加上重寫 spectrophotometerConfig 檔案的功能
-                  break;
-                  
-                }
-              }
-            }
-            CH0_result = (double)sensorData.CH_0;
-            CH1_result = (double)sensorData.CH_1;
-          }
-          Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
-          
-          CH0_after = (-log10(CH0_result/50000.)-bValue)/mValue * dilutionValue;
-          CH1_after = (-log10(CH1_result/50000.)-bValue)/mValue * dilutionValue;
 
-          //? 接下來依照 value_name 的不同分成不同行為
-          if (value_name == "NO2_wash_volt") {
-            //? 亞硝酸鹽清洗數值記錄
-            if (targetChannel == "CH0") {
-              (*Machine_Ctrl.sensorDataSave)[poolChose]["NO2_wash_volt"].set(CH0_result);
-            } else {
-              (*Machine_Ctrl.sensorDataSave)[poolChose]["NO2_wash_volt"].set(CH1_result);
-            }
-          }
-          else if (value_name == "NO2_test_volt") {
-            //? 亞硝酸鹽樣本數值記錄
-            if (targetChannel == "CH0") {
-              (*Machine_Ctrl.sensorDataSave)[poolChose]["NO2_test_volt"].set(CH0_result);
-              (*Machine_Ctrl.sensorDataSave)[poolChose]["NO2"].set(CH0_after);
-            } else {
-              (*Machine_Ctrl.sensorDataSave)[poolChose]["NO2_test_volt"].set(CH1_result);
-              (*Machine_Ctrl.sensorDataSave)[poolChose]["NO2"].set(CH1_after);
-            }
-          }
-          else if (value_name == "NH4_wash_volt") {
-            //? 亞硝酸鹽樣本數值記錄
-            if (targetChannel == "CH0") {
-              (*Machine_Ctrl.sensorDataSave)[poolChose]["NH4_wash_volt"].set(CH0_result);
-            } else {
-              (*Machine_Ctrl.sensorDataSave)[poolChose]["NH4_wash_volt"].set(CH1_result);
-            }
-          }
-          else if (value_name == "NH4_test_volt") {
-            //? 亞硝酸鹽樣本數值記錄
-            if (targetChannel == "CH0") {
-              (*Machine_Ctrl.sensorDataSave)[poolChose]["NH4_test_volt"].set(CH0_result);
-              (*Machine_Ctrl.sensorDataSave)[poolChose]["NH4"].set(CH0_after);
-            } else {
-              (*Machine_Ctrl.sensorDataSave)[poolChose]["NH4_test_volt"].set(CH1_result);
-              (*Machine_Ctrl.sensorDataSave)[poolChose]["NH4"].set(CH1_after);
-            }
-          }
-        }
-        Machine_Ctrl.WireOne.beginTransmission(0x70);
-        Machine_Ctrl.WireOne.write(1 << 7);
-        Machine_Ctrl.WireOne.endTransmission();
-        vTaskDelay(500/portTICK_PERIOD_MS);
-        Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
-        vTaskDelay(500/portTICK_PERIOD_MS);
+            CH0_after = CH0_result*mValue + bValue;
+            CH1_after = CH1_result*mValue + bValue;
 
-        if (targetFail) {
-          (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
+            Machine_Ctrl.WireOne.beginTransmission(0x70);
+            Machine_Ctrl.WireOne.write(1 << 7);
+            Machine_Ctrl.WireOne.endTransmission();
+            Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
+            
+            double failCheckValue;
+            if (targetChannel == "CH0") {
+              (*Machine_Ctrl.sensorDataSave)[poolChose][value_name].set(CH0_result);
+              (*Machine_Ctrl.sensorDataSave)[poolChose][TargetType].set(CH0_after);
+              failCheckValue = CH0_result;
+
+              sprintf(
+                logBuffer, 
+                "測量結果: %s 頻道: %s 原始數值: %s, 轉換後PPM: %s",
+                TargetType.c_str(), targetChannel.c_str(), String(CH0_result, 1).c_str(), String(CH0_after, 1).c_str()
+              );
+            } else {
+              (*Machine_Ctrl.sensorDataSave)[poolChose][value_name].set(CH1_result);
+              (*Machine_Ctrl.sensorDataSave)[poolChose][TargetType].set(CH1_after);
+              failCheckValue = CH1_result;
+              sprintf(
+                logBuffer, 
+                "測量結果: %s 頻道: %s 原始數值: %s, 轉換後PPM: %s",
+                TargetType.c_str(), targetChannel.c_str(), String(CH1_result, 1).c_str(), String(CH1_after, 1).c_str()
+              );
+              ESP_LOGI("LOADED_ACTION","       - %s", String(logBuffer).c_str());
+              Machine_Ctrl.SetLog(3, "測量PPM數值", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
+            }
+
+
+            if (failCheckValue < min or failCheckValue > max) {
+              (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
+              sprintf(
+                logBuffer, 
+                "測量光度述職時發現錯誤，獲得數值: %s, 不再設定範圍內 %s - %s",
+                String(CH1_result, 1).c_str(), String(min, 1).c_str(), String(max, 1).c_str()
+              );
+              ESP_LOGI("LOADED_ACTION","       - %s", String(logBuffer).c_str());
+              Machine_Ctrl.SetLog(1, "測量PPM數值", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
+
+
+
+              if (failAction == "stepStop") {
+                //? 當前step流程中止
+                Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
+                Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
+                free(stepsGroupName);
+                vTaskDelete(NULL);
+              }
+              else if (failAction == "stopImmediately") {
+                Machine_Ctrl.StopDeviceAndINIT();
+              }
+            }
+          }
         }
       }
       else if (eventItem.containsKey("ph_meter")) {
@@ -803,12 +857,13 @@ void SMachine_Ctrl::CleanAllStepTask()
 void PipelineFlowScan(void* parameter)
 { 
   JsonObject stepsGroup = (*Machine_Ctrl.pipelineConfig)["steps_group"].as<JsonObject>();
+  JsonObject pipelineSet = (*Machine_Ctrl.pipelineConfig)["pipline"].as<JsonObject>();
   //? isAllDone: 用來判斷是否所有流程都運行完畢，如果都完畢，則此TASK也可以關閉
   //? 判斷完畢的邏輯: 全部step都不為 "WAIT"、"RUNNING" 則代表完畢
   bool isAllDone = false;
   while(isAllDone == false) {
     isAllDone = true;
-    for (JsonPair stepsGroupItem : stepsGroup) {
+    for (JsonPair stepsGroupItem : pipelineSet) {
       //? stepsGroupName: 流程名稱
       String stepsGroupName = String(stepsGroupItem.key().c_str());
       //? stepsGroupResult: 此流程的運行狀態

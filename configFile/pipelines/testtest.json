@@ -655,27 +655,7 @@
     }
   },
   "pipline": [
-    ["Clear_All_Path", ["GetPool1SimpleStep_1", "GetROWater_1"]],
-    ["GetPool1SimpleStep_1", ["Wash_All_Path_With_Sample_1"]],
-    ["GetROWater_1", ["Wash_All_Path_With_Sample_1"]],
-    ["Wash_All_Path_With_Sample_1", ["GetPool1SimpleStep_2", "GetROWater_2"]],
-    ["GetPool1SimpleStep_2", ["Wash_All_Path_With_Sample_2"]],
-    ["GetROWater_2", ["Wash_All_Path_With_Sample_2"]],
-    ["Wash_All_Path_With_Sample_2", ["GetPool1SimpleStep_3", "GetROWater_3"]],
-    ["GetPool1SimpleStep_3", ["NO3_Original_Value_Get"]],
-    ["GetROWater_3", ["NO3_Original_Value_Get"]],
-    ["NO3_Original_Value_Get", ["NO3_Sample_Value_Get"]],
-    ["NO3_Sample_Value_Get", ["Wash_All_Path_With_Sample_3"]],
-    ["Wash_All_Path_With_Sample_3", ["GetPool1SimpleStep_4", "GetROWater_4"]],
-    ["GetPool1SimpleStep_4", ["Wash_All_Path_With_Sample_4"]],
-    ["GetROWater_4", ["Wash_All_Path_With_Sample_4"]],
-    ["Wash_All_Path_With_Sample_4", ["GetPool1SimpleStep_5", "GetROWater_5"]],
-    ["GetPool1SimpleStep_5", ["NH4_Original_Value_Get"]],
-    ["GetROWater_5", ["NH4_Original_Value_Get"]],
-    ["NH4_Original_Value_Get", ["NH4_Sample_Value_Get"]],
-    ["NH4_Sample_Value_Get", ["PH_Value_Get"]],
-    ["PH_Value_Get", ["Return_To_Initial_From_Pool1_State"]],
-    ["Return_To_Initial_From_Pool1_State", ["Wash_All_Path_With_RO_1"]],
-    ["Wash_All_Path_With_RO_1", ["Wash_All_Path_With_RO_2"]]
+    ["GetPool1SimpleStep_1", []],
+    ["GetROWater_1", []]
   ]
 }

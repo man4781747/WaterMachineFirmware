@@ -71,6 +71,7 @@ class C_Peristaltic_Motors_Ctrl
     void SetMotorStatus(int index, PeristalticMotorStatus status);
     void ShowNowSetting();
     void OpenAllPin();
+    bool IsAllStop();
   private:
 };
 
