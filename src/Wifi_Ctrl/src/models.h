@@ -2112,26 +2112,33 @@ void ws_RunPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynami
 
 void ws_v2_RunPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
 {
-  String stepChose = "";
-  String eventChose = "";
-  if ((*D_QueryParameter).containsKey("step")) {
-    stepChose = (*D_QueryParameter)["step"].as<String>();
-    if ((*D_QueryParameter).containsKey("event")) {
-      eventChose = (*D_QueryParameter)["event"].as<String>();
+  //? 先判斷儀器是否空閒
+  //! 注意，這邊流程只有失敗時會釋放互斥鎖，但如果收到訓則會將互斥鎖鎖起來，要記得再其他流程釋放他
+  //! 如果執行失敗，要記得釋放
+  if (xSemaphoreTake(Machine_Ctrl.LOAD__ACTION_V2_xMutex, 0) == pdTRUE) {
+    String stepChose = "";
+    String eventChose = "";
+    int eventIndexChose = -1;
+    if ((*D_QueryParameter).containsKey("step")) {
+      stepChose = (*D_QueryParameter)["step"].as<String>();
+      if ((*D_QueryParameter).containsKey("event")) {
+        eventChose = (*D_QueryParameter)["event"].as<String>();
+        if ((*D_QueryParameter).containsKey("index")) {
+          eventIndexChose = (*D_QueryParameter)["index"].as<String>().toInt();
+        }
+      }
     }
-  }
-  String TargetName = D_PathParameter->as<JsonObject>()["name"];
-  // Serial.println(TargetName);
-  String FullFilePath = "/pipelines/"+TargetName+".json";
-  if (SD.exists(FullFilePath)) {
-    if (Machine_Ctrl.TASK__pipelineFlowScan == NULL) {
-      if (Machine_Ctrl.LOAD__ACTION_V2(FullFilePath, stepChose, eventChose)) {
+    String TargetName = D_PathParameter->as<JsonObject>()["name"];
+    String FullFilePath = "/pipelines/"+TargetName+".json";
+    if (SD.exists(FullFilePath)) {
+      if (Machine_Ctrl.LOAD__ACTION_V2(FullFilePath, stepChose, eventChose, eventIndexChose)) {
         Machine_Ctrl.SetLog(
           5,
           "即將執行流程",
           "流程設定讀取成功",
           NULL, client, false
         );
+        //! 這邊不釋放互斥鎖，交由後續執行釋放
       } else {
         Machine_Ctrl.SetLog(
           1,
@@ -2139,23 +2146,28 @@ void ws_v2_RunPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
           "檔案讀取失敗",
           NULL, client, false
         );
+        xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
       }
     } else {
       Machine_Ctrl.SetLog(
         1,
         "流程設定失敗",
-        "儀器忙碌中，請稍後",
+        "找不到流程設定檔案: " + TargetName+".json",
         NULL, client, false
       );
+      xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
     }
-  } else {
+  }
+  else {
     Machine_Ctrl.SetLog(
       1,
-      "流程設定失敗",
-      "找不到流程設定檔案: " + TargetName+".json",
+      "儀器忙碌中，請稍後再試",
+      "",
       NULL, client, false
     );
   }
+
+
 
 
 
@@ -2392,6 +2404,150 @@ void ws_AddNewPipelineInfo(AsyncWebSocket *server, AsyncWebSocketClient *client,
   }
 }
 
+//! 儀器控制
+void ws_v2_RunPwmMotor(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
+{
+  if (xSemaphoreTake(Machine_Ctrl.LOAD__ACTION_V2_xMutex, 0) == pdTRUE) {
+    DynamicJsonDocument tempFile(10000);
+    //? 作法為了對其正式執行的流程, 若要測試儀器會先生成測試用的temp檔案
+    int motorIndex = (*D_QueryParameter)["index"].as<int>();
+    int motorStatus = (*D_QueryParameter)["status"].as<int>();
+    tempFile["title"].set("手動觸發-伺服馬達測試");
+    tempFile["desp"].set("");
+
+    //? events 設定
+    tempFile["events"]["test"]["title"].set("伺服馬達轉動");
+    tempFile["events"]["test"]["desp"].set("伺服馬達轉動");
+    JsonArray eventList = tempFile["events"]["test"].createNestedArray("event");
+    DynamicJsonDocument eventObj(1000);
+    JsonArray pwmMotorList = eventObj.createNestedArray("pwm_motor_list");
+    DynamicJsonDocument indexObj(800);
+    indexObj["index"].set(motorIndex);
+    indexObj["status"].set(motorStatus);
+    pwmMotorList.add(indexObj);
+    eventList.add(eventObj);
+
+    //? steps_group 設定
+    tempFile["steps_group"]["test"]["title"].set("伺服馬達轉動");
+    tempFile["steps_group"]["test"]["desp"].set("伺服馬達轉動");
+    JsonArray stepsList = tempFile["steps_group"]["test"].createNestedArray("steps");
+    stepsList.add("test");
+
+    //? pipline 設定
+    JsonArray piplineList = tempFile.createNestedArray("pipline");
+    JsonArray piplineSetList = piplineList.createNestedArray();
+    piplineSetList.add("test");
+    DynamicJsonDocument emptyObject(1000);
+    JsonArray emptyList = emptyObject.createNestedArray();
+    piplineSetList.add(emptyList);
+
+
+    // serializeJsonPretty(tempFile, Serial);
+    File tempFileItem = SD.open("/pipelines/__temp__.json", FILE_WRITE);
+    serializeJson(tempFile, tempFileItem);
+    tempFileItem.close();
+    if (Machine_Ctrl.LOAD__ACTION_V2("/pipelines/__temp__.json")) {
+      Machine_Ctrl.SetLog(
+        5,
+        "即將執行流程",
+        "流程設定讀取成功",
+        NULL, client, false
+      );
+    } else {
+      Machine_Ctrl.SetLog(
+        1,
+        "流程設定失敗",
+        "檔案讀取失敗",
+        NULL, client, false
+      );
+      xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
+    }
+  }
+
+  else {
+    Machine_Ctrl.SetLog(
+      1,
+      "儀器忙碌中，請稍後再試",
+      "",
+      NULL, client, false
+    );
+  }
+}
+
+void ws_v2_RunPeristalticMotor(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
+{
+  if (xSemaphoreTake(Machine_Ctrl.LOAD__ACTION_V2_xMutex, 0) == pdTRUE) {
+    DynamicJsonDocument tempFile(10000);
+    //? 作法為了對其正式執行的流程, 若要測試儀器會先生成測試用的temp檔案
+    int motorIndex = (*D_QueryParameter)["index"].as<int>();
+    int motorStatus = (*D_QueryParameter)["status"].as<int>();
+    double motorTime = (*D_QueryParameter)["time"].as<String>().toDouble();
+    tempFile["title"].set("手動觸發-蠕動馬達測試");
+    tempFile["desp"].set("index: "+String(motorIndex) +", status: "+String(motorStatus) +", time: "+String(motorTime));
+
+    //? events 設定
+    tempFile["events"]["test"]["title"].set("蠕動馬達轉動");
+    tempFile["events"]["test"]["desp"].set("蠕動馬達轉動");
+    JsonArray eventList = tempFile["events"]["test"].createNestedArray("event");
+    DynamicJsonDocument eventObj(1000);
+    JsonArray pwmMotorList = eventObj.createNestedArray("peristaltic_motor_list");
+    DynamicJsonDocument indexObj(800);
+    indexObj["index"].set(motorIndex);
+    indexObj["status"].set(motorStatus);
+    indexObj["time"].set(motorTime);
+    indexObj["until"].set("-");
+    indexObj["failType"].set("-");
+    indexObj["failAction"].set("-");
+
+    pwmMotorList.add(indexObj);
+    eventList.add(eventObj);
+
+    //? steps_group 設定
+    tempFile["steps_group"]["test"]["title"].set("蠕動馬達轉動");
+    tempFile["steps_group"]["test"]["desp"].set("蠕動馬達轉動");
+    JsonArray stepsList = tempFile["steps_group"]["test"].createNestedArray("steps");
+    stepsList.add("test");
+
+    //? pipline 設定
+    JsonArray piplineList = tempFile.createNestedArray("pipline");
+    JsonArray piplineSetList = piplineList.createNestedArray();
+    piplineSetList.add("test");
+    DynamicJsonDocument emptyObject(1000);
+    JsonArray emptyList = emptyObject.createNestedArray();
+    piplineSetList.add(emptyList);
+
+
+    // serializeJsonPretty(tempFile, Serial);
+    File tempFileItem = SD.open("/pipelines/__temp__.json", FILE_WRITE);
+    serializeJson(tempFile, tempFileItem);
+    tempFileItem.close();
+    if (Machine_Ctrl.LOAD__ACTION_V2("/pipelines/__temp__.json")) {
+      Machine_Ctrl.SetLog(
+        5,
+        "即將執行流程",
+        "流程設定讀取成功",
+        NULL, client, false
+      );
+    } else {
+      Machine_Ctrl.SetLog(
+        1,
+        "流程設定失敗",
+        "檔案讀取失敗",
+        NULL, client, false
+      );
+      xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
+    }
+  }
+
+  else {
+    Machine_Ctrl.SetLog(
+      1,
+      "儀器忙碌中，請稍後再試",
+      "",
+      NULL, client, false
+    );
+  }
+}
 
 
 #endif

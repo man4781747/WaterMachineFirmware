@@ -102,7 +102,12 @@ void setAPI(CWIFI_Ctrler &WIFI_Ctrler)
   //! 流程設定V2
   WIFI_Ctrler.AddWebsocketAPI("/api/v2/Pipeline/(<name>.*)/RUN", "GET", &ws_v2_RunPipeline);
 
-
+  //! 儀器控制
+  WIFI_Ctrler.AddWebsocketAPI("/api/v2/DeviceCtrl/Spectrophotometer", "GET", &ws_v2_RunPipeline);
+  WIFI_Ctrler.AddWebsocketAPI("/api/v2/DeviceCtrl/PwmMotor", "GET", &ws_v2_RunPwmMotor);
+  WIFI_Ctrler.AddWebsocketAPI("/api/v2/DeviceCtrl/PeristalticMotor", "GET", &ws_v2_RunPeristalticMotor);
+  WIFI_Ctrler.AddWebsocketAPI("/api/v2/DeviceCtrl/PHmeter", "GET", &ws_v2_RunPipeline);
+  
 }
 
 #endif

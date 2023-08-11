@@ -156,9 +156,14 @@ DynamicJsonDocument CWIFI_Ctrler::GetBaseWSReturnData(String MessageString)
   BaseWSReturnData["action"]["status"].set("看到這行代表API設定時忘記設定本項目了，請通知工程師修正，謝謝");
   BaseWSReturnData.createNestedObject("parameter");
   BaseWSReturnData["cmd_detail"].set(MessageString);
-  if (Machine_Ctrl.TASK__NOW_ACTION != NULL | Machine_Ctrl.TASK__pipelineFlowScan != NULL) {
+  if (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
     BaseWSReturnData["device_status"].set("Busy");
-  } else {
+  }
+  else if (xSemaphoreTake(Machine_Ctrl.LOAD__ACTION_V2_xMutex, 0) == pdFALSE) {
+    BaseWSReturnData["device_status"].set("Busy");
+  }
+  else {
+    xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
     BaseWSReturnData["device_status"].set("Idle");
   }
   // serializeJsonPretty(BaseWSReturnData, Serial);

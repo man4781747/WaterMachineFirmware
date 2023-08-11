@@ -304,6 +304,7 @@ void SMachine_Ctrl::StopDeviceAndINIT()
   Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
   MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
   digitalWrite(48, LOW);
+  xSemaphoreGive(LOAD__ACTION_V2_xMutex);
 }
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -864,6 +865,7 @@ void SMachine_Ctrl::CleanAllStepTask()
 }
 
 //? 負責檢查Pipeline目前進度，以及判斷是否要執行
+//! 這個流程在確定執行完畢後，要負責釋放互斥鎖: LOAD__ACTION_V2_xMutex
 void PipelineFlowScan(void* parameter)
 { 
   JsonObject stepsGroup = (*Machine_Ctrl.pipelineConfig)["steps_group"].as<JsonObject>();
@@ -968,6 +970,7 @@ void PipelineFlowScan(void* parameter)
   }
 
   Machine_Ctrl.TASK__pipelineFlowScan = NULL;
+  xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex); //! 釋放互斥鎖!!
   ESP_LOGI("", "所有流程已執行完畢");
   vTaskDelay(100/portTICK_PERIOD_MS);
   Machine_Ctrl.SetLog(
@@ -978,36 +981,63 @@ void PipelineFlowScan(void* parameter)
 //? 建立Pipeline排程的控制Task
 void SMachine_Ctrl::CreatePipelineFlowScanTask() 
 {
-  if (TASK__pipelineFlowScan == NULL) {
-    xTaskCreate(
-      PipelineFlowScan, "PipelineScan",
-      5000, NULL, 4, &TASK__pipelineFlowScan
-    );
-    vTaskDelay(500);
+  //!! 防呆，在此funtion內，互斥鎖: LOAD__ACTION_V2_xMutex 應該都是上鎖的狀態
+  //!! 若判定執行失敗，則立刻釋放互斥鎖
+  if (xSemaphoreTake(Machine_Ctrl.LOAD__ACTION_V2_xMutex, 0) == pdTRUE) {
+    ESP_LOGE("LOAD__ACTION_V2", "發現不合理的流程觸發，請排查code是否錯誤");
+    SetLog(1, "發現不合理的流程觸發，終止流程執行", "請通知工程師排除");
+    xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
   }
   else {
-
+    if (TASK__pipelineFlowScan == NULL) {
+      xTaskCreate(
+        PipelineFlowScan, "PipelineScan",
+        5000, NULL, 4, &TASK__pipelineFlowScan
+      );
+    }
+    else {
+      ESP_LOGE("LOAD__ACTION_V2", "發現不合理的流程觸發，TASK__pipelineFlowScan不為NULL，請排查code是否錯誤");
+      SetLog(1, "發現不合理的流程觸發，TASK__pipelineFlowScan不為NULL，終止流程執行", "請通知工程師排除");
+      xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
+    }
   }
 }
 
 ////////////////////////////////////////////////////
 // For 事件執行
 ////////////////////////////////////////////////////
+// SemaphoreHandle_t LOAD__ACTION_V2_xMutex = NULL;
+// vSemaphoreCreateBinary(LOAD__ACTION_V2_xMutex);
+// SemaphoreHandle_t LOAD__ACTION_V2_xMutex = vSemaphoreCreateBinary();
 
-bool SMachine_Ctrl::LOAD__ACTION_V2(String pipelineConfigFileFullPath, String onlyStepGroup, String onlyEvent)
+bool SMachine_Ctrl::LOAD__ACTION_V2(String pipelineConfigFileFullPath, String onlyStepGroup, String onlyEvent, int onlyIndex)
 {
+  //!! 防呆，在此funtion內，互斥鎖: LOAD__ACTION_V2_xMutex 應該都是上鎖的狀態
+  //!! 若判定執行失敗，則立刻釋放互斥鎖
+  if (xSemaphoreTake(Machine_Ctrl.LOAD__ACTION_V2_xMutex, 0) == pdTRUE) {
+    ESP_LOGE("LOAD__ACTION_V2", "發現不合理的流程觸發，請排查code是否錯誤");
+    SetLog(1, "發現不合理的流程觸發，終止流程執行", "請通知工程師排除");
+    xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
+    return false;
+  }
+
+
   //! onlyStepGroup: 指定只執行哪一個流程，若為NULL則代表不指定
   //! onlyEvent: 指定只執行流程中的哪一個Event，若為NULL則代表不指定
   (*pipelineConfig).clear();
   File pipelineConfigFile = SD.open(pipelineConfigFileFullPath);
   if (!pipelineConfigFile) {
+    ESP_LOGE("LOAD__ACTION_V2", "無法打開檔案: %s ，終止流程執行", pipelineConfigFileFullPath.c_str());
+    SetLog(1, "無法打開檔案，終止流程執行", pipelineConfigFileFullPath);
+    xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
     return false;
   }
   DeserializationError error = deserializeJson(*pipelineConfig, pipelineConfigFile,  DeserializationOption::NestingLimit(20));
   pipelineConfigFile.close();
   if (error) {
-    Serial.print("deserializeJson() failed: ");
-    Serial.println(error.c_str());
+    ESP_LOGE("LOAD__ACTION_V2", "JOSN解析失敗: %s ，終止流程執行", error.c_str());
+    SetLog(1, "JOSN解析失敗，終止流程執行", String(error.c_str()));
+    xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
     return false;
   }
   DynamicJsonDocument piplineSave(65525);
@@ -1070,11 +1100,8 @@ bool SMachine_Ctrl::LOAD__ACTION_V2(String pipelineConfigFileFullPath, String on
       piplineSave[onlyStepGroup]["Name"] = onlyStepGroup;
       piplineSave[onlyStepGroup].createNestedObject("childList");
       piplineSave[onlyStepGroup].createNestedObject("parentList");
-
       (*Machine_Ctrl.pipelineConfig)["pipline"].set(piplineSave);
       (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["RESULT"].set("WAIT");
-
-
       if ((*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup].containsKey("same")) {
         (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["steps"].set(
           (*Machine_Ctrl.pipelineConfig)["steps_group"][
@@ -1083,20 +1110,48 @@ bool SMachine_Ctrl::LOAD__ACTION_V2(String pipelineConfigFileFullPath, String on
         );
       }
       if (onlyEvent != "") {
+        //? 若有指定Event執行
+        //? 防呆: 檢查此event是否存在
+        if (!(*Machine_Ctrl.pipelineConfig)["events"].containsKey(onlyEvent)) {
+          //! 指定的event不存在
+          ESP_LOGE("LOAD__ACTION_V2", "設定檔 %s 中找不到Event: %s ，終止流程執行", pipelineConfigFileFullPath.c_str(), onlyEvent.c_str());
+          SetLog(1, "找不到事件: " + onlyEvent + "，終止流程執行", "設定檔名稱: "+pipelineConfigFileFullPath);
+          xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
+          return false;
+        }
         (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["steps"].clear();
         (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["steps"].add(onlyEvent);
+
+        if (onlyIndex != -1) {
+          //? 若有指定事件中的步驟執行
+          //? 防呆: 檢查此步驟是否存在
+          if (onlyIndex >= (*Machine_Ctrl.pipelineConfig)["events"][onlyEvent]["event"].size()) {
+            //! 指定的index不存在
+            ESP_LOGE("LOAD__ACTION_V2", "設定檔 %s 中的Event: %s 並無步驟: %d，終止流程執行", pipelineConfigFileFullPath.c_str(), onlyEvent.c_str(), onlyIndex);
+            SetLog(1, "事件: " + onlyEvent + "找不到步驟: " + String(onlyIndex) + "，終止流程執行", "設定檔名稱: "+pipelineConfigFileFullPath);
+            xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
+            return false;
+          }
+          DynamicJsonDocument newEventIndexArray(200);
+          JsonArray array = newEventIndexArray.to<JsonArray>();
+          array.add(
+            (*Machine_Ctrl.pipelineConfig)["events"][onlyEvent]["event"][onlyIndex]
+          );
+          (*Machine_Ctrl.pipelineConfig)["events"][onlyEvent]["event"].set(array);
+        }
       }
-      serializeJsonPretty(piplineSave, Serial);
-      Serial.println();
-      serializeJsonPretty((*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["steps"], Serial);
-      Serial.println();
       CreatePipelineFlowScanTask();
       return true;
     }
     else {
+      ESP_LOGE("LOAD__ACTION_V2", "設定檔 %s 中找不到流程: %s ，終止流程執行", pipelineConfigFileFullPath.c_str(), onlyStepGroup.c_str());
+      SetLog(1, "找不到流程: " + onlyStepGroup + "，終止流程執行", "設定檔名稱: "+pipelineConfigFileFullPath);
+      xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
       return false;
     }
   }
+
+
 }
 
 
