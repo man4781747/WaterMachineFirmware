@@ -1,6 +1,7 @@
 {
   "title": "測試所有伺服馬達",
   "desp": "",
+  "tag": ["測試"],
   "events": {
     "ResetAllServoMotor": {
       "title": "伺服馬達全數歸位",

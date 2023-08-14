@@ -1,6 +1,7 @@
 {
   "title": "獲得第一池的所有資訊",
   "desp": "",
+  "tag": ["正式","池1"],
   "events": {
     "Reset_All_PWM_Motor": {
       "title": "伺服馬達全數歸位",

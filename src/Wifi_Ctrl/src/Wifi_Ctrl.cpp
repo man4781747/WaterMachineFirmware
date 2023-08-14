@@ -523,6 +523,8 @@ void CWIFI_Ctrler::UpdateMachineTimerByNTP()
 void CWIFI_Ctrler::ServerStart()
 {
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "*");
+
   ws.onEvent(onWebSocketEvent);
   asyncServer.addHandler(&ws);
   asyncServer.begin();
@@ -661,12 +663,14 @@ void CWIFI_Ctrler::setAPIs()
       if (final) {
         Serial.printf("檔案 %s 接收完成， len: %d ，共 %d/%d bytes\n", filename.c_str(), len ,index + len, request->contentLength());
         newConfigUpdateFileBufferLen = index + len;
-
+        if (!SD.exists("/pipelines")) {
+          SD.mkdir("/pipelines");
+        }
         File configTempFile;
         configTempFile = SD.open("/pipelines/"+filename, FILE_WRITE);
         configTempFile.write(newConfigUpdateFileBuffer ,index + len);
         configTempFile.close();
-
+        Machine_Ctrl.UpdatePipelineConfigList();
       } 
       else {
         Serial.printf("檔案 %s 正在傳輸， len: %d ，目前已接收 %d/%d bytes\n", filename.c_str(), len, index + len, request->contentLength());
@@ -674,12 +678,92 @@ void CWIFI_Ctrler::setAPIs()
     }
   );
 
+  asyncServer.on("/api/config", HTTP_POST, 
+    [&](AsyncWebServerRequest *request)
+    { 
+      String FileContent = String(newConfigUpdateFileBuffer ,newConfigUpdateFileBufferLen);
+      free(newConfigUpdateFileBuffer);
+      DynamicJsonDocument NewDeviceSetting(300000);
+      DeserializationError error = deserializeJson(NewDeviceSetting, FileContent);
+      if (error) {
+        Serial.print("deserializeJson() failed: ");
+        Serial.println(error.f_str());
+        AsyncWebServerResponse* response = request->beginResponse(400, "application/json", "{\"Result\":\"FAIL\"}");
+        SendHTTPesponse(request, response);
+      }
+      else {
+        AsyncWebServerResponse* response = request->beginResponse(200, "application/json", FileContent);
+        SendHTTPesponse(request, response);
+      }
 
+    },
+    [&](AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+    {
+      if (index == 0) {
+        newConfigUpdateFileBuffer = (uint8_t *)malloc(request->contentLength());
+      }
+      memcpy(newConfigUpdateFileBuffer + index, data, len);
+      if (final) {
+        Serial.printf("檔案 %s 接收完成， len: %d ，共 %d/%d bytes\n", filename.c_str(), len ,index + len, request->contentLength());
+        newConfigUpdateFileBufferLen = index + len;
+        if (!SD.exists("/config")) {
+          SD.mkdir("/config");
+        }
+        File configTempFile;
+        configTempFile = SD.open("/config/"+filename, FILE_WRITE);
+        configTempFile.write(newConfigUpdateFileBuffer ,index + len);
+        configTempFile.close();
+        Machine_Ctrl.UpdatePipelineConfigList();
+      } 
+      else {
+        Serial.printf("檔案 %s 正在傳輸， len: %d ，目前已接收 %d/%d bytes\n", filename.c_str(), len, index + len, request->contentLength());
+      }
+    }
+  );
+
+  asyncServer.on("^\\/api\\/pipeline\\/([a-zA-Z0-9_.]+)$", HTTP_DELETE, 
+    [&](AsyncWebServerRequest *request)
+    { 
+      DynamicJsonDocument responeData(1000);
+      AsyncWebServerResponse* response;
+      String ResponeContent;
+      String fileName = request->pathArg(0);
+      Serial.println("/pipelines/"+fileName);
+      if (SD.exists("/pipelines/"+fileName)) {
+        if (SD.remove("/pipelines/"+fileName)) {
+          Machine_Ctrl.UpdatePipelineConfigList();
+          responeData["result"].set("Delete Pipeline File: "+fileName+" Success");
+          serializeJson(responeData, ResponeContent);
+          response = request->beginResponse(200, "application/json", ResponeContent);
+        }
+        else {
+          responeData["result"].set("Delete Pipeline File: "+fileName+" Fail");
+          response = request->beginResponse(400, "application/json", ResponeContent);
+        }
+      }
+      else {
+        responeData["result"].set("Can't File Pipeline File: "+fileName);
+        response = request->beginResponse(400, "application/json", ResponeContent);
+      }
+      SendHTTPesponse(request, response);
+
+      // int args = request->args();
+      // for (int paraIndex=0;paraIndex<args:paraIndex++) {
+      //   Serial.println(request->argName(paraIndex));
+      // }
+      // int params = request->params();
+      // for (int paraIndex=0;paraIndex<params:params++) {
+      //   AsyncWebParameter *p = request->getParam(paraIndex);
+        
+      // }
+    }
+  );
 
   asyncServer.on("/api/piplines", HTTP_GET, [&](AsyncWebServerRequest *request){
 
     String pipelineFilesList;
-    serializeJsonPretty(ExFile_listDir(SD,"/pipelines"), pipelineFilesList);
+    serializeJsonPretty(*Machine_Ctrl.PipelineConfigList, pipelineFilesList);
+    // serializeJsonPretty(ExFile_listDir(SD,"/pipelines"), pipelineFilesList);
 
     AsyncWebServerResponse* response = request->beginResponse(200, "application/json", pipelineFilesList);
     SendHTTPesponse(request, response);
@@ -738,6 +822,14 @@ void CWIFI_Ctrler::setAPIs()
     }
   );
 
+  //! CORS 檢查用
+  asyncServer.onNotFound([](AsyncWebServerRequest *request) {
+    if (request->method() == HTTP_OPTIONS) {
+      request->send(200);
+    } else {
+      request->send(404);
+    }
+  });
 }
 
 
