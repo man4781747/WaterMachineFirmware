@@ -71,7 +71,7 @@ void SMachine_Ctrl::INIT_SD_Card()
 
 
 
-
+    
   }
 }
 
@@ -319,6 +319,39 @@ void SMachine_Ctrl::LoadspectrophotometerConfig()
 void SMachine_Ctrl::LoadPHmeterConfig()
 {
   LoadJsonConfig(SD, PHmeterConfigFileFullPath, *PHmeterConfig);
+}
+
+void SMachine_Ctrl::UpdatePipelineConfigList()
+{
+  (*PipelineConfigList).clear();
+  File folder = SD.open("/pipelines");
+  while (true) {
+    File Entry = folder.openNextFile();
+    if (! Entry) {
+      break;
+    }
+    String FileName = String(Entry.name());
+    if (FileName == "__temp__.json") {
+      continue;
+    }
+    DynamicJsonDocument fileInfo(500);
+    fileInfo["size"].set(Entry.size());
+    fileInfo["name"].set(FileName);
+    fileInfo["getLastWrite"].set(Entry.getLastWrite());
+    DynamicJsonDocument fileContent(60000);
+    DeserializationError error = deserializeJson(fileContent, Entry);
+    Entry.close();
+    if (error) {
+
+    } else {
+      fileInfo["title"].set(fileContent["title"].as<String>());
+      fileInfo["desp"].set(fileContent["desp"].as<String>());
+      fileInfo["tag"].set(fileContent["tag"].as<JsonArray>());
+    }
+    (*PipelineConfigList).add(fileInfo);
+  }
+
+  // serializeJsonPretty(*PipelineConfigList, Serial);
 }
 
 ////////////////////////////////////////////////////

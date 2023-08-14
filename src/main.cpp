@@ -51,6 +51,8 @@ void setup() {
   Machine_Ctrl.LoadPiplineConfig();
   Machine_Ctrl.LoadspectrophotometerConfig();
   Machine_Ctrl.LoadPHmeterConfig();
+  Machine_Ctrl.UpdatePipelineConfigList();
+  
   Machine_Ctrl.INIT_I2C_Wires();
   Machine_Ctrl.INIT_PoolData();
   

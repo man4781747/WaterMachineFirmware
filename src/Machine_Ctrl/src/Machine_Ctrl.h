@@ -86,6 +86,12 @@ class SMachine_Ctrl
     DynamicJsonDocument *PHmeterConfig = new DynamicJsonDocument(2000);
     void LoadPHmeterConfig();
 
+
+    DynamicJsonDocument *PipelineConfigList = new DynamicJsonDocument(10000);
+    //? 更新當前pipeline列表資料
+    //? 以下情況需要觸發他: 1. 剛開機時、2. pipeline檔案有變動時
+    void UpdatePipelineConfigList();
+
     ////////////////////////////////////////////////////
     // For 數值轉換
     ////////////////////////////////////////////////////  
