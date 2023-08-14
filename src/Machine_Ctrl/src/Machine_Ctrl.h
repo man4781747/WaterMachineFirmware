@@ -104,13 +104,17 @@ class SMachine_Ctrl
     //! 流程設定相關
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+    //? pipelineStack: 待執行的Step列表
+    DynamicJsonDocument *pipelineStack = new DynamicJsonDocument(10000);
+    //? pipelineConfig: 當前運行的Pipeline詳細設定
     DynamicJsonDocument *pipelineConfig = new DynamicJsonDocument(65525);
-    //? pipelineTaskHandleMap: 記錄了當前正在執行的Step，Key為Step名稱、Value為TaskHandle_t
+    //? pipelineTaskHandleMap: 記錄了當前正在執行Step的Task，Key為Step名稱、Value為TaskHandle_t
     std::map<String, TaskHandle_t*> pipelineTaskHandleMap;
-    bool LOAD__ACTION_V2(String pipelineConfigFileFullPath, String onlyStepGroup="", String onlyEvent="", int onlyIndex=-1);
+    bool LOAD__ACTION_V2(DynamicJsonDocument *pipelineStackList);
     void AddNewPiplelineFlowTask(String stepsGroupName);
     void CleanAllStepTask();
     void CreatePipelineFlowScanTask();
+    void CreatePipelineFlowScanTask(DynamicJsonDocument *pipelineStackList);
     //? 排程狀態檢視Task，負責檢查排程進度、觸發排程執行
     TaskHandle_t TASK__pipelineFlowScan = NULL;
     //? LOAD__ACTION_V2_xMutex: 儀器是否忙碌一切依此 xMutex 決定

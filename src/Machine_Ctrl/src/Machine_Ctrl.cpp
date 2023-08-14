@@ -233,60 +233,6 @@ void SMachine_Ctrl::LoadOldLogs()
       break;
     }
   }
-
-  // for (int i=logFileNameList.size()-1;i>-1;i--) {
-  //   if (logArray.size() > 100) {
-  //     break;
-  //   }
-  //   std::vector<String> logContentList;
-
-  //   File logFileChose = SD.open("/logs/"+logFileNameList[i]);
-  //   String line = logFileChose.readStringUntil('\n');
-  //   while (line.length() > 0) {
-  //     logContentList.push_back(line);
-  //     line = logFileChose.readStringUntil('\n');
-  //   }
-  //   logFileChose.close();
-
-  //   for (int lineIndex=logContentList.size()-1;lineIndex>0;lineIndex--) {
-  //     int delimiterIndex = 0;
-  //     String lineChose = logContentList[lineIndex];
-  //     int itemIndex = 0;
-  //     int level;
-  //     String title,time, desp="";
-  //     while (lineChose.length() > 0) {
-  //       delimiterIndex = lineChose.indexOf(",");
-  //       if (itemIndex == 0) {
-  //         level = lineChose.substring(0, delimiterIndex).toInt();
-  //       }
-  //       else if (itemIndex == 1) {
-  //         time = lineChose.substring(0, delimiterIndex);
-  //       }
-  //       else if (itemIndex == 2) {
-  //         title = lineChose.substring(0, delimiterIndex);
-  //       }
-  //       else if (itemIndex == 3) {
-  //         desp = lineChose.substring(0, delimiterIndex);
-  //       }
-  //       if (delimiterIndex == -1) {
-  //         break;
-  //       }
-  //       lineChose = lineChose.substring(delimiterIndex + 1);
-  //       itemIndex++;
-  //     }
-  //     DynamicJsonDocument logItem(3000);
-  //     logItem["level"].set(level);
-  //     logItem["time"].set(time);
-  //     logItem["title"].set(title);
-  //     logItem["desp"].set(desp);
-  //     serializeJson(logItem, Serial);
-  //     logArray.add(logItem);
-  //     if (logArray.size() > 100) {
-  //       break;
-  //     }
-  //   }
-  // }
-
 }
 
 void SMachine_Ctrl::StopDeviceAndINIT()
@@ -810,6 +756,14 @@ void PiplelineFlowTask(void* parameter)
           (*Machine_Ctrl.sensorDataSave)[poolChose]["pH_volt"].set(PH_RowValue);
           (*Machine_Ctrl.sensorDataSave)[poolChose]["pH"].set(pHValue);
           digitalWrite(7, LOW);
+          char logBuffer[1000];
+          sprintf(
+            logBuffer, 
+            "PH量測結果, 測量原始值: %s, 轉換後PH值: %s",
+            String(PH_RowValue, 1).c_str(), String(pHValue, 1).c_str()
+          );
+          ESP_LOGI("LOADED_ACTION","       - %s", String(logBuffer).c_str());
+          Machine_Ctrl.SetLog(5, "測量PH數值", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
         }
 
       }
@@ -901,67 +855,233 @@ void SMachine_Ctrl::CleanAllStepTask()
 //! 這個流程在確定執行完畢後，要負責釋放互斥鎖: LOAD__ACTION_V2_xMutex
 void PipelineFlowScan(void* parameter)
 { 
-  JsonObject stepsGroup = (*Machine_Ctrl.pipelineConfig)["steps_group"].as<JsonObject>();
-  JsonObject pipelineSet = (*Machine_Ctrl.pipelineConfig)["pipline"].as<JsonObject>();
-  //? isAllDone: 用來判斷是否所有流程都運行完畢，如果都完畢，則此TASK也可以關閉
-  //? 判斷完畢的邏輯: 全部step都不為 "WAIT"、"RUNNING" 則代表完畢
-  bool isAllDone = false;
-  while(isAllDone == false) {
-    isAllDone = true;
-    for (JsonPair stepsGroupItem : pipelineSet) {
-      //? stepsGroupName: 流程名稱
-      String stepsGroupName = String(stepsGroupItem.key().c_str());
-      //? stepsGroupResult: 此流程的運行狀態
-      String stepsGroupResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].as<String>();
-      //? 只有在"WAIT"時，才有必要判斷是否要執行
-      if (stepsGroupResult == "WAIT") {
-        isAllDone = false;
-        //? parentList: 此流程的parentList
-        JsonObject parentList = (*Machine_Ctrl.pipelineConfig)["pipline"][stepsGroupName]["parentList"].as<JsonObject>();
-        //? 如果此step狀態是WAIT並且parent數量為0，則直接觸發
-        if (parentList.size() == 0) {
-          Machine_Ctrl.AddNewPiplelineFlowTask(stepsGroupName);
-          continue;
+  DynamicJsonDocument pipelineStackList = *((DynamicJsonDocument*)parameter);
+  for (int pipelineIndex = 0;pipelineIndex<pipelineStackList.size();pipelineIndex++) {
+    JsonObject pipelineChose = pipelineStackList[pipelineIndex].as<JsonObject>();
+    String pipelineConfigFileFullPath = pipelineChose["FullFilePath"].as<String>();
+    //STEP 1 檢查檔案是否存在
+    ESP_LOGI("PipelineFlowScan", "STEP 1 檢查檔案是否存在: %s", pipelineConfigFileFullPath.c_str());
+    if (!SD.exists(pipelineConfigFileFullPath)) {
+      ESP_LOGE("PipelineFlowScan", "檔案: %s 不存在,跳至下一流程", pipelineConfigFileFullPath.c_str());
+      Machine_Ctrl.SetLog(1, "檔案不存在，跳至下一流程", pipelineConfigFileFullPath);
+      continue;
+    }
+    //STEP 2 檢查檔案是否可以被讀取
+    ESP_LOGI("PipelineFlowScan", "STEP 2 檢查檔案是否可以被讀取");
+    File pipelineConfigFile = SD.open(pipelineConfigFileFullPath);
+    if (!pipelineConfigFile) {
+      ESP_LOGE("PipelineFlowScan", "無法打開檔案: %s ,跳至下一流程", pipelineConfigFileFullPath.c_str());
+      Machine_Ctrl.SetLog(1, "無法打開檔案，跳至下一流程", pipelineConfigFileFullPath);
+      continue;
+    }
+    //STEP 3 檢查檔案是否可以被解析成JSON格式
+    ESP_LOGI("PipelineFlowScan", "STEP 3 檢查檔案是否可以被解析成JSON格式");
+    (*Machine_Ctrl.pipelineConfig).clear();
+    DeserializationError error = deserializeJson(*Machine_Ctrl.pipelineConfig, pipelineConfigFile,  DeserializationOption::NestingLimit(20));
+    pipelineConfigFile.close();
+    if (error) {
+      ESP_LOGE("LOAD__ACTION_V2", "JOSN解析失敗: %s ,跳至下一流程", error.c_str());
+      Machine_Ctrl.SetLog(1, "JOSN解析失敗, 跳至下一流程", String(error.c_str()));
+      continue;
+    }
+    //STEP 4 整理設定檔內容，以利後續使用
+    ESP_LOGI("PipelineFlowScan", "STEP 4 整理設定檔內容，以利後續使用");
+    /**
+    //* 範例
+    //* [["NO3WashValueTest",["NO3ValueTest","NO3TestWarning"]],["NO3ValueTest",["NH4WashValueTest"]],["NH4WashValueTest",["NH4Test","NH4TestWarning"]]]
+    //* 轉換為
+    //* {
+    //*   "NO3WashValueTest": {
+    //*    "Name": "NO3WashValueTest",
+    //*     "childList": {"NO3ValueTest": {},"NO3TestWarning": {}},
+    //*     "parentList": {}
+    //*   },
+    //*   "NO3ValueTest": {
+    //*     "Name": "NO3ValueTest",
+    //*     "childList": {"NH4WashValueTest": {}},
+    //*     "parentList": {"NO3WashValueTest": {}}
+    //*   },
+    //*   "NO3TestWarning": {
+    //*     "Name": "NO3TestWarning",
+    //*     "childList": {},
+    //*     "parentList": {"NO3WashValueTest": {}}
+    //*   },
+    //*   "NH4WashValueTest": {
+    //*     "Name": "NH4WashValueTest",
+    //*     "childList": {"NH4Test": {},"NH4TestWarning": {}},
+    //*     "parentList": {"NO3ValueTest": {}}
+    //*   },
+    //*   "NH4Test": {
+    //*     "Name": "NH4Test","childList": {},
+    //*     "parentList": {"NH4WashValueTest": {}}
+    //*   },
+    //*   "NH4TestWarning": {
+    //*     "Name": "NH4TestWarning",
+    //*     "childList": {},
+    //*     "parentList": {"NH4WashValueTest": {}}
+    //*   }
+    //* }
+     */
+    String onlyStepGroup = pipelineChose["stepChose"].as<String>();
+    DynamicJsonDocument piplineSave(65525);
+    //? 若不指定Step
+    if (onlyStepGroup == "") {
+      JsonArray piplineArray = (*Machine_Ctrl.pipelineConfig)["pipline"].as<JsonArray>();
+      for (JsonArray singlePiplineArray : piplineArray) {
+        String ThisNodeNameString = singlePiplineArray[0].as<String>();
+        if (!piplineSave.containsKey(ThisNodeNameString)) {
+          piplineSave[ThisNodeNameString]["Name"] = ThisNodeNameString;
+          piplineSave[ThisNodeNameString].createNestedObject("childList");
+          piplineSave[ThisNodeNameString].createNestedObject("parentList");
         }
-
-        //? 程式執行到這邊，代表都不是ENTEY POINT
-        //? TrigerRule: 此流程的觸發條件
-        String TrigerRule = (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["trigger"].as<String>();
-        //? 如果觸發條件是 allDone，則會等待parents都不為 "WAIT"、"RUNNING"、"NORUN" 時則會開始執行
-        //? 而若任何一個parent為 "NORUN" 時，則本step則視為不再需要執行，立刻設定為 "NORUN"
-        if (TrigerRule == "allDone") {
-          bool stepRun = true;
-          for (JsonPair parentItem : parentList ) {
-            String parentName = String(parentItem.key().c_str());
-            String parentResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
-            if (parentResult=="WAIT" or parentResult=="RUNNING") {
-              //? 有任何一個parent還沒執行完畢，跳出
-              stepRun = false;
-              break; 
-            } else if ( parentResult=="NORUN") {
-              //? 有任何一個parent不需執行，此step也不再需執行
-              ESP_LOGW("", "Task %s 不符合 allDone 的執行條件，關閉此Task", stepsGroupName.c_str());
-              (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("NORUN");
-              stepRun = false;
-              break; 
-            }
+        for (String piplineChildName :  singlePiplineArray[1].as<JsonArray>()) {
+          if (!piplineSave.containsKey(piplineChildName)) {
+            piplineSave[piplineChildName]["Name"] = piplineChildName;
+            piplineSave[piplineChildName].createNestedObject("childList");
+            piplineSave[piplineChildName].createNestedObject("parentList");
           }
-          if (stepRun) {
+          if (!piplineSave[ThisNodeNameString]["childList"].containsKey(piplineChildName)){
+            piplineSave[ThisNodeNameString]["childList"].createNestedObject(piplineChildName);
+          }
+
+          if (!piplineSave[piplineChildName]["parentList"].containsKey(ThisNodeNameString)){
+            piplineSave[piplineChildName]["parentList"].createNestedObject(ThisNodeNameString);
+          }
+        }
+      }
+      (*Machine_Ctrl.pipelineConfig)["pipline"].set(piplineSave);
+      //? 將 steps_group 內的資料多加上key值: RESULT 來讓後續Task可以判斷流程是否正確執行
+      //? 如果沒有"trigger"這個key值，則預設task觸發條件為"allDone"
+      JsonObject stepsGroup = (*Machine_Ctrl.pipelineConfig)["steps_group"].as<JsonObject>();
+      for (JsonPair stepsGroupItem : stepsGroup) {
+        String stepsGroupName = String(stepsGroupItem.key().c_str());
+        //? 如果有"same"這個key值，則 steps 要繼承其他設定內容
+        if ((*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName].containsKey("same")) {
+          (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["steps"].set(
+            (*Machine_Ctrl.pipelineConfig)["steps_group"][
+              (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["same"].as<String>()
+            ]["steps"].as<JsonArray>()
+          );
+        }
+        (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("WAIT");
+        if (!(*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName].containsKey("trigger")) {
+          (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["trigger"].set("allDone");
+        }
+      };
+
+      
+    }
+    else {
+      JsonObject piplineArray = (*Machine_Ctrl.pipelineConfig)["steps_group"].as<JsonObject>();
+      if (piplineArray.containsKey(onlyStepGroup)) {
+        piplineSave[onlyStepGroup]["Name"] = onlyStepGroup;
+        piplineSave[onlyStepGroup].createNestedObject("childList");
+        piplineSave[onlyStepGroup].createNestedObject("parentList");
+        (*Machine_Ctrl.pipelineConfig)["pipline"].set(piplineSave);
+        (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["RESULT"].set("WAIT");
+        if ((*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup].containsKey("same")) {
+          (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["steps"].set(
+            (*Machine_Ctrl.pipelineConfig)["steps_group"][
+              (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["same"].as<String>()
+            ]["steps"].as<JsonArray>()
+          );
+        }
+        String onlyEvent = pipelineChose["eventChose"].as<String>();
+        if (onlyEvent != "") {
+          //? 若有指定Event執行
+          //? 防呆: 檢查此event是否存在
+          if (!(*Machine_Ctrl.pipelineConfig)["events"].containsKey(onlyEvent)) {
+            //! 指定的event不存在
+            ESP_LOGE("LOAD__ACTION_V2", "設定檔 %s 中找不到Event: %s ，終止流程執行", pipelineConfigFileFullPath.c_str(), onlyEvent.c_str());
+            Machine_Ctrl.SetLog(1, "找不到事件: " + onlyEvent + "，終止流程執行", "設定檔名稱: "+pipelineConfigFileFullPath);
+            continue;
+          }
+          (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["steps"].clear();
+          (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["steps"].add(onlyEvent);
+          int onlyIndex = pipelineChose["eventIndexChose"].as<int>();
+          if (onlyIndex != -1) {
+            //? 若有指定事件中的步驟執行
+            //? 防呆: 檢查此步驟是否存在
+            if (onlyIndex >= (*Machine_Ctrl.pipelineConfig)["events"][onlyEvent]["event"].size()) {
+              //! 指定的index不存在
+              ESP_LOGE("LOAD__ACTION_V2", "設定檔 %s 中的Event: %s 並無步驟: %d，終止流程執行", pipelineConfigFileFullPath.c_str(), onlyEvent.c_str(), onlyIndex);
+              Machine_Ctrl.SetLog(1, "事件: " + onlyEvent + "找不到步驟: " + String(onlyIndex) + "，終止流程執行", "設定檔名稱: "+pipelineConfigFileFullPath);
+              continue;
+            }
+            DynamicJsonDocument newEventIndexArray(200);
+            JsonArray array = newEventIndexArray.to<JsonArray>();
+            array.add(
+              (*Machine_Ctrl.pipelineConfig)["events"][onlyEvent]["event"][onlyIndex]
+            );
+            (*Machine_Ctrl.pipelineConfig)["events"][onlyEvent]["event"].set(array);
+          }
+        }
+      }
+    }
+    
+    //STEP 5 開始執行流程判斷功能
+    ESP_LOGI("PipelineFlowScan", "STEP 5 開始執行流程判斷功能");
+    JsonObject stepsGroup = (*Machine_Ctrl.pipelineConfig)["steps_group"].as<JsonObject>();
+    JsonObject pipelineSet = (*Machine_Ctrl.pipelineConfig)["pipline"].as<JsonObject>();
+    //? isAllDone: 用來判斷是否所有流程都運行完畢，如果都完畢，則此TASK也可以關閉
+    //? 判斷完畢的邏輯: 全部step都不為 "WAIT"、"RUNNING" 則代表完畢
+    bool isAllDone = false;
+    while(isAllDone == false) {
+      isAllDone = true;
+      for (JsonPair stepsGroupItem : pipelineSet) {
+        //? stepsGroupName: 流程名稱
+        String stepsGroupName = String(stepsGroupItem.key().c_str());
+        //? stepsGroupResult: 此流程的運行狀態
+        String stepsGroupResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].as<String>();
+        //? 只有在"WAIT"時，才有必要判斷是否要執行
+        if (stepsGroupResult == "WAIT") {
+          isAllDone = false;
+          //? parentList: 此流程的parentList
+          JsonObject parentList = (*Machine_Ctrl.pipelineConfig)["pipline"][stepsGroupName]["parentList"].as<JsonObject>();
+          //? 如果此step狀態是WAIT並且parent數量為0，則直接觸發
+          if (parentList.size() == 0) {
             Machine_Ctrl.AddNewPiplelineFlowTask(stepsGroupName);
             continue;
           }
-        }
-        //? 如果觸發條件是 oneFail，則會等待parent任何一項的RESULT變成 "FAIL" 就執行
-        //? 而若所有parent都不是 "FAIL" 並且不為 "WAIT"、"RUNNING" 時，則本Step則視為不再需要執行，立刻設定為 "NORUN"
-        else if (TrigerRule == "oneFail") {
-          bool setNoRun = true;
-          for (JsonPair parentItem : parentList ) {
-            String parentName = String(parentItem.key().c_str());
-            String parentResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
-            if (parentResult=="FAIL") {
+
+          //? 程式執行到這邊，代表都不是ENTEY POINT
+          //? TrigerRule: 此流程的觸發條件
+          String TrigerRule = (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["trigger"].as<String>();
+          //? 如果觸發條件是 allDone，則會等待parents都不為 "WAIT"、"RUNNING"、"NORUN" 時則會開始執行
+          //? 而若任何一個parent為 "NORUN" 時，則本step則視為不再需要執行，立刻設定為 "NORUN"
+          if (TrigerRule == "allDone") {
+            bool stepRun = true;
+            for (JsonPair parentItem : parentList ) {
+              String parentName = String(parentItem.key().c_str());
+              String parentResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
+              if (parentResult=="WAIT" or parentResult=="RUNNING") {
+                //? 有任何一個parent還沒執行完畢，跳出
+                stepRun = false;
+                break; 
+              } else if ( parentResult=="NORUN") {
+                //? 有任何一個parent不需執行，此step也不再需執行
+                ESP_LOGW("", "Task %s 不符合 allDone 的執行條件，關閉此Task", stepsGroupName.c_str());
+                (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("NORUN");
+                stepRun = false;
+                break; 
+              }
+            }
+            if (stepRun) {
               Machine_Ctrl.AddNewPiplelineFlowTask(stepsGroupName);
-              setNoRun = false;
-              break;
+              continue;
+            }
+          }
+          //? 如果觸發條件是 oneFail，則會等待parent任何一項的RESULT變成 "FAIL" 就執行
+          //? 而若所有parent都不是 "FAIL" 並且不為 "WAIT"、"RUNNING" 時，則本Step則視為不再需要執行，立刻設定為 "NORUN"
+          else if (TrigerRule == "oneFail") {
+            bool setNoRun = true;
+            for (JsonPair parentItem : parentList ) {
+              String parentName = String(parentItem.key().c_str());
+              String parentResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
+              if (parentResult=="FAIL") {
+                Machine_Ctrl.AddNewPiplelineFlowTask(stepsGroupName);
+                setNoRun = false;
+                break;
             } else if (parentResult=="WAIT" or parentResult=="RUNNING") {
               setNoRun = false;
               break;
@@ -1002,6 +1122,7 @@ void PipelineFlowScan(void* parameter)
     vTaskDelay(100/portTICK_PERIOD_MS);
   }
 
+  }
   Machine_Ctrl.TASK__pipelineFlowScan = NULL;
   xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex); //! 釋放互斥鎖!!
   ESP_LOGI("", "所有流程已執行完畢");
@@ -1011,9 +1132,9 @@ void PipelineFlowScan(void* parameter)
   );
   vTaskDelete(NULL);
 }
+
 //? 建立Pipeline排程的控制Task
-void SMachine_Ctrl::CreatePipelineFlowScanTask() 
-{
+void SMachine_Ctrl::CreatePipelineFlowScanTask(DynamicJsonDocument *pipelineStackList) {
   //!! 防呆，在此funtion內，互斥鎖: LOAD__ACTION_V2_xMutex 應該都是上鎖的狀態
   //!! 若判定執行失敗，則立刻釋放互斥鎖
   if (xSemaphoreTake(Machine_Ctrl.LOAD__ACTION_V2_xMutex, 0) == pdTRUE) {
@@ -1025,7 +1146,7 @@ void SMachine_Ctrl::CreatePipelineFlowScanTask()
     if (TASK__pipelineFlowScan == NULL) {
       xTaskCreate(
         PipelineFlowScan, "PipelineScan",
-        5000, NULL, 4, &TASK__pipelineFlowScan
+        20000, (void*)pipelineStackList, 4, &TASK__pipelineFlowScan
       );
     }
     else {
@@ -1043,7 +1164,7 @@ void SMachine_Ctrl::CreatePipelineFlowScanTask()
 // vSemaphoreCreateBinary(LOAD__ACTION_V2_xMutex);
 // SemaphoreHandle_t LOAD__ACTION_V2_xMutex = vSemaphoreCreateBinary();
 
-bool SMachine_Ctrl::LOAD__ACTION_V2(String pipelineConfigFileFullPath, String onlyStepGroup, String onlyEvent, int onlyIndex)
+bool SMachine_Ctrl::LOAD__ACTION_V2(DynamicJsonDocument *pipelineStackList)
 {
   //!! 防呆，在此funtion內，互斥鎖: LOAD__ACTION_V2_xMutex 應該都是上鎖的狀態
   //!! 若判定執行失敗，則立刻釋放互斥鎖
@@ -1053,139 +1174,10 @@ bool SMachine_Ctrl::LOAD__ACTION_V2(String pipelineConfigFileFullPath, String on
     xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
     return false;
   }
-
-
-  //! onlyStepGroup: 指定只執行哪一個流程，若為NULL則代表不指定
-  //! onlyEvent: 指定只執行流程中的哪一個Event，若為NULL則代表不指定
-  (*pipelineConfig).clear();
-  File pipelineConfigFile = SD.open(pipelineConfigFileFullPath);
-  if (!pipelineConfigFile) {
-    ESP_LOGE("LOAD__ACTION_V2", "無法打開檔案: %s ，終止流程執行", pipelineConfigFileFullPath.c_str());
-    SetLog(1, "無法打開檔案，終止流程執行", pipelineConfigFileFullPath);
-    xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
-    return false;
-  }
-  DeserializationError error = deserializeJson(*pipelineConfig, pipelineConfigFile,  DeserializationOption::NestingLimit(20));
-  pipelineConfigFile.close();
-  if (error) {
-    ESP_LOGE("LOAD__ACTION_V2", "JOSN解析失敗: %s ，終止流程執行", error.c_str());
-    SetLog(1, "JOSN解析失敗，終止流程執行", String(error.c_str()));
-    xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
-    return false;
-  }
-  DynamicJsonDocument piplineSave(65525);
-  //! 不指定StepGroup執行
-  if (onlyStepGroup == "") {
-    //? 讀取設定檔完成後，還要將設定檔內容做準備
-    //? 將原本的pipeline流程設定轉換成後面Task好追蹤的格式
-    JsonArray piplineArray = (*pipelineConfig)["pipline"].as<JsonArray>();
-    for (JsonArray singlePiplineArray : piplineArray) {
-      String ThisNodeNameString = singlePiplineArray[0].as<String>();
-      if (!piplineSave.containsKey(ThisNodeNameString)) {
-        piplineSave[ThisNodeNameString]["Name"] = ThisNodeNameString;
-        piplineSave[ThisNodeNameString].createNestedObject("childList");
-        piplineSave[ThisNodeNameString].createNestedObject("parentList");
-      }
-      for (String piplineChildName :  singlePiplineArray[1].as<JsonArray>()) {
-        if (!piplineSave.containsKey(piplineChildName)) {
-          piplineSave[piplineChildName]["Name"] = piplineChildName;
-          piplineSave[piplineChildName].createNestedObject("childList");
-          piplineSave[piplineChildName].createNestedObject("parentList");
-        }
-        if (!piplineSave[ThisNodeNameString]["childList"].containsKey(piplineChildName)){
-          piplineSave[ThisNodeNameString]["childList"].createNestedObject(piplineChildName);
-          // ESP_LOGI("", "%s 新增一個 child: %s", ThisNodeNameString.c_str(), piplineChildName.c_str());
-        }
-
-        if (!piplineSave[piplineChildName]["parentList"].containsKey(ThisNodeNameString)){
-          piplineSave[piplineChildName]["parentList"].createNestedObject(ThisNodeNameString);
-          // ESP_LOGI("", "%s 新增一個 parent: %s", piplineChildName.c_str(), ThisNodeNameString.c_str());
-        }
-      }
-    }
-    (*Machine_Ctrl.pipelineConfig)["pipline"].set(piplineSave);
-
-    //? 將 steps_group 內的資料多加上key值: RESULT 來讓後續Task可以判斷流程是否正確執行
-    //? 如果沒有"trigger"這個key值，則預設task觸發條件為"allDone"
-    JsonObject stepsGroup = (*Machine_Ctrl.pipelineConfig)["steps_group"].as<JsonObject>();
-    for (JsonPair stepsGroupItem : stepsGroup) {
-      String stepsGroupName = String(stepsGroupItem.key().c_str());
-      //? 如果有"same"這個key值，則 steps 要繼承其他設定內容
-      if ((*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName].containsKey("same")) {
-        (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["steps"].set(
-          (*Machine_Ctrl.pipelineConfig)["steps_group"][
-            (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["same"].as<String>()
-          ]["steps"].as<JsonArray>()
-        );
-      }
-      (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("WAIT");
-      if (!(*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName].containsKey("trigger")) {
-        (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["trigger"].set("allDone");
-      }
-    };
-    CreatePipelineFlowScanTask();
-    return true;
-  } 
-  //! 指定StepGroup執行
-  else {
-    JsonObject piplineArray = (*pipelineConfig)["steps_group"].as<JsonObject>();
-    if (piplineArray.containsKey(onlyStepGroup)) {
-      piplineSave[onlyStepGroup]["Name"] = onlyStepGroup;
-      piplineSave[onlyStepGroup].createNestedObject("childList");
-      piplineSave[onlyStepGroup].createNestedObject("parentList");
-      (*Machine_Ctrl.pipelineConfig)["pipline"].set(piplineSave);
-      (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["RESULT"].set("WAIT");
-      if ((*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup].containsKey("same")) {
-        (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["steps"].set(
-          (*Machine_Ctrl.pipelineConfig)["steps_group"][
-            (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["same"].as<String>()
-          ]["steps"].as<JsonArray>()
-        );
-      }
-      if (onlyEvent != "") {
-        //? 若有指定Event執行
-        //? 防呆: 檢查此event是否存在
-        if (!(*Machine_Ctrl.pipelineConfig)["events"].containsKey(onlyEvent)) {
-          //! 指定的event不存在
-          ESP_LOGE("LOAD__ACTION_V2", "設定檔 %s 中找不到Event: %s ，終止流程執行", pipelineConfigFileFullPath.c_str(), onlyEvent.c_str());
-          SetLog(1, "找不到事件: " + onlyEvent + "，終止流程執行", "設定檔名稱: "+pipelineConfigFileFullPath);
-          xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
-          return false;
-        }
-        (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["steps"].clear();
-        (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["steps"].add(onlyEvent);
-
-        if (onlyIndex != -1) {
-          //? 若有指定事件中的步驟執行
-          //? 防呆: 檢查此步驟是否存在
-          if (onlyIndex >= (*Machine_Ctrl.pipelineConfig)["events"][onlyEvent]["event"].size()) {
-            //! 指定的index不存在
-            ESP_LOGE("LOAD__ACTION_V2", "設定檔 %s 中的Event: %s 並無步驟: %d，終止流程執行", pipelineConfigFileFullPath.c_str(), onlyEvent.c_str(), onlyIndex);
-            SetLog(1, "事件: " + onlyEvent + "找不到步驟: " + String(onlyIndex) + "，終止流程執行", "設定檔名稱: "+pipelineConfigFileFullPath);
-            xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
-            return false;
-          }
-          DynamicJsonDocument newEventIndexArray(200);
-          JsonArray array = newEventIndexArray.to<JsonArray>();
-          array.add(
-            (*Machine_Ctrl.pipelineConfig)["events"][onlyEvent]["event"][onlyIndex]
-          );
-          (*Machine_Ctrl.pipelineConfig)["events"][onlyEvent]["event"].set(array);
-        }
-      }
-      CreatePipelineFlowScanTask();
-      return true;
-    }
-    else {
-      ESP_LOGE("LOAD__ACTION_V2", "設定檔 %s 中找不到流程: %s ，終止流程執行", pipelineConfigFileFullPath.c_str(), onlyStepGroup.c_str());
-      SetLog(1, "找不到流程: " + onlyStepGroup + "，終止流程執行", "設定檔名稱: "+pipelineConfigFileFullPath);
-      xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
-      return false;
-    }
-  }
-
-
+  CreatePipelineFlowScanTask(pipelineStackList);
+  return true;
 }
+
 
 
 typedef struct {

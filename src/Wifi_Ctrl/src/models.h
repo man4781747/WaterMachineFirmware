@@ -2116,6 +2116,8 @@ void ws_v2_RunPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
   //! 注意，這邊流程只有失敗時會釋放互斥鎖，但如果收到訓則會將互斥鎖鎖起來，要記得再其他流程釋放他
   //! 如果執行失敗，要記得釋放
   if (xSemaphoreTake(Machine_Ctrl.LOAD__ACTION_V2_xMutex, 0) == pdTRUE) {
+    DynamicJsonDocument singlePipelineSetting(10000);
+
     String stepChose = "";
     String eventChose = "";
     int eventIndexChose = -1;
@@ -2130,33 +2132,45 @@ void ws_v2_RunPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
     }
     String TargetName = D_PathParameter->as<JsonObject>()["name"];
     String FullFilePath = "/pipelines/"+TargetName+".json";
-    if (SD.exists(FullFilePath)) {
-      if (Machine_Ctrl.LOAD__ACTION_V2(FullFilePath, stepChose, eventChose, eventIndexChose)) {
-        Machine_Ctrl.SetLog(
-          5,
-          "即將執行流程",
-          "流程設定讀取成功",
-          NULL, client, false
-        );
-        //! 這邊不釋放互斥鎖，交由後續執行釋放
-      } else {
-        Machine_Ctrl.SetLog(
-          1,
-          "流程設定失敗",
-          "檔案讀取失敗",
-          NULL, client, false
-        );
-        xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
-      }
-    } else {
-      Machine_Ctrl.SetLog(
-        1,
-        "流程設定失敗",
-        "找不到流程設定檔案: " + TargetName+".json",
-        NULL, client, false
-      );
-      xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
-    }
+    singlePipelineSetting["FullFilePath"].set(FullFilePath);
+    singlePipelineSetting["TargetName"].set(TargetName);
+    singlePipelineSetting["stepChose"].set(stepChose);
+    singlePipelineSetting["eventChose"].set(eventChose);
+    singlePipelineSetting["eventIndexChose"].set(eventIndexChose);
+
+    (*Machine_Ctrl.pipelineStack).clear();
+    (*Machine_Ctrl.pipelineStack).add(singlePipelineSetting);
+    
+    Machine_Ctrl.LOAD__ACTION_V2(Machine_Ctrl.pipelineStack);
+
+    // if (SD.exists(FullFilePath)) {
+    //   if (Machine_Ctrl.LOAD__ACTION_V2(FullFilePath, stepChose, eventChose, eventIndexChose)) {
+    //     Machine_Ctrl.SetLog(
+    //       5,
+    //       "即將執行流程",
+    //       "流程設定讀取成功",
+    //       NULL, client, false
+    //     );
+    //     //! 這邊不釋放互斥鎖，交由後續執行釋放
+    //   } else {
+    //     Machine_Ctrl.SetLog(
+    //       1,
+    //       "流程設定失敗",
+    //       "檔案讀取失敗",
+    //       NULL, client, false
+    //     );
+    //     xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
+    //   }
+    // } else {
+    //   Machine_Ctrl.SetLog(
+    //     1,
+    //     "流程設定失敗",
+    //     "找不到流程設定檔案: " + TargetName+".json",
+    //     NULL, client, false
+    //   );
+    //   xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
+    // }
+ 
   }
   else {
     Machine_Ctrl.SetLog(
@@ -2166,13 +2180,6 @@ void ws_v2_RunPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
       NULL, client, false
     );
   }
-
-
-
-
-
-
-  
 }
 
 
@@ -2446,24 +2453,21 @@ void ws_v2_RunPwmMotor(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
     File tempFileItem = SD.open("/pipelines/__temp__.json", FILE_WRITE);
     serializeJson(tempFile, tempFileItem);
     tempFileItem.close();
-    if (Machine_Ctrl.LOAD__ACTION_V2("/pipelines/__temp__.json")) {
-      Machine_Ctrl.SetLog(
-        5,
-        "即將執行流程",
-        "流程設定讀取成功",
-        NULL, client, false
-      );
-    } else {
-      Machine_Ctrl.SetLog(
-        1,
-        "流程設定失敗",
-        "檔案讀取失敗",
-        NULL, client, false
-      );
-      xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
-    }
-  }
 
+    DynamicJsonDocument singlePipelineSetting(10000);
+    String TargetName = "__temp__.json";
+    String FullFilePath = "/pipelines/__temp__.json";
+    singlePipelineSetting["FullFilePath"].set(FullFilePath);
+    singlePipelineSetting["TargetName"].set(TargetName);
+    singlePipelineSetting["stepChose"].set("");
+    singlePipelineSetting["eventChose"].set("");
+    singlePipelineSetting["eventIndexChose"].set(-1);
+
+    (*Machine_Ctrl.pipelineStack).clear();
+    (*Machine_Ctrl.pipelineStack).add(singlePipelineSetting);
+    
+    Machine_Ctrl.LOAD__ACTION_V2(Machine_Ctrl.pipelineStack);
+  }
   else {
     Machine_Ctrl.SetLog(
       1,
@@ -2515,30 +2519,23 @@ void ws_v2_RunPeristalticMotor(AsyncWebSocket *server, AsyncWebSocketClient *cli
     DynamicJsonDocument emptyObject(1000);
     JsonArray emptyList = emptyObject.createNestedArray();
     piplineSetList.add(emptyList);
-
-
-    // serializeJsonPretty(tempFile, Serial);
     File tempFileItem = SD.open("/pipelines/__temp__.json", FILE_WRITE);
     serializeJson(tempFile, tempFileItem);
     tempFileItem.close();
-    if (Machine_Ctrl.LOAD__ACTION_V2("/pipelines/__temp__.json")) {
-      Machine_Ctrl.SetLog(
-        5,
-        "即將執行流程",
-        "流程設定讀取成功",
-        NULL, client, false
-      );
-    } else {
-      Machine_Ctrl.SetLog(
-        1,
-        "流程設定失敗",
-        "檔案讀取失敗",
-        NULL, client, false
-      );
-      xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
-    }
-  }
+    DynamicJsonDocument singlePipelineSetting(10000);
+    String TargetName = "__temp__.json";
+    String FullFilePath = "/pipelines/__temp__.json";
+    singlePipelineSetting["FullFilePath"].set(FullFilePath);
+    singlePipelineSetting["TargetName"].set(TargetName);
+    singlePipelineSetting["stepChose"].set("");
+    singlePipelineSetting["eventChose"].set("");
+    singlePipelineSetting["eventIndexChose"].set(-1);
 
+    (*Machine_Ctrl.pipelineStack).clear();
+    (*Machine_Ctrl.pipelineStack).add(singlePipelineSetting);
+    
+    Machine_Ctrl.LOAD__ACTION_V2(Machine_Ctrl.pipelineStack);
+  }
   else {
     Machine_Ctrl.SetLog(
       1,
