@@ -1991,79 +1991,56 @@ void RunAllPoolDataGetTask(void* parameter)
 //? 目的在於執行時，他會依序執行所有池的資料，每池檢測完後丟出一次NewData
 void ws_RunAllPoolPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
 {
-  ESP_LOGD("websocket API", "執行所有檢測流程所需的排程");
-  JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
-  
-  if (Machine_Ctrl.TASK__NOW_ACTION != NULL) {
-    Machine_Ctrl.SetLog(
-      2,
-      "執行流程設定失敗",
-      "儀器忙碌中，請稍後再試",
-      NULL, client
-    );
-  }
-  else {
-    ESP_LOGI("ws_RunAllPoolPipeline","RUN");
-
+  ESP_LOGI("websocket API", "執行所有檢測流程所需的排程");
+  if (xSemaphoreTake(Machine_Ctrl.LOAD__ACTION_V2_xMutex, 0) == pdTRUE) {
     if ((*D_QueryParameter).containsKey("order")) {
       String orderString = (*D_QueryParameter)["order"].as<String>();
       if (orderString.length() == 0) {
-        Machine_Ctrl.SetLog(
-          1,
-          "執行蝦池數值檢測流程失敗",
-          "order參數不得為空",
-          NULL, client
-        );
-      } else {
+        Machine_Ctrl.SetLog(1, "執行蝦池數值檢測流程失敗", "order參數不得為空", NULL, client, false);
+        xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
+      }
+      else {
         //* 分割order文字
         int splitIndex = -1;
         int prevSpliIndex = 0;
         splitIndex = orderString.indexOf(',', prevSpliIndex);
-        String noInfoString = "";
+        (*Machine_Ctrl.pipelineStack).clear();
         while (splitIndex != -1) {
           String token = orderString.substring(prevSpliIndex, splitIndex);
-          Serial.println(token);
-          if (!(*Machine_Ctrl.spiffs.DeviceSetting)["pipeline"].containsKey(token)) {
-            noInfoString += token + ",";
-          }
-          prevSpliIndex = splitIndex + 1;
+          String TargetName = token+".json";
+          String FullFilePath = "/pipelines/"+TargetName;
+          DynamicJsonDocument singlePipelineSetting(10000);
+          singlePipelineSetting["FullFilePath"].set(FullFilePath);
+          singlePipelineSetting["TargetName"].set(TargetName);
+          singlePipelineSetting["stepChose"].set("");
+          singlePipelineSetting["eventChose"].set("");
+          singlePipelineSetting["eventIndexChose"].set(-1);
+          (*Machine_Ctrl.pipelineStack).add(singlePipelineSetting);
+          prevSpliIndex = splitIndex +1;
           splitIndex = orderString.indexOf(',', prevSpliIndex);
         }
         String lastToken = orderString.substring(prevSpliIndex);
-        if (!(*Machine_Ctrl.spiffs.DeviceSetting)["pipeline"].containsKey(lastToken)) {
-          noInfoString += lastToken;
+        if (lastToken.length() > 0) {
+          String TargetName = lastToken+".json";
+          String FullFilePath = "/pipelines/"+TargetName;
+          DynamicJsonDocument singlePipelineSetting(10000);
+          singlePipelineSetting["FullFilePath"].set(FullFilePath);
+          singlePipelineSetting["TargetName"].set(TargetName);
+          singlePipelineSetting["stepChose"].set("");
+          singlePipelineSetting["eventChose"].set("");
+          singlePipelineSetting["eventIndexChose"].set(-1);
+          (*Machine_Ctrl.pipelineStack).add(singlePipelineSetting);
         }
-
-        
-        if (noInfoString.length()!=0) {
-          Machine_Ctrl.SetLog(
-            1,
-            "執行蝦池數值檢測流程失敗",
-            "找不到以下設定: "+noInfoString,
-            NULL, client
-          );
-        } else {
-          xTaskCreate(
-            RunAllPoolDataGetTask, "ALL_DATA_GET",
-            10000, (void*)&orderString, configMAX_PRIORITIES-1, NULL
-          );
-
-          //? 這邊的code試給NodeRed判斷用的，讓他知道他觸發的排程有正常被執行
-          D_baseInfoJSON["action"]["message"].set("觸發排程成功");
-          D_baseInfoJSON["action"]["status"].set("OK");
-          String returnString;
-          serializeJsonPretty(D_baseInfoJSON, returnString);
-          server->binaryAll(returnString);
-        }
+        Machine_Ctrl.LOAD__ACTION_V2(Machine_Ctrl.pipelineStack);
       }
-    } else {
-      Machine_Ctrl.SetLog(
-        1,
-        "執行蝦池數值檢測流程失敗",
-        "API需要order參數",
-        NULL, client
-      );
+    } 
+    else {
+      Machine_Ctrl.SetLog(1,"執行蝦池數值檢測流程失敗","API需要order參數",NULL, client, false);
+      xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
     }
+  }
+  else {
+    Machine_Ctrl.SetLog(2,"執行流程設定失敗","儀器忙碌中，請稍後再試",NULL, client, false);  
   }
 }
 

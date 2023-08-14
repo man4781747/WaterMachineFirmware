@@ -863,7 +863,7 @@ void PipelineFlowScan(void* parameter)
     ESP_LOGI("PipelineFlowScan", "STEP 1 檢查檔案是否存在: %s", pipelineConfigFileFullPath.c_str());
     if (!SD.exists(pipelineConfigFileFullPath)) {
       ESP_LOGE("PipelineFlowScan", "檔案: %s 不存在,跳至下一流程", pipelineConfigFileFullPath.c_str());
-      Machine_Ctrl.SetLog(1, "檔案不存在，跳至下一流程", pipelineConfigFileFullPath);
+      Machine_Ctrl.SetLog(1, "檔案不存在，跳至下一流程", pipelineConfigFileFullPath, Machine_Ctrl.BackendServer.ws_);
       continue;
     }
     //STEP 2 檢查檔案是否可以被讀取
@@ -871,7 +871,7 @@ void PipelineFlowScan(void* parameter)
     File pipelineConfigFile = SD.open(pipelineConfigFileFullPath);
     if (!pipelineConfigFile) {
       ESP_LOGE("PipelineFlowScan", "無法打開檔案: %s ,跳至下一流程", pipelineConfigFileFullPath.c_str());
-      Machine_Ctrl.SetLog(1, "無法打開檔案，跳至下一流程", pipelineConfigFileFullPath);
+      Machine_Ctrl.SetLog(1, "無法打開檔案，跳至下一流程", pipelineConfigFileFullPath, Machine_Ctrl.BackendServer.ws_);
       continue;
     }
     //STEP 3 檢查檔案是否可以被解析成JSON格式
@@ -881,7 +881,7 @@ void PipelineFlowScan(void* parameter)
     pipelineConfigFile.close();
     if (error) {
       ESP_LOGE("LOAD__ACTION_V2", "JOSN解析失敗: %s ,跳至下一流程", error.c_str());
-      Machine_Ctrl.SetLog(1, "JOSN解析失敗, 跳至下一流程", String(error.c_str()));
+      Machine_Ctrl.SetLog(1, "JOSN解析失敗, 跳至下一流程", String(error.c_str()), Machine_Ctrl.BackendServer.ws_);
       continue;
     }
     //STEP 4 整理設定檔內容，以利後續使用
@@ -993,7 +993,7 @@ void PipelineFlowScan(void* parameter)
           if (!(*Machine_Ctrl.pipelineConfig)["events"].containsKey(onlyEvent)) {
             //! 指定的event不存在
             ESP_LOGE("LOAD__ACTION_V2", "設定檔 %s 中找不到Event: %s ，終止流程執行", pipelineConfigFileFullPath.c_str(), onlyEvent.c_str());
-            Machine_Ctrl.SetLog(1, "找不到事件: " + onlyEvent + "，終止流程執行", "設定檔名稱: "+pipelineConfigFileFullPath);
+            Machine_Ctrl.SetLog(1, "找不到事件: " + onlyEvent + "，終止流程執行", "設定檔名稱: "+pipelineConfigFileFullPath, Machine_Ctrl.BackendServer.ws_);
             continue;
           }
           (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["steps"].clear();
@@ -1005,7 +1005,7 @@ void PipelineFlowScan(void* parameter)
             if (onlyIndex >= (*Machine_Ctrl.pipelineConfig)["events"][onlyEvent]["event"].size()) {
               //! 指定的index不存在
               ESP_LOGE("LOAD__ACTION_V2", "設定檔 %s 中的Event: %s 並無步驟: %d，終止流程執行", pipelineConfigFileFullPath.c_str(), onlyEvent.c_str(), onlyIndex);
-              Machine_Ctrl.SetLog(1, "事件: " + onlyEvent + "找不到步驟: " + String(onlyIndex) + "，終止流程執行", "設定檔名稱: "+pipelineConfigFileFullPath);
+              Machine_Ctrl.SetLog(1, "事件: " + onlyEvent + "找不到步驟: " + String(onlyIndex) + "，終止流程執行", "設定檔名稱: "+pipelineConfigFileFullPath, Machine_Ctrl.BackendServer.ws_);
               continue;
             }
             DynamicJsonDocument newEventIndexArray(200);
