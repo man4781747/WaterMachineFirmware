@@ -350,6 +350,8 @@ void PiplelineFlowTask(void* parameter)
   //? 這個 Task 要執行的 parent list
   JsonObject parentList = (*Machine_Ctrl.pipelineConfig)["pipline"][stepsGroupNameString]["parentList"].as<JsonObject>();
   
+  bool isStepFail = false;
+
   for (String eventChose : stepsGroupArray) {
     //? eventChose: 待執行的event名稱
 
@@ -457,7 +459,6 @@ void PiplelineFlowTask(void* parameter)
               //? 執行到這，代表馬達執行到最大執行時間，如果 failType 是 timeout，則代表觸發失敗判斷
               if (thisFailType == "timeout") {
                 ESP_LOGE("", "蠕動馬達觸發Timeout錯誤");
-                (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
                 if (thisFailAction=="stepStop") {
                   for (const auto& motorChose : endTimeCheckList.as<JsonObject>()) {
                     //? 強制停止當前step執行的馬達
@@ -465,6 +466,7 @@ void PiplelineFlowTask(void* parameter)
                     Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
                   }
                   endTimeCheckJSON["finish"].set(true);
+                  (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
                   Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
                   Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
                   free(stepsGroupName);
@@ -498,7 +500,6 @@ void PiplelineFlowTask(void* parameter)
                 //? 判斷是否有觸發錯誤
                 if (thisFailType == "connect") {
                   ESP_LOGE("", "蠕動馬達觸發connect錯誤");
-                  (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
                   if (thisFailAction=="stepStop") {
                     for (const auto& motorChose : endTimeCheckList.as<JsonObject>()) {
                       //? 強制停止當前step執行的馬達
@@ -506,6 +507,7 @@ void PiplelineFlowTask(void* parameter)
                       Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
                     }
                     endTimeCheckJSON["finish"].set(true);
+                    (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
                     Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
                     Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
                     free(stepsGroupName);
@@ -622,11 +624,11 @@ void PiplelineFlowTask(void* parameter)
 
             if (fail) {
               sprintf(logBuffer, "最終強度: %d, 無法調整至指定強度: %d",checkNum, targetLevel);
-              Machine_Ctrl.SetLog(3, "調整光強度過程中發現錯誤", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
+              Machine_Ctrl.SetLog(2, "調整光強度過程中發現錯誤", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
               ESP_LOGI("LOADED_ACTION","       - %s",String(logBuffer).c_str());
-              (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
               if (failAction == "stepStop") {
                 //? 當前step流程中止
+                (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
                 Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
                 Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
                 free(stepsGroupName);
@@ -635,6 +637,7 @@ void PiplelineFlowTask(void* parameter)
               else if (failAction == "stopImmediately") {
                 Machine_Ctrl.StopDeviceAndINIT();
               }
+              isStepFail = true;
             }
           }
           //! 數據測量
@@ -709,7 +712,6 @@ void PiplelineFlowTask(void* parameter)
 
 
             if (failCheckValue < min or failCheckValue > max) {
-              (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
               sprintf(
                 logBuffer, 
                 "測量光度述職時發現錯誤，獲得數值: %s, 不再設定範圍內 %s - %s",
@@ -718,10 +720,9 @@ void PiplelineFlowTask(void* parameter)
               ESP_LOGI("LOADED_ACTION","       - %s", String(logBuffer).c_str());
               Machine_Ctrl.SetLog(1, "測量PPM數值", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
 
-
-
               if (failAction == "stepStop") {
                 //? 當前step流程中止
+                (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
                 Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
                 Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
                 free(stepsGroupName);
@@ -730,6 +731,7 @@ void PiplelineFlowTask(void* parameter)
               else if (failAction == "stopImmediately") {
                 Machine_Ctrl.StopDeviceAndINIT();
               }
+              isStepFail = true;
             }
           }
         }
@@ -793,12 +795,13 @@ void PiplelineFlowTask(void* parameter)
     vTaskDelay(10);
   }
 
-
-  if (
-    (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].as<String>() == String("RUNNING")
-  ) {
+  if (isStepFail) {
+    (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
+  }
+  else {
     (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("SUCCESS");
   }
+
 
   Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
   Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
