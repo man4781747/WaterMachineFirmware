@@ -574,7 +574,6 @@ void PiplelineFlowTask(void* parameter)
           //! 調整數值
           if (type == "Adjustment") {
             int targetLevel = spectrophotometerItem["target"].as<int>();
-
             char logBuffer[1000];
             sprintf(
               logBuffer, 
@@ -732,6 +731,19 @@ void PiplelineFlowTask(void* parameter)
             Machine_Ctrl.WireOne.endTransmission();
             Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
 
+            double finalValue;
+            if (targetChannel == "CH0") {
+              finalValue = Machine_Ctrl.lastLightValue_CH0;
+            }
+            else if (targetChannel == "CH1") {
+              finalValue = Machine_Ctrl.lastLightValue_CH1;
+            }
+            String DataFileFullPath = Machine_Ctrl.SensorDataFolder + Machine_Ctrl.GetDateString("") + "_data.csv";
+            Machine_Ctrl.SaveSensorData_photometer(
+              DataFileFullPath,Machine_Ctrl.GetDatetimeString() ,spectrophotometerTitle, "", GainStr, targetChannel,
+              value_name, -1, finalValue, -1
+            );
+            Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.LastDataSaveFilePath, (*Machine_Ctrl.sensorDataSave).as<JsonObject>());
             sprintf(logBuffer, "最終取調整值:%d, CH0 強度: %s, CH1 強度: %s", 
               spectrophotometerConfigChose["level"].as<int>(), String(Machine_Ctrl.lastLightValue_CH0, 2).c_str(),
               String(Machine_Ctrl.lastLightValue_CH1, 2).c_str()
@@ -803,31 +815,31 @@ void PiplelineFlowTask(void* parameter)
             Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
             
             double failCheckValue;
+            double failCheckPPM;
             if (targetChannel == "CH0") {
-              (*Machine_Ctrl.sensorDataSave)[poolChose][value_name].set(CH0_result);
-              (*Machine_Ctrl.sensorDataSave)[poolChose][TargetType].set(CH0_after);
               failCheckValue = CH0_result;
-
-              sprintf(
-                logBuffer, 
-                "測量結果: %s ,設定值: %d, 頻道: %s, 原始數值: %s, 轉換後PPM: %s",
-                TargetType.c_str(), spectrophotometerConfigChose["level"].as<int>(), targetChannel.c_str(), String(CH0_result, 1).c_str(), String(CH0_after, 1).c_str()
-              );
-              ESP_LOGI("LOADED_ACTION","       - %s", String(logBuffer).c_str());
-              Machine_Ctrl.SetLog(3, "測量PPM數值", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
+              failCheckPPM = CH0_after;
             } else {
-              (*Machine_Ctrl.sensorDataSave)[poolChose][value_name].set(CH1_result);
-              (*Machine_Ctrl.sensorDataSave)[poolChose][TargetType].set(CH1_after);
               failCheckValue = CH1_result;
-              sprintf(
-                logBuffer, 
-                "測量結果: %s ,設定值: %d, 頻道: %s, 原始數值: %s, 轉換後PPM: %s",
-                TargetType.c_str(), spectrophotometerConfigChose["level"].as<int>(), targetChannel.c_str(), String(CH1_result, 1).c_str(), String(CH1_after, 1).c_str()
-              );
-              ESP_LOGI("LOADED_ACTION","       - %s", String(logBuffer).c_str());
-              Machine_Ctrl.SetLog(3, "測量PPM數值", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
+              failCheckPPM = CH1_after;
             }
+            (*Machine_Ctrl.sensorDataSave)[poolChose][value_name].set(failCheckValue);
+            (*Machine_Ctrl.sensorDataSave)[poolChose][TargetType].set(failCheckPPM);
+            sprintf(
+              logBuffer, 
+              "測量結果: %s ,設定值: %d, 頻道: %s, 原始數值: %s, 轉換後PPM: %s",
+              TargetType.c_str(), spectrophotometerConfigChose["level"].as<int>(), targetChannel.c_str(), String(failCheckValue, 1).c_str(), String(failCheckPPM, 1).c_str()
+            );
+            ESP_LOGI("LOADED_ACTION","       - %s", String(logBuffer).c_str());
+            Machine_Ctrl.SetLog(3, "測量PPM數值", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
 
+
+            String DataFileFullPath = Machine_Ctrl.SensorDataFolder + Machine_Ctrl.GetDateString("") + "_data.csv";
+            Machine_Ctrl.SaveSensorData_photometer(
+              DataFileFullPath,Machine_Ctrl.GetDatetimeString() ,spectrophotometerTitle, "", GainStr, targetChannel,
+              value_name, dilution, failCheckValue, failCheckPPM
+            );
+            Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.LastDataSaveFilePath, (*Machine_Ctrl.sensorDataSave).as<JsonObject>());
 
             if (failCheckValue < min or failCheckValue > max) {
               sprintf(
@@ -876,6 +888,15 @@ void PiplelineFlowTask(void* parameter)
           (*Machine_Ctrl.sensorDataSave)[poolChose]["pH_volt"].set(PH_RowValue);
           (*Machine_Ctrl.sensorDataSave)[poolChose]["pH"].set(pHValue);
           digitalWrite(7, LOW);
+          Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.LastDataSaveFilePath, (*Machine_Ctrl.sensorDataSave).as<JsonObject>());
+          String DataFileFullPath = Machine_Ctrl.SensorDataFolder + Machine_Ctrl.GetDateString("") + "_data.csv";
+          Machine_Ctrl.SaveSensorData_photometer(
+            DataFileFullPath,Machine_Ctrl.GetDatetimeString() ,"PH測量", "", "", "",
+            "phValue", -1, PH_RowValue, pHValue
+          );
+
+
+
           char logBuffer[1000];
           sprintf(
             logBuffer, 
