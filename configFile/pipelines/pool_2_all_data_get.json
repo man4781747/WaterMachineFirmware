@@ -94,6 +94,30 @@
         ]}
       ]
     },
+    "FORWASH_Push_Sample_Liquid_To_MixRoom": {
+      "title": "[清洗用] 抽取樣本水 (40秒) 至混合室",
+      "desp": "",
+      "event": [
+        {"pwm_motor_list": [
+          {"index": 22,"status": 180 },
+          {"index": 21,"status": 90 },
+          {"index": 20,"status": 90 },
+          {"index": 7,"status": 90 },
+          {"index": 6,"status": 90 },
+          {"index": 5,"status": 90 },
+          {"index": 4,"status": 90 }
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 4,"status": 1,"time": 40,"until": "-"}
+        ]},
+        {"pwm_motor_list": [
+          {"index": 22,"status": 90}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 4,"status": 1,"time": 10,"until": "-"}
+        ]}
+      ]
+    },
     "FORWASH_Push_RO_Liquid_To_MixRoom": {
       "title": "[清洗用] 抽取試劑水 (40秒) 至混合室",
       "desp": "",
@@ -556,7 +580,7 @@
       "trigger": "allSuccess",
       "steps": [
         "Reset_All_PWM_Motor",
-        "FORWASH_Push_RO_Liquid_To_MixRoom",
+        "FORWASH_Push_Sample_Liquid_To_MixRoom",
         "Push_MixRoom_To_NO3_SensorRoom",
         "Push_MixRoom_To_NH4_SensorRoom",
         "Clear_NO3_SensorRoom_To_MixRoom",
