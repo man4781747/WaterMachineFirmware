@@ -119,7 +119,8 @@ class SMachine_Ctrl
     TaskHandle_t TASK__pipelineFlowScan = NULL;
     //? LOAD__ACTION_V2_xMutex: 儀器是否忙碌一切依此 xMutex 決定
     SemaphoreHandle_t LOAD__ACTION_V2_xMutex = NULL;
-
+    double lastLightValue_CH0;
+    double lastLightValue_CH1;
 
 
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

@@ -584,48 +584,161 @@ void PiplelineFlowTask(void* parameter)
             Machine_Ctrl.SetLog(3, "調整光強度,並記錄A0數值", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
             ESP_LOGI("LOADED_ACTION","       - %s",String(logBuffer).c_str());
 
-            bool fail = true;
-            uint16_t checkNum;
-            for (int i=0;i<256;i++) {
+            ALS_01_Data_t sensorData;
+            uint16_t checkBuffer_CH0 [10];
+            uint16_t checkBuffer_CH1 [10];
+            double checkValue_max;
+            double checkValue_min;
+            double checkValue_fixing;
+            
+            bool fixFail = true;
+
+            //? 進行各種量測檢查，若遇到錯誤則直接break;
+            for (int xxx=0;xxx<1;xxx++) {
+              //STEP 檢查最暗時亮度有沒有低於目標值
               Machine_Ctrl.WireOne.beginTransmission(0x2F);
               Machine_Ctrl.WireOne.write(0b00000000);
-              Machine_Ctrl.WireOne.write(i);
+              Machine_Ctrl.WireOne.write(0);
               Machine_Ctrl.WireOne.endTransmission();
-              ALS_01_Data_t sensorData = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+              for (int i=0;i<10;i++) {
+                sensorData = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+                checkBuffer_CH0[i] = sensorData.CH_0;
+                checkBuffer_CH1[i] = sensorData.CH_1;
+              }
               if (targetChannel == "CH0") {
-                checkNum = sensorData.CH_0;
-                Serial.printf("%d:%d -> %d\r",i, sensorData.CH_0, targetLevel);
-                if (sensorData.CH_0 >= targetLevel) {
-                  spectrophotometerConfigChose["level"].set(i);
-                  fail = false;
-                  //TODO 記得加上重寫 spectrophotometerConfig 檔案的功能
-                  break;
-                }
+                checkValue_min = afterFilterValue(checkBuffer_CH0, 10);
               }
               else if (targetChannel == "CH1") {
-                checkNum = sensorData.CH_1;
-                Serial.printf("%d:%d -> %d\r",i, sensorData.CH_1, targetLevel);
-                if (sensorData.CH_1 >= targetLevel) {
-                  spectrophotometerConfigChose["level"].set(i);
-                  fail = false;
-                  //TODO 記得加上重寫 spectrophotometerConfig 檔案的功能
-                  break;
+                checkValue_min = afterFilterValue(checkBuffer_CH1, 10);
+              }
+              if (checkValue_min > (double)targetLevel) {
+                sprintf(logBuffer, "光度計最暗強度為: %s, 大於目標值: %d",String(checkValue_min, 2).c_str(), targetLevel);
+                Machine_Ctrl.SetLog(2, "調整光強度,並記錄A0數值", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
+                ESP_LOGI("LOADED_ACTION","       - %s",String(logBuffer).c_str());
+                spectrophotometerConfigChose["level"].set(0);
+                Machine_Ctrl.lastLightValue_CH0 = afterFilterValue(checkBuffer_CH0, 10);
+                Machine_Ctrl.lastLightValue_CH1 = afterFilterValue(checkBuffer_CH1, 10);
+                fixFail = false;
+                break;
+              }
+
+              //STEP 檢查最亮時亮度有沒有低於目標值
+              Machine_Ctrl.WireOne.beginTransmission(0x2F);
+              Machine_Ctrl.WireOne.write(0b00000000);
+              Machine_Ctrl.WireOne.write(255);
+              Machine_Ctrl.WireOne.endTransmission();
+              for (int i=0;i<10;i++) {
+                sensorData = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+                checkBuffer_CH0[i] = sensorData.CH_0;
+                checkBuffer_CH1[i] = sensorData.CH_1;
+              }
+              if (targetChannel == "CH0") {
+                checkValue_max = afterFilterValue(checkBuffer_CH0, 10);
+              }
+              else if (targetChannel == "CH1") {
+                checkValue_max = afterFilterValue(checkBuffer_CH1, 10);
+              }
+              if (checkValue_max < (double)targetLevel) {
+                sprintf(logBuffer, "光度計最亮時強度為: %s, 小於目標值: %d",String(checkValue_max, 2).c_str(), targetLevel);
+                Machine_Ctrl.SetLog(2, "調整光強度,並記錄A0數值", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
+                ESP_LOGI("LOADED_ACTION","       - %s",String(logBuffer).c_str());
+                spectrophotometerConfigChose["level"].set(255);
+                Machine_Ctrl.lastLightValue_CH0 = afterFilterValue(checkBuffer_CH0, 10);
+                Machine_Ctrl.lastLightValue_CH1 = afterFilterValue(checkBuffer_CH1, 10);
+                fixFail = false;
+                break;
+              }
+              
+              //STEP 目標亮度介於最暗與最亮之間，以最亮與最暗為準，內插出最可能接近目標值的設定
+              int guestValue = (int)(255*((double)targetLevel-checkValue_min)/(checkValue_max-checkValue_min));
+              spectrophotometerConfigChose["level"].set(guestValue);
+              Machine_Ctrl.WireOne.beginTransmission(0x2F);
+              Machine_Ctrl.WireOne.write(0b00000000);
+              Machine_Ctrl.WireOne.write(guestValue);
+              Machine_Ctrl.WireOne.endTransmission();
+              for (int i=0;i<10;i++) {
+                sensorData = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+                checkBuffer_CH0[i] = sensorData.CH_0;
+                checkBuffer_CH1[i] = sensorData.CH_1;
+              }
+              if (targetChannel == "CH0") {
+                checkValue_fixing = afterFilterValue(checkBuffer_CH0, 10);
+              }
+              else if (targetChannel == "CH1") {
+                checkValue_fixing = afterFilterValue(checkBuffer_CH1, 10);
+              }
+              //? 若調整後的值小於目標，則慢慢向上調整，直到到達目標強度為止
+              if (checkValue_fixing <= (double)targetLevel) {
+                while (true) {
+                  if (guestValue >= 255) {break;}
+                  Machine_Ctrl.WireOne.beginTransmission(0x2F);
+                  Machine_Ctrl.WireOne.write(0b00000000);
+                  Machine_Ctrl.WireOne.write(guestValue);
+                  Machine_Ctrl.WireOne.endTransmission();
+                  for (int i=0;i<10;i++) {
+                    sensorData = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+                    checkBuffer_CH0[i] = sensorData.CH_0;
+                    checkBuffer_CH1[i] = sensorData.CH_1;
+                  }
+                  Machine_Ctrl.lastLightValue_CH0 = afterFilterValue(checkBuffer_CH0, 10);
+                  Machine_Ctrl.lastLightValue_CH1 = afterFilterValue(checkBuffer_CH1, 10);
+                  if (targetChannel == "CH0") {
+                    checkValue_fixing = Machine_Ctrl.lastLightValue_CH0;
+                  }
+                  else if (targetChannel == "CH1") {
+                    checkValue_fixing = Machine_Ctrl.lastLightValue_CH1;
+                  }
+                  if (checkValue_fixing >= (double)targetLevel) {
+                    fixFail = false;
+                    spectrophotometerConfigChose["level"].set(guestValue);
+                    break;
+                  }
+                  guestValue++;
+                }
+              }
+              //? 若調整後的值大於目標，則慢慢向下調整，直到到達目標強度為止
+              else {
+                while(true) {
+                  if (guestValue <= 0) {break;}
+                  Machine_Ctrl.WireOne.beginTransmission(0x2F);
+                  Machine_Ctrl.WireOne.write(0b00000000);
+                  Machine_Ctrl.WireOne.write(guestValue);
+                  Machine_Ctrl.WireOne.endTransmission();
+                  for (int i=0;i<10;i++) {
+                    sensorData = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+                    checkBuffer_CH0[i] = sensorData.CH_0;
+                    checkBuffer_CH1[i] = sensorData.CH_1;
+                  }
+                  if (targetChannel == "CH0") {
+                    checkValue_fixing = afterFilterValue(checkBuffer_CH0, 10);
+                  }
+                  else if (targetChannel == "CH1") {
+                    checkValue_fixing = afterFilterValue(checkBuffer_CH1, 10);
+                  }
+                  if (checkValue_fixing < (double)targetLevel) {
+                    fixFail = false;
+                    spectrophotometerConfigChose["level"].set(guestValue+1);
+                    break;
+                  }
+                  Machine_Ctrl.lastLightValue_CH0 = afterFilterValue(checkBuffer_CH0, 10);
+                  Machine_Ctrl.lastLightValue_CH1 = afterFilterValue(checkBuffer_CH1, 10);
+                  guestValue--;
                 }
               }
             }
+
             Machine_Ctrl.WireOne.beginTransmission(0x70);
             Machine_Ctrl.WireOne.write(1 << 7);
             Machine_Ctrl.WireOne.endTransmission();
             Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
-            sprintf(logBuffer, "調整結果: 強度為: %d, 光強度數值為: %d",spectrophotometerConfigChose["level"].as<int>(), checkNum);
-            Machine_Ctrl.SetLog(3, "調整光強度,並記錄A0數值", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
-            ESP_LOGI("LOADED_ACTION","       - %s",String(logBuffer).c_str());
 
-
-            if (fail) {
-              sprintf(logBuffer, "最終強度: %d, 無法調整至指定強度: %d",checkNum, targetLevel);
-              Machine_Ctrl.SetLog(2, "調整光強度過程中發現錯誤", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
-              ESP_LOGI("LOADED_ACTION","       - %s",String(logBuffer).c_str());
+            sprintf(logBuffer, "最終取調整值:%d, CH0 強度: %s, CH1 強度: %s", 
+              spectrophotometerConfigChose["level"].as<int>(), String(Machine_Ctrl.lastLightValue_CH0, 2).c_str(),
+              String(Machine_Ctrl.lastLightValue_CH1, 2).c_str()
+            );
+            if (fixFail) {
+              Machine_Ctrl.SetLog(2, "調整光強度失敗", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
+              ESP_LOGI("LOADED_ACTION","       - 調整光強度失敗 %s",String(logBuffer).c_str());
               if (failAction == "stepStop") {
                 //? 當前step流程中止
                 (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
@@ -638,6 +751,9 @@ void PiplelineFlowTask(void* parameter)
                 Machine_Ctrl.StopDeviceAndINIT();
               }
               isStepFail = true;
+            } else {
+              Machine_Ctrl.SetLog(5, "調整光強度成功", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
+              ESP_LOGI("LOADED_ACTION","       - 調整光強度成功 %s",String(logBuffer).c_str());
             }
           }
           //! 數據測量
@@ -678,8 +794,8 @@ void PiplelineFlowTask(void* parameter)
             CH0_result = afterFilterValue(CH0_Buff, 30);
             CH1_result = afterFilterValue(CH1_Buff, 30);
 
-            CH0_after = CH0_result*mValue + bValue;
-            CH1_after = CH1_result*mValue + bValue;
+            CH0_after = (-log10(CH0_result/Machine_Ctrl.lastLightValue_CH0)-bValue)/mValue * dilution;
+            CH1_after = (-log10(CH1_result/Machine_Ctrl.lastLightValue_CH1)-bValue)/mValue * dilution;
 
             Machine_Ctrl.WireOne.beginTransmission(0x70);
             Machine_Ctrl.WireOne.write(1 << 7);
@@ -694,17 +810,19 @@ void PiplelineFlowTask(void* parameter)
 
               sprintf(
                 logBuffer, 
-                "測量結果: %s 頻道: %s 原始數值: %s, 轉換後PPM: %s",
-                TargetType.c_str(), targetChannel.c_str(), String(CH0_result, 1).c_str(), String(CH0_after, 1).c_str()
+                "測量結果: %s ,設定值: %d, 頻道: %s, 原始數值: %s, 轉換後PPM: %s",
+                TargetType.c_str(), spectrophotometerConfigChose["level"].as<int>(), targetChannel.c_str(), String(CH0_result, 1).c_str(), String(CH0_after, 1).c_str()
               );
+              ESP_LOGI("LOADED_ACTION","       - %s", String(logBuffer).c_str());
+              Machine_Ctrl.SetLog(3, "測量PPM數值", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
             } else {
               (*Machine_Ctrl.sensorDataSave)[poolChose][value_name].set(CH1_result);
               (*Machine_Ctrl.sensorDataSave)[poolChose][TargetType].set(CH1_after);
               failCheckValue = CH1_result;
               sprintf(
                 logBuffer, 
-                "測量結果: %s 頻道: %s 原始數值: %s, 轉換後PPM: %s",
-                TargetType.c_str(), targetChannel.c_str(), String(CH1_result, 1).c_str(), String(CH1_after, 1).c_str()
+                "測量結果: %s ,設定值: %d, 頻道: %s, 原始數值: %s, 轉換後PPM: %s",
+                TargetType.c_str(), spectrophotometerConfigChose["level"].as<int>(), targetChannel.c_str(), String(CH1_result, 1).c_str(), String(CH1_after, 1).c_str()
               );
               ESP_LOGI("LOADED_ACTION","       - %s", String(logBuffer).c_str());
               Machine_Ctrl.SetLog(3, "測量PPM數值", String(logBuffer), Machine_Ctrl.BackendServer.ws_);

@@ -758,9 +758,7 @@ void CWIFI_Ctrler::setAPIs()
       // }
     }
   );
-
   asyncServer.on("/api/piplines", HTTP_GET, [&](AsyncWebServerRequest *request){
-
     String pipelineFilesList;
     serializeJsonPretty(*Machine_Ctrl.PipelineConfigList, pipelineFilesList);
     // serializeJsonPretty(ExFile_listDir(SD,"/pipelines"), pipelineFilesList);
@@ -768,6 +766,15 @@ void CWIFI_Ctrler::setAPIs()
     AsyncWebServerResponse* response = request->beginResponse(200, "application/json", pipelineFilesList);
     SendHTTPesponse(request, response);
   });
+
+  //! 獲得Sensor檔案列表
+  asyncServer.on("/api/SensorHistory", HTTP_GET, [&](AsyncWebServerRequest *request){
+    String SensorHistoryFilesList;
+    serializeJsonPretty(ExFile_listDir(SD,"/datas"), SensorHistoryFilesList);
+    AsyncWebServerResponse* response = request->beginResponse(200, "application/json", SensorHistoryFilesList);
+    SendHTTPesponse(request, response);
+  });
+
 
   asyncServer.on("/api/wifi/Connect", HTTP_POST, [&](AsyncWebServerRequest *request){
     AsyncWebServerResponse* response = request->beginResponse(200, "application/json", "OK");
