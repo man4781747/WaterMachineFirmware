@@ -158,12 +158,12 @@ void C_Peristaltic_Motors_Ctrl::RunMotor(uint8_t *moduleDataList)
     for (int index = moduleNum-1;index >= 0;index--) {
       shiftOut(DATA, SHCP, MSBFIRST, moduleDataList[index]);
 
-      // char btyeContent[9];
-      // btyeContent[8] = '\0';
-      // for (int i = 0; i <= 7; i++) {
-      //   btyeContent[i] = ((moduleDataList[index] >> i) & 1) ? '1' : '0';
-      // }
-      // ESP_LOGI("蠕動馬達", "當前設定: %d -> %s", index, btyeContent);
+      char btyeContent[9];
+      btyeContent[8] = '\0';
+      for (int i = 0; i <= 7; i++) {
+        btyeContent[i] = ((moduleDataList[index] >> i) & 1) ? '1' : '0';
+      }
+      ESP_LOGV("蠕動馬達", "當前設定: %d -> %s", index, btyeContent);
     }
     digitalWrite(STCP, HIGH);
     vTaskDelay(10);
@@ -228,4 +228,5 @@ bool C_Peristaltic_Motors_Ctrl::IsAllStop() {
     xSemaphoreGive(Peristaltic_Motors_xMutex);
     return true;
   }
+  return false;
 }

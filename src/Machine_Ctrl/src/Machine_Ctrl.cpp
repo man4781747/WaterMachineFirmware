@@ -381,7 +381,6 @@ void PiplelineFlowTask(void* parameter)
       //! 蠕動馬達控制設定
       else if (eventItem.containsKey("peristaltic_motor_list")) {
         pinMode(48, OUTPUT);
-        digitalWrite(48, HIGH);
         //? endTimeCheckList: 記錄各蠕動馬達最大運行結束時間
         DynamicJsonDocument endTimeCheckList(10000);
         
@@ -432,11 +431,16 @@ void PiplelineFlowTask(void* parameter)
             endTimeCheckList[motorIndexString]["until"] = -1;
           }
           Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(motorIndex, ststus);
-          Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
+          // Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
           endTimeCheckList[motorIndexString]["startTime"] = millis();
           endTimeCheckList[motorIndexString]["endTime"] = millis() + (long)(runTime*1000);
-          vTaskDelay(100/portTICK_PERIOD_MS);
+          // vTaskDelay(100/portTICK_PERIOD_MS);
         }
+
+
+        Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
+        digitalWrite(48, HIGH);
+
 
         //? 開始loop所有馬達狀態，來決定是否繼續執行、停下、觸發錯誤...等等等
         bool allFinish = false;
@@ -577,8 +581,9 @@ void PiplelineFlowTask(void* parameter)
             char logBuffer[1000];
             sprintf(
               logBuffer, 
-              "(%d)%s 測量倍率: %s, 指定頻道: %s, 調整強度目標: %d, 並紀錄為: %s, 若不達標觸發錯誤行為: %s",
-              spectrophotometerIndex, spectrophotometerTitle.c_str(), GainStr.c_str(), targetChannel.c_str(), targetLevel, value_name.c_str(), failAction.c_str()
+              "(%d)%s 指定池: %s, 測量倍率: %s, 指定頻道: %s, 調整強度目標: %d, 並紀錄為: %s, 若不達標觸發錯誤行為: %s",
+              spectrophotometerIndex, spectrophotometerTitle.c_str(), poolChose.c_str(),
+              GainStr.c_str(), targetChannel.c_str(), targetLevel, value_name.c_str(), failAction.c_str()
             );
             Machine_Ctrl.SetLog(3, "調整光強度,並記錄A0數值", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
             ESP_LOGI("LOADED_ACTION","       - %s",String(logBuffer).c_str());
@@ -678,9 +683,11 @@ void PiplelineFlowTask(void* parameter)
                     sensorData = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
                     checkBuffer_CH0[i] = sensorData.CH_0;
                     checkBuffer_CH1[i] = sensorData.CH_1;
+                    Serial.printf("Adjustment\tOrigin\tLevel: %d\tCH0: %d,\tCH1: %d\n", guestValue, sensorData.CH_0, sensorData.CH_1);
                   }
                   Machine_Ctrl.lastLightValue_CH0 = afterFilterValue(checkBuffer_CH0, 10);
                   Machine_Ctrl.lastLightValue_CH1 = afterFilterValue(checkBuffer_CH1, 10);
+                  Serial.printf("Adjustment\tResult\tLevel: %d\tCH0: %d,\tCH1: %d\n",guestValue, String(Machine_Ctrl.lastLightValue_CH0, 2).c_str(), String(Machine_Ctrl.lastLightValue_CH1, 2).c_str());
                   if (targetChannel == "CH0") {
                     checkValue_fixing = Machine_Ctrl.lastLightValue_CH0;
                   }
@@ -707,6 +714,7 @@ void PiplelineFlowTask(void* parameter)
                     sensorData = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
                     checkBuffer_CH0[i] = sensorData.CH_0;
                     checkBuffer_CH1[i] = sensorData.CH_1;
+                    Serial.printf("Adjustment\tOrigin\tLevel: %d\tCH0: %d,\tCH1: %d\n", guestValue, sensorData.CH_0, sensorData.CH_1);
                   }
                   if (targetChannel == "CH0") {
                     checkValue_fixing = afterFilterValue(checkBuffer_CH0, 10);
@@ -721,6 +729,7 @@ void PiplelineFlowTask(void* parameter)
                   }
                   Machine_Ctrl.lastLightValue_CH0 = afterFilterValue(checkBuffer_CH0, 10);
                   Machine_Ctrl.lastLightValue_CH1 = afterFilterValue(checkBuffer_CH1, 10);
+                  Serial.printf("Adjustment\tResult\tLevel: %d\tCH0: %d,\tCH1: %d\n",guestValue, String(Machine_Ctrl.lastLightValue_CH0, 2).c_str(), String(Machine_Ctrl.lastLightValue_CH1, 2).c_str());
                   guestValue--;
                 }
               }
@@ -740,7 +749,7 @@ void PiplelineFlowTask(void* parameter)
             }
             String DataFileFullPath = Machine_Ctrl.SensorDataFolder + Machine_Ctrl.GetDateString("") + "_data.csv";
             Machine_Ctrl.SaveSensorData_photometer(
-              DataFileFullPath,Machine_Ctrl.GetDatetimeString() ,spectrophotometerTitle, "", GainStr, targetChannel,
+              DataFileFullPath,Machine_Ctrl.GetDatetimeString() ,spectrophotometerTitle, poolChose, GainStr, targetChannel,
               value_name, -1, finalValue, -1
             );
             Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.LastDataSaveFilePath, (*Machine_Ctrl.sensorDataSave).as<JsonObject>());
@@ -777,7 +786,7 @@ void PiplelineFlowTask(void* parameter)
             double bValue = spectrophotometerConfigChose["calibration"][0]["ret"]["b"].as<double>();
             String TargetType = value_name.substring(0,3); 
 
-            char logBuffer[1000];
+            char logBuffer[3000];
             sprintf(
               logBuffer, 
               "(%d)%s 測量倍率: %s, 指定頻道: %s, 量測數值, 並紀錄為: %s, 若數值不介於 %s - %s 則觸發錯誤行為: %s, 最後算出PPM數值: %s",
@@ -800,11 +809,13 @@ void PiplelineFlowTask(void* parameter)
             Machine_Ctrl.WireOne.endTransmission();
             for (int i=0;i<30;i++) {
               sensorData = Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.TakeOneValue();
+              Serial.printf("Measurement\tOrigin\tLevel: %d\tCH0: %d,\tCH1: %d\n", spectrophotometerConfigChose["level"].as<int>(), sensorData.CH_0, sensorData.CH_1);
               CH0_Buff[i] = sensorData.CH_0;
               CH1_Buff[i] = sensorData.CH_1;
             }
             CH0_result = afterFilterValue(CH0_Buff, 30);
             CH1_result = afterFilterValue(CH1_Buff, 30);
+            Serial.printf("Measurement\tResult\tLevel: %d\tCH0: %s,\tCH1: %s\n", spectrophotometerConfigChose["level"].as<int>(), String(CH0_result,2).c_str(), String(CH1_result,2).c_str());
 
             CH0_after = (-log10(CH0_result/Machine_Ctrl.lastLightValue_CH0)-bValue)/mValue * dilution;
             CH1_after = (-log10(CH1_result/Machine_Ctrl.lastLightValue_CH1)-bValue)/mValue * dilution;
@@ -836,7 +847,7 @@ void PiplelineFlowTask(void* parameter)
 
             String DataFileFullPath = Machine_Ctrl.SensorDataFolder + Machine_Ctrl.GetDateString("") + "_data.csv";
             Machine_Ctrl.SaveSensorData_photometer(
-              DataFileFullPath,Machine_Ctrl.GetDatetimeString() ,spectrophotometerTitle, "", GainStr, targetChannel,
+              DataFileFullPath,Machine_Ctrl.GetDatetimeString() ,spectrophotometerTitle, poolChose, GainStr, targetChannel,
               value_name, dilution, failCheckValue, failCheckPPM
             );
             Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.LastDataSaveFilePath, (*Machine_Ctrl.sensorDataSave).as<JsonObject>());
@@ -885,13 +896,18 @@ void PiplelineFlowTask(void* parameter)
           double m = (*Machine_Ctrl.PHmeterConfig)[0]["calibration"][0]["ret"]["m"].as<String>().toDouble();
           double b = (*Machine_Ctrl.PHmeterConfig)[0]["calibration"][0]["ret"]["b"].as<String>().toDouble();
           double pHValue = m*PH_RowValue + b;
+          if (pHValue<0) {
+            pHValue = 0.;
+          } else if (pHValue > 14) {
+            pHValue = 14.;
+          }
           (*Machine_Ctrl.sensorDataSave)[poolChose]["pH_volt"].set(PH_RowValue);
           (*Machine_Ctrl.sensorDataSave)[poolChose]["pH"].set(pHValue);
           digitalWrite(7, LOW);
           Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.LastDataSaveFilePath, (*Machine_Ctrl.sensorDataSave).as<JsonObject>());
           String DataFileFullPath = Machine_Ctrl.SensorDataFolder + Machine_Ctrl.GetDateString("") + "_data.csv";
           Machine_Ctrl.SaveSensorData_photometer(
-            DataFileFullPath,Machine_Ctrl.GetDatetimeString() ,"PH測量", "", "", "",
+            DataFileFullPath,Machine_Ctrl.GetDatetimeString() ,"PH測量", poolChose, "", "",
             "phValue", -1, PH_RowValue, pHValue
           );
 
@@ -962,7 +978,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
     (*pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("RUNNING");
     xReturned = xTaskCreate(
       PiplelineFlowTask, NULL,
-      10000, (void*)charPtr, 3, thisTaskHandle_t
+      15000, (void*)charPtr, 3, thisTaskHandle_t
     );
     if (xReturned != pdPASS) {
       Serial.println("Create Fail");
