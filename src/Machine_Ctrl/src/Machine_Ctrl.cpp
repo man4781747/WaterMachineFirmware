@@ -237,8 +237,9 @@ void SMachine_Ctrl::LoadOldLogs()
 
 void SMachine_Ctrl::StopDeviceAndINIT()
 {
-  Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
+  peristalticMotorsCtrl.SetAllMotorStop();
   MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
+  CleanAllStepTask();
   digitalWrite(48, LOW);
   xSemaphoreGive(LOAD__ACTION_V2_xMutex);
 }
@@ -430,7 +431,8 @@ void PiplelineFlowTask(void* parameter)
             if (millis() >= endTime) {
               //? 執行到這，代表馬達執行到最大執行時間，如果 failType 是 timeout，則代表觸發失敗判斷
               if (thisFailType == "timeout") {
-                ESP_LOGE("", "蠕動馬達觸發Timeout錯誤");
+                ESP_LOGE("", "蠕動馬達觸發Timeout錯誤，錯誤處裡: %s", thisFailAction.c_str());
+
                 if (thisFailAction=="stepStop") {
                   for (const auto& motorChose : endTimeCheckList.as<JsonObject>()) {
                     //? 強制停止當前step執行的馬達
@@ -445,6 +447,7 @@ void PiplelineFlowTask(void* parameter)
                   vTaskDelete(NULL);
                 }
                 else if (thisFailAction=="stopImmediately") {
+                  ESP_LOGE("", "緊急終止儀器");
                   Machine_Ctrl.StopDeviceAndINIT();
                 }
                 //? 若非，則正常停止馬達運行
@@ -1247,11 +1250,10 @@ void PipelineFlowScan(void* parameter)
           }
         }
       } 
-      else if (stepsGroupResult == "RUNNING") {isAllDone = false;}
-    };
-    vTaskDelay(100/portTICK_PERIOD_MS);
-  }
-
+        else if (stepsGroupResult == "RUNNING") {isAllDone = false;}
+      };
+      vTaskDelay(100/portTICK_PERIOD_MS);
+    }
   }
   Machine_Ctrl.TASK__pipelineFlowScan = NULL;
   xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex); //! 釋放互斥鎖!!
