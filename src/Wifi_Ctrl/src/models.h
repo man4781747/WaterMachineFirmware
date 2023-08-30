@@ -695,5 +695,62 @@ void ws_v2_RunPeristalticMotor(AsyncWebSocket *server, AsyncWebSocketClient *cli
   }
 }
 
+//? [GET]/api/Pipeline/pool_all_data_get/RUN 這支API比較特別，目前是寫死的
+//? 目的在於執行時，他會依序執行所有池的資料，每池檢測完後丟出一次NewData
+void ws_RunAllPoolPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
+{
+  ESP_LOGI("websocket API", "執行所有檢測流程所需的排程");
+  if (xSemaphoreTake(Machine_Ctrl.LOAD__ACTION_V2_xMutex, 0) == pdTRUE) {
+    if ((*D_QueryParameter).containsKey("order")) {
+      String orderString = (*D_QueryParameter)["order"].as<String>();
+      if (orderString.length() == 0) {
+        Machine_Ctrl.SetLog(1, "執行蝦池數值檢測流程失敗", "order參數不得為空", NULL, client, false);
+        xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
+      }
+      else {
+        //* 分割order文字
+        int splitIndex = -1;
+        int prevSpliIndex = 0;
+        splitIndex = orderString.indexOf(',', prevSpliIndex);
+        (*Machine_Ctrl.pipelineStack).clear();
+        while (splitIndex != -1) {
+          String token = orderString.substring(prevSpliIndex, splitIndex);
+          String TargetName = token+".json";
+          String FullFilePath = "/pipelines/"+TargetName;
+          DynamicJsonDocument singlePipelineSetting(10000);
+          singlePipelineSetting["FullFilePath"].set(FullFilePath);
+          singlePipelineSetting["TargetName"].set(TargetName);
+          singlePipelineSetting["stepChose"].set("");
+          singlePipelineSetting["eventChose"].set("");
+          singlePipelineSetting["eventIndexChose"].set(-1);
+          (*Machine_Ctrl.pipelineStack).add(singlePipelineSetting);
+          prevSpliIndex = splitIndex +1;
+          splitIndex = orderString.indexOf(',', prevSpliIndex);
+        }
+        String lastToken = orderString.substring(prevSpliIndex);
+        if (lastToken.length() > 0) {
+          String TargetName = lastToken+".json";
+          String FullFilePath = "/pipelines/"+TargetName;
+          DynamicJsonDocument singlePipelineSetting(10000);
+          singlePipelineSetting["FullFilePath"].set(FullFilePath);
+          singlePipelineSetting["TargetName"].set(TargetName);
+          singlePipelineSetting["stepChose"].set("");
+          singlePipelineSetting["eventChose"].set("");
+          singlePipelineSetting["eventIndexChose"].set(-1);
+          (*Machine_Ctrl.pipelineStack).add(singlePipelineSetting);
+        }
+        Machine_Ctrl.LOAD__ACTION_V2(Machine_Ctrl.pipelineStack);
+      }
+    } 
+    else {
+      Machine_Ctrl.SetLog(1,"執行蝦池數值檢測流程失敗","API需要order參數",NULL, client, false);
+      xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
+    }
+  }
+  else {
+    Machine_Ctrl.SetLog(2,"執行流程設定失敗","儀器忙碌中，請稍後再試",NULL, client, false);  
+  }
+}
+
 
 #endif

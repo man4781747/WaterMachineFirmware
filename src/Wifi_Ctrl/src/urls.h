@@ -33,7 +33,9 @@ void setAPI(CWIFI_Ctrler &WIFI_Ctrler)
   WIFI_Ctrler.AddWebsocketAPI("/api/Pool", "GET", &ws_GetAllPoolInfo);
   WIFI_Ctrler.AddWebsocketAPI("/api/Pool", "POST", &ws_AddNewPoolInfo);
 
-
+  //? [GET]/api/Pipeline/pool_all_data_get/RUN 這支API比較特別，目前是寫死的
+  //? 目的在於執行時，他會依序執行所有池的資料，每池檢測完後丟出一次NewData
+  WIFI_Ctrler.AddWebsocketAPI("/api/Pipeline/pool_all_data_get/RUN", "GET", &ws_RunAllPoolPipeline);
 
   //! 流程設定V2
   WIFI_Ctrler.AddWebsocketAPI("/api/v2/Pipeline/(<name>.*)/RUN", "GET", &ws_v2_RunPipeline);
