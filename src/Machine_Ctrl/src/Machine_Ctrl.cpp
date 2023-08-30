@@ -301,7 +301,7 @@ void SMachine_Ctrl::UpdatePipelineConfigList()
 void PiplelineFlowTask(void* parameter)
 { 
   //! TASK 有以下數種狀態
-  //! 1. WAIT、2. NORUN、3. FAIL、4. SUCCESS、5. RUNNING 
+  //! 1. WAIT、2. NORUN、3. FAIL、4. SUCCESS、5. RUNNING、6. STOP_THIS_PIPELINE
   char* stepsGroupName = (char*)parameter;
   String ThisPipelineTitle = (*Machine_Ctrl.pipelineConfig)["title"].as<String>();
   String stepsGroupNameString = String(stepsGroupName);
@@ -449,6 +449,14 @@ void PiplelineFlowTask(void* parameter)
                 else if (thisFailAction=="stopImmediately") {
                   ESP_LOGE("", "緊急終止儀器");
                   Machine_Ctrl.StopDeviceAndINIT();
+                }
+                else if (thisFailAction=="stopPipeline") {
+                  ESP_LOGE("", "停止當前流程，若有下一個排隊中的流程就執行他");
+                  (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("STOP_THIS_PIPELINE");
+                  Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
+                  Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
+                  free(stepsGroupName);
+                  vTaskDelete(NULL);
                 }
                 //? 若非，則正常停止馬達運行
                 Machine_Ctrl.peristalticMotorsCtrl.SetMotorStatus(motorIndex, PeristalticMotorStatus::STOP);
@@ -988,6 +996,7 @@ void SMachine_Ctrl::CleanAllStepTask()
 //! 這個流程在確定執行完畢後，要負責釋放互斥鎖: LOAD__ACTION_V2_xMutex
 void PipelineFlowScan(void* parameter)
 { 
+  //? pipelineStackList: 多流程設定的列隊
   DynamicJsonDocument pipelineStackList = *((DynamicJsonDocument*)parameter);
   for (int pipelineIndex = 0;pipelineIndex<pipelineStackList.size();pipelineIndex++) {
     JsonObject pipelineChose = pipelineStackList[pipelineIndex].as<JsonObject>();
@@ -1225,32 +1234,45 @@ void PipelineFlowScan(void* parameter)
             (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("NORUN");
           }
         }
-        //? 如果觸發條件是 allSuccess，則會等待所有parent的RESULT變成 "SUCCESS" 就執行
-        //? 如果任何一個parent為 "WAIT"、"RUNNING"，則繼續等待
-        //? 如果任何一個parent為 "NORUN"、、"FAIL" 時，則本Task則視為不再需要執行，立刻設定為 "NORUN"，並且刪除Task
-        else if (TrigerRule == "allSuccess") {
-          bool stepRun = true;
-          for (JsonPair parentItem : parentList ) {
-            String parentName = String(parentItem.key().c_str());
-            String parentResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
-            if (parentResult=="NORUN" or parentResult=="FAIL") {
-              ESP_LOGW("", "Task %s 不符合 allSuccess 的執行條件，關閉此Task", stepsGroupName.c_str());
-              (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("NORUN");
-              stepRun = false;
-              break;
+          //? 如果觸發條件是 allSuccess，則會等待所有parent的RESULT變成 "SUCCESS" 就執行
+          //? 如果任何一個parent為 "WAIT"、"RUNNING"，則繼續等待
+          //? 如果任何一個parent為 "NORUN"、、"FAIL" 時，則本Task則視為不再需要執行，立刻設定為 "NORUN"，並且刪除Task
+          else if (TrigerRule == "allSuccess") {
+            bool stepRun = true;
+            for (JsonPair parentItem : parentList ) {
+              String parentName = String(parentItem.key().c_str());
+              String parentResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
+              if (parentResult=="NORUN" or parentResult=="FAIL") {
+                ESP_LOGW("", "Task %s 不符合 allSuccess 的執行條件，關閉此Task", stepsGroupName.c_str());
+                (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("NORUN");
+                stepRun = false;
+                break;
+              }
+              else if (parentResult=="WAIT" or parentResult=="RUNNING") {
+                stepRun = false;
+                break;
+              }
             }
-            else if (parentResult=="WAIT" or parentResult=="RUNNING") {
-              stepRun = false;
-              break;
+            if (stepRun) {
+              Machine_Ctrl.AddNewPiplelineFlowTask(stepsGroupName);
+              continue;
             }
           }
-          if (stepRun) {
-            Machine_Ctrl.AddNewPiplelineFlowTask(stepsGroupName);
-            continue;
-          }
-        }
-      } 
+        } 
         else if (stepsGroupResult == "RUNNING") {isAllDone = false;}
+        else if (stepsGroupResult == "STOP_THIS_PIPELINE") {
+          for (const auto& pipelineTaskHandle : Machine_Ctrl.pipelineTaskHandleMap) {
+            TaskHandle_t* taskChose = pipelineTaskHandle.second;
+            String stepName = pipelineTaskHandle.first;
+            vTaskSuspend(*taskChose);
+            vTaskDelete(*taskChose);
+            Machine_Ctrl.pipelineTaskHandleMap.erase(stepName);
+          }
+          Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
+          Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
+          isAllDone = true;
+          break;
+        }
       };
       vTaskDelay(100/portTICK_PERIOD_MS);
     }

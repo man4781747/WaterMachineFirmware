@@ -74,9 +74,7 @@ class SMachine_Ctrl
     //? 緊急終止所有動作，並且回歸初始狀態
     void StopDeviceAndINIT();
 
-    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    //! 儀器基礎設定
-    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
     String spectrophotometerConfigFileFullPath = "/config/spectrophotometer_config.json";
     DynamicJsonDocument *spectrophotometerConfig = new DynamicJsonDocument(4000);
     void LoadspectrophotometerConfig();
@@ -90,10 +88,6 @@ class SMachine_Ctrl
     //? 更新當前pipeline列表資料
     //? 以下情況需要觸發他: 1. 剛開機時、2. pipeline檔案有變動時
     void UpdatePipelineConfigList();
-
-    ////////////////////////////////////////////////////
-    // For 數值轉換
-    ////////////////////////////////////////////////////  
 
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //! 流程設定相關
@@ -174,20 +168,15 @@ class SMachine_Ctrl
     TaskHandle_t TASK__SPIFFS_Working;
     String ReWriteDeviceSetting();
 
-    //! 當前執行動作TASK
+
+    //? sensorDataSave: 紀錄當前儀器的感測器資料
     DynamicJsonDocument *sensorDataSave = new DynamicJsonDocument(50000);
+
+    //? DeviceLogSave: 當前儀器Log的儲存
     DynamicJsonDocument *DeviceLogSave = new DynamicJsonDocument(50000);
     JsonArray logArray;
 
 
-
-    TaskHandle_t TASK__Peristaltic_MOTOR;
-    //? 蠕動馬達Task的互斥鎖，確保蠕動馬達的 moduleDataList 內容不會被多個Task同時變動
-
-    TaskHandle_t TASK__History;
-    
-    TickType_t LastSuspendTick;
-    unsigned long TaskSuspendTimeSum = 0;
 
     Motor_Ctrl motorCtrl;
     C_Peristaltic_Motors_Ctrl peristalticMotorsCtrl;
