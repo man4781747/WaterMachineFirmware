@@ -54,7 +54,6 @@ class SMachine_Ctrl
   public:
     SMachine_Ctrl(void){
       logArray = DeviceLogSave->createNestedArray("Log");
-      xSemaphoreGive(MUTEX_Peristaltic_MOTOR);
       vSemaphoreCreateBinary(LOAD__ACTION_V2_xMutex);
     };
 
@@ -95,10 +94,6 @@ class SMachine_Ctrl
     ////////////////////////////////////////////////////
     // For 數值轉換
     ////////////////////////////////////////////////////  
-
-    int pwmMotorIDToMotorIndex(String motorID);
-
-    int PeristalticMotorIDToMotorIndex(String motorID);
 
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //! 流程設定相關
@@ -144,7 +139,7 @@ class SMachine_Ctrl
     String SensorDataFolder = "/datas/";
     //? 最新資料儲存檔案位置
     //? API路徑:<ip>/static/SD/datas/temp.json
-    String LastDataSaveFilePath = SensorDataFolder+"/temp.json";
+    String LastDataSaveFilePath = SensorDataFolder+"temp.json";
     //? 儲存正式的光度計測量數據
     void SaveSensorData_photometer(
       String filePath, String dataTime, String title, String desp, String Gain, String Channel,
@@ -154,29 +149,6 @@ class SMachine_Ctrl
     void ReWriteLastDataSaveFile(String filePath, JsonObject tempData);
 
 
-
-    ////////////////////////////////////////////////////
-    // For 事件執行
-    ////////////////////////////////////////////////////
-
-    // EVENT_RESULT RUN__PWMMotorTestEvent(String motorID);
-    
-
-    void LOAD__ACTION(String actionJSONString);
-    void LOAD__ACTION(JsonObject actionJSON);
-    void RUN__LOADED_ACTION();
-  
-    EVENT_RESULT RUN__PeristalticMotorEvent(Peristaltic_task_config *config_);
-
-    void STOP_AllTask();
-
-    void RESUME_AllTask();
-
-    void Stop_AllPeristalticMotor();
-
-    ////////////////////////////////////////////////////
-    // For 互動相關
-    ////////////////////////////////////////////////////
 
     DynamicJsonDocument SetLog(int Level, String Title, String description, AsyncWebSocket *server=NULL, AsyncWebSocketClient *client=NULL, bool Save=true);
 
@@ -195,14 +167,6 @@ class SMachine_Ctrl
     void ShowIPAndQRCodeOnOled();
 
     ////////////////////////////////////////////////////
-    //* For 測試
-    ////////////////////////////////////////////////////
-
-    void UpdateAllPoolsDataRandom();
-
-    void LoopTest();
-
-    ////////////////////////////////////////////////////
     //* 公用參數
     ////////////////////////////////////////////////////
 
@@ -211,9 +175,6 @@ class SMachine_Ctrl
     String ReWriteDeviceSetting();
 
     //! 當前執行動作TASK
-    TaskHandle_t TASK__NOW_ACTION;
-    DynamicJsonDocument *loadedAction = new DynamicJsonDocument(1000000);
-
     DynamicJsonDocument *sensorDataSave = new DynamicJsonDocument(50000);
     DynamicJsonDocument *DeviceLogSave = new DynamicJsonDocument(50000);
     JsonArray logArray;
@@ -222,7 +183,7 @@ class SMachine_Ctrl
 
     TaskHandle_t TASK__Peristaltic_MOTOR;
     //? 蠕動馬達Task的互斥鎖，確保蠕動馬達的 moduleDataList 內容不會被多個Task同時變動
-    SemaphoreHandle_t MUTEX_Peristaltic_MOTOR = xSemaphoreCreateBinary();
+
     TaskHandle_t TASK__History;
     
     TickType_t LastSuspendTick;
@@ -238,14 +199,6 @@ class SMachine_Ctrl
     int WireOne_SDA = 5;
     int WireOne_SCL = 6;
     CMULTI_LTR_329ALS_01 MULTI_LTR_329ALS_01_Ctrler = CMULTI_LTR_329ALS_01(16, 18, 17, &WireOne);
-    // CLTR_329ALS_01 LTR_329ALS_01_Ctrler = CLTR_329ALS_01(&WireOne);
-
-    ////////////////////////////////////////////////////
-    // 捨棄使用，純紀錄
-    ////////////////////////////////////////////////////
-
-    // void ChangeMotorStatus(MOTOR_STATUS StatusCode, char* TaskName, char* NextTaskName="", bool waitForTigger=false);
-
 
   private:
 };
