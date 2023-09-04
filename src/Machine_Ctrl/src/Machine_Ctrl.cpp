@@ -66,12 +66,6 @@ void SMachine_Ctrl::INIT_SD_Card()
     ESP_LOGE("SD", "initialization failed!");
   } else {
     ESP_LOGV("SD", "initialization done.");
-
-    // SdFile::dateTimeCallback();
-
-
-
-    
   }
 }
 

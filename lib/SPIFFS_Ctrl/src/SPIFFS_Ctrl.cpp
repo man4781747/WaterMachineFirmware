@@ -14,7 +14,6 @@ void SPIFFS_Ctrl::INIT_SPIFFS()
       delay(5000);
     }
   }
-  SPIFFS.remove("/otaTempFile.bin");
 }
 
 /**
@@ -152,7 +151,6 @@ DynamicJsonDocument* SPIFFS_Ctrl::LoadWiFiConfig()
     File file = SPIFFS.open(WiFiConfigFilePath, FILE_READ);
     String FileContent = file.readString();
     file.close();
-    Serial.println(FileContent);
     if (FileContent.length() != 0) {
       DeserializationError error = deserializeJson(*WifiConfig, FileContent);
       if (error) {
