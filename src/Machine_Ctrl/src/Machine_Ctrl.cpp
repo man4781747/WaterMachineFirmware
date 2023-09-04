@@ -731,8 +731,8 @@ void PiplelineFlowTask(void* parameter)
               DataFileFullPath,Machine_Ctrl.GetDatetimeString() ,spectrophotometerTitle, poolChose, GainStr, targetChannel,
               value_name, -1, finalValue, -1
             );
-            (*Machine_Ctrl.sensorDataSave)[poolChose][value_name].set(finalValue);
-            serializeJsonPretty((*Machine_Ctrl.sensorDataSave)[poolChose], Serial);
+            //? websocket相關的數值要限縮在小數點下第2位
+            (*Machine_Ctrl.sensorDataSave)[poolChose][value_name].set(String(finalValue,2).toDouble());
             Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.LastDataSaveFilePath, (*Machine_Ctrl.sensorDataSave).as<JsonObject>());
             sprintf(logBuffer, "最終取調整值:%d, CH0 強度: %s, CH1 強度: %s", 
               spectrophotometerConfigChose["level"].as<int>(), String(Machine_Ctrl.lastLightValue_CH0, 2).c_str(),
@@ -772,7 +772,7 @@ void PiplelineFlowTask(void* parameter)
               logBuffer, 
               "(%d)%s 測量倍率: %s, 指定頻道: %s, 量測數值, 並紀錄為: %s, 若數值不介於 %s - %s 則觸發錯誤行為: %s, 最後算出PPM數值: %s",
               spectrophotometerIndex, spectrophotometerTitle.c_str(), GainStr.c_str(), targetChannel.c_str(), value_name.c_str(), 
-              String(min, 1).c_str(), String(max, 1).c_str(), failAction.c_str(), TargetType.c_str()
+              String(min, 2).c_str(), String(max, 2).c_str(), failAction.c_str(), TargetType.c_str()
             );
             String logString = String(logBuffer);
 
@@ -815,12 +815,13 @@ void PiplelineFlowTask(void* parameter)
               failCheckValue = CH1_result;
               failCheckPPM = CH1_after;
             }
-            (*Machine_Ctrl.sensorDataSave)[poolChose][value_name].set(failCheckValue);
-            (*Machine_Ctrl.sensorDataSave)[poolChose][TargetType].set(failCheckPPM);
+            //? websocket相關的數值要限縮在小數點下第2位
+            (*Machine_Ctrl.sensorDataSave)[poolChose][value_name].set(String(failCheckValue,2).toDouble());
+            (*Machine_Ctrl.sensorDataSave)[poolChose][TargetType].set(String(failCheckPPM,2).toDouble());
             sprintf(
               logBuffer, 
               "測量結果: %s ,設定值: %d, 頻道: %s, 原始數值: %s, 轉換後PPM: %s",
-              TargetType.c_str(), spectrophotometerConfigChose["level"].as<int>(), targetChannel.c_str(), String(failCheckValue, 1).c_str(), String(failCheckPPM, 1).c_str()
+              TargetType.c_str(), spectrophotometerConfigChose["level"].as<int>(), targetChannel.c_str(), String(failCheckValue, 2).c_str(), String(failCheckPPM, 2).c_str()
             );
             ESP_LOGI("LOADED_ACTION","       - %s", String(logBuffer).c_str());
             Machine_Ctrl.SetLog(3, "測量PPM數值", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
@@ -837,7 +838,7 @@ void PiplelineFlowTask(void* parameter)
               sprintf(
                 logBuffer, 
                 "測量光度述職時發現錯誤，獲得數值: %s, 不再設定範圍內 %s - %s",
-                String(CH1_result, 1).c_str(), String(min, 1).c_str(), String(max, 1).c_str()
+                String(failCheckValue, 2).c_str(), String(min, 2).c_str(), String(max, 2).c_str()
               );
               ESP_LOGI("LOADED_ACTION","       - %s", String(logBuffer).c_str());
               Machine_Ctrl.SetLog(1, "測量PPM數值", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
@@ -884,8 +885,9 @@ void PiplelineFlowTask(void* parameter)
             Machine_Ctrl.SetLog(2, "測量PH數值", "數值:"+String(pHValue,1)+"過高");
             pHValue = 14.;
           }
-          (*Machine_Ctrl.sensorDataSave)[poolChose]["pH_volt"].set(PH_RowValue);
-          (*Machine_Ctrl.sensorDataSave)[poolChose]["pH"].set(pHValue);
+          //? websocket相關的數值要限縮在小數點下第2位
+          (*Machine_Ctrl.sensorDataSave)[poolChose]["pH_volt"].set(String(PH_RowValue,2).toDouble());
+          (*Machine_Ctrl.sensorDataSave)[poolChose]["pH"].set(String(pHValue,2).toDouble());
           digitalWrite(7, LOW);
           Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.LastDataSaveFilePath, (*Machine_Ctrl.sensorDataSave).as<JsonObject>());
           String DataFileFullPath = Machine_Ctrl.SensorDataFolder + Machine_Ctrl.GetDateString("") + "_data.csv";
@@ -900,7 +902,7 @@ void PiplelineFlowTask(void* parameter)
           sprintf(
             logBuffer, 
             "PH量測結果, 測量原始值: %s, 轉換後PH值: %s",
-            String(PH_RowValue, 1).c_str(), String(pHValue, 1).c_str()
+            String(PH_RowValue, 2).c_str(), String(pHValue, 2).c_str()
           );
           ESP_LOGI("LOADED_ACTION","       - %s", String(logBuffer).c_str());
           Machine_Ctrl.SetLog(5, "測量PH數值", String(logBuffer), Machine_Ctrl.BackendServer.ws_);
