@@ -1509,6 +1509,23 @@ String SMachine_Ctrl::GetDatetimeString(String interval_date, String interval_mi
   return GetDateString(interval_date)+interval_middle+GetTimeString(interval_time);
 }
 
+void SMachine_Ctrl::PrintOnScreen(String content)
+{
+  Wire.end();
+  U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, WireOne_SCL, WireOne_SDA);
+  
+  u8g2.begin();
+  u8g2.clearDisplay();
+  u8g2.firstPage();
+  do {
+    u8g2.setFont(u8g2_font_t0_11_tf);
+    u8g2.setColorIndex(1);
+    u8g2.drawUTF8(0,8,content.c_str());
+  } while ( u8g2.nextPage() );
+  Wire.end();
+  INIT_I2C_Wires();
+}
+
 void SMachine_Ctrl::ShowIPAndQRCodeOnOled()
 {
   //TODO 不知為何 U8G2一直不能用Wire1來運作，目前寫死要用oled時 要停止Wire1 先開Wire給oled用

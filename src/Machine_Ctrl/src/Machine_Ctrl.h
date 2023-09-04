@@ -158,6 +158,9 @@ class SMachine_Ctrl
     String GetTimeString(String interval=":");
     String GetDateString(String interval="-");
     String GetDatetimeString(String interval_date="-", String interval_middle=" ", String interval_time=":");
+    
+    //! led螢幕相關
+    void PrintOnScreen(String content);
     void ShowIPAndQRCodeOnOled();
 
     ////////////////////////////////////////////////////
@@ -184,7 +187,7 @@ class SMachine_Ctrl
     CWIFI_Ctrler BackendServer;
     SPIFFS_Ctrl spiffs;
 
-    TwoWire WireOne = Wire1;
+    TwoWire WireOne = Wire;
     int WireOne_SDA = 5;
     int WireOne_SCL = 6;
     CMULTI_LTR_329ALS_01 MULTI_LTR_329ALS_01_Ctrler = CMULTI_LTR_329ALS_01(16, 18, 17, &WireOne);
