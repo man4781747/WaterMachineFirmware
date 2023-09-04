@@ -506,8 +506,14 @@ void CWIFI_Ctrler::UpdateMachineTimerByNTP()
 {
   ESP_LOGI(LOG_TAG_WIFI, "Try to update MCU timer");
   timeClient.begin();
+  int errorCount = 0;
   while(!timeClient.update()) {
     timeClient.forceUpdate();
+    vTaskDelay(100);
+    errorCount++;
+    if (errorCount > 1000) {
+      ESP.restart();
+    }
   }
   configTime(28800, 0, "pool.ntp.org");
   setTime((time_t)timeClient.getEpochTime());
