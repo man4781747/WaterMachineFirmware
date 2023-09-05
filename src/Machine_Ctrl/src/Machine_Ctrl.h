@@ -53,50 +53,25 @@ class SMachine_Ctrl
 {
   public:
     SMachine_Ctrl(void){
-      logArray = DeviceLogSave->createNestedArray("Log");
       vSemaphoreCreateBinary(LOAD__ACTION_V2_xMutex);
     };
 
-    ////////////////////////////////////////////////////
-    // For 初始化
-    ////////////////////////////////////////////////////
-
-    void INIT_SPIFFS_config();
-    void INIT_SD_Card();
     void INIT_I2C_Wires();
-    void INIT_PoolData();
-
-
-    bool LoadJsonConfig(fs::FS& fileSystem, String FilePath, JsonDocument &doc);
-    void LoadPiplineConfig();
-    void LoadOldLogs();
+    bool INIT_PoolData();
 
     //? 緊急終止所有動作，並且回歸初始狀態
     void StopDeviceAndINIT();
 
 
-    String spectrophotometerConfigFileFullPath = "/config/spectrophotometer_config.json";
-    DynamicJsonDocument *spectrophotometerConfig = new DynamicJsonDocument(4000);
-    void LoadspectrophotometerConfig();
-
-    String PHmeterConfigFileFullPath = "/config/PHmeter_config.json";
-    DynamicJsonDocument *PHmeterConfig = new DynamicJsonDocument(2000);
-    void LoadPHmeterConfig();
-
-
-    DynamicJsonDocument *PipelineConfigList = new DynamicJsonDocument(10000);
-    //? 更新當前pipeline列表資料
-    //? 以下情況需要觸發他: 1. 剛開機時、2. pipeline檔案有變動時
-    void UpdatePipelineConfigList();
 
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //! 流程設定相關
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    //? pipelineStack: 待執行的Step列表
-    DynamicJsonDocument *pipelineStack = new DynamicJsonDocument(10000);
-    //? pipelineConfig: 當前運行的Pipeline詳細設定
-    DynamicJsonDocument *pipelineConfig = new DynamicJsonDocument(65525);
+    //? JSON__pipelineStack: 待執行的Step列表
+    DynamicJsonDocument *JSON__pipelineStack = new DynamicJsonDocument(60000);
+    //? JSON__pipelineConfig: 當前運行的Pipeline詳細設定
+    DynamicJsonDocument *JSON__pipelineConfig = new DynamicJsonDocument(65525);
     //? pipelineTaskHandleMap: 記錄了當前正在執行Step的Task，Key為Step名稱、Value為TaskHandle_t
     std::map<String, TaskHandle_t*> pipelineTaskHandleMap;
     bool LOAD__ACTION_V2(DynamicJsonDocument *pipelineStackList);
@@ -115,25 +90,44 @@ class SMachine_Ctrl
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //! SPIFFS系統相關
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    String configsFolder = "/config/";
-    String deviceBaseConfigFileFullPath = configsFolder+"device_base_config.json";
-    String wifiConfigFileFullPath = configsFolder+"wifi_config.json";
+    void INIT_SPIFFS_And_LoadConfigs();
+    bool INIT_SPIFFS();
+    String FilePath__SPIFFS__WiFiConfig = "/config/wifi_config.json";
+    DynamicJsonDocument *JSON__WifiConfig = new DynamicJsonDocument(5000);
+    String FilePath__SPIFFS__DeviceBaseInfo = "/config/device_base_config.json";
+    DynamicJsonDocument *JSON__DeviceBaseInfo = new DynamicJsonDocument(1000);
+    bool SPIFFS__LoadDeviceBaseInfo();
+    bool SPIFFS__ReWriteDeviceBaseInfo();
+    bool SPIFFS__LoadWiFiConfig();
+    bool SPIFFS__ReWriteWiFiConfig();
 
     
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //! SD卡系統相關
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    
+    void INIT_SD_And_LoadConfigs();
+    bool INIT_SD_Card();
+    String FilePath__SD__SpectrophotometerConfig = "/config/spectrophotometer_config.json";
+    DynamicJsonDocument *JSON__SpectrophotometerConfig = new DynamicJsonDocument(4000);
+    String FilePath__SD__PHmeterConfig = "/config/PHmeter_config.json";
+    DynamicJsonDocument *JSON__PHmeterConfig = new DynamicJsonDocument(2000);
+    void SD__LoadspectrophotometerConfig();
+    void SD__LoadPHmeterConfig();
+    DynamicJsonDocument *JSON__PipelineConfigList = new DynamicJsonDocument(10000);
+    //? 更新當前pipeline列表資料
+    //? 以下情況需要觸發他: 1. 剛開機時、2. pipeline檔案有變動時
+    void SD__UpdatePipelineConfigList();
+    //? JSON__DeviceLogSave: 當前儀器Log的儲存
+    DynamicJsonDocument *JSON__DeviceLogSave = new DynamicJsonDocument(50000);
+    void SD__LoadOldLogs();
     String SD__configsFolder = "/config/";
-    String SD__piplineConfigsFileFullPath = SD__configsFolder+"event_config.json";
     //? LOG 資料夾位置
     String LogFolder = "/logs/";
     //? 感測器資料儲存資料夾
     String SensorDataFolder = "/datas/";
     //? 最新資料儲存檔案位置
-    //? API路徑:<ip>/static/SD/datas/temp.json
-    String LastDataSaveFilePath = SensorDataFolder+"temp.json";
+    //? API路徑:http://<ip>/static/SD/datas/temp.json
+    String FilePath__SD__LastSensorDataSave = SensorDataFolder+"temp.json";
     //? 儲存正式的光度計測量數據
     void SaveSensorData_photometer(
       String filePath, String dataTime, String title, String desp, String Gain, String Channel,
@@ -141,10 +135,9 @@ class SMachine_Ctrl
     );
     //? 更新最新資料儲存檔案
     void ReWriteLastDataSaveFile(String filePath, JsonObject tempData);
-
-
-
     DynamicJsonDocument SetLog(int Level, String Title, String description, AsyncWebSocket *server=NULL, AsyncWebSocketClient *client=NULL, bool Save=true);
+
+
 
     //* 廣播指定池的感測器資料出去
     //!! 注意，這個廣撥出去的資料是會進資料庫的
@@ -163,21 +156,8 @@ class SMachine_Ctrl
     void PrintOnScreen(String content);
     void ShowIPAndQRCodeOnOled();
 
-    ////////////////////////////////////////////////////
-    //* 公用參數
-    ////////////////////////////////////////////////////
-
-    //! SPIFFS TASK
-    TaskHandle_t TASK__SPIFFS_Working;
-    String ReWriteDeviceSetting();
-
-
-    //? sensorDataSave: 紀錄當前儀器的感測器資料
-    DynamicJsonDocument *sensorDataSave = new DynamicJsonDocument(50000);
-
-    //? DeviceLogSave: 當前儀器Log的儲存
-    DynamicJsonDocument *DeviceLogSave = new DynamicJsonDocument(50000);
-    JsonArray logArray;
+    //? JSON__sensorDataSave: 紀錄當前儀器的感測器資料
+    DynamicJsonDocument *JSON__sensorDataSave = new DynamicJsonDocument(50000);
 
 
 
@@ -185,7 +165,6 @@ class SMachine_Ctrl
     C_Peristaltic_Motors_Ctrl peristalticMotorsCtrl;
     SPOOLS_Ctrl poolsCtrl;
     CWIFI_Ctrler BackendServer;
-    SPIFFS_Ctrl spiffs;
 
     TwoWire WireOne = Wire;
     int WireOne_SDA = 5;

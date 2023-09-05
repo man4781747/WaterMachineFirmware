@@ -117,7 +117,6 @@ DynamicJsonDocument urlParamsToJSON(const std::string& urlParams) {
 void SendHTTPesponse(AsyncWebServerRequest *request, AsyncWebServerResponse* response) {
   AsyncWebHeader* h = request->getHeader("Host");
   Serial.printf("HOST %s\n", h->value().c_str());
-  JsonObject WifiConfigJSON = Machine_Ctrl.spiffs.WifiConfig->as<JsonObject>();
   response->addHeader("Set-Cookie", "deviceMode=LocalHost");
   response->addHeader("X-device-mode", "LocalHost");
   request->send(response);
@@ -130,7 +129,7 @@ void SendHTTPesponse(AsyncWebServerRequest *request, AsyncWebServerResponse* res
 DynamicJsonDocument CWIFI_Ctrler::GetBaseWSReturnData(String MessageString)
 {
   DynamicJsonDocument BaseWSReturnData(500000);
-  BaseWSReturnData.set(*(Machine_Ctrl.spiffs.DeviceBaseInfo));
+  BaseWSReturnData.set(*(Machine_Ctrl.JSON__DeviceBaseInfo));
   // time_t nowTime = now();
   // char datetimeChar[30];
   // sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
@@ -432,7 +431,7 @@ void OTAServiceTask(void* parameter) {
 void CWIFI_Ctrler::ConnectToWifi()
 {
   WiFi.mode(WIFI_AP_STA);
-  JsonObject WifiConfigJSON = Machine_Ctrl.spiffs.WifiConfig->as<JsonObject>();
+  JsonObject WifiConfigJSON = (*Machine_Ctrl.JSON__WifiConfig).as<JsonObject>();
   ESP_LOGI(LOG_TAG_WIFI, "Start to connect to wifi");
   // StartWiFiConnecter();
   CreateSoftAP();
@@ -449,7 +448,7 @@ void CWIFI_Ctrler::ConnectToWifi()
 bool CWIFI_Ctrler::CreateSoftAP()
 {
   ESP_LOGI(LOG_TAG_WIFI, "Create Soft AP");
-  JsonObject WifiConfigJSON = Machine_Ctrl.spiffs.WifiConfig->as<JsonObject>();
+  JsonObject WifiConfigJSON = (*Machine_Ctrl.JSON__WifiConfig).as<JsonObject>();
   IPAddress AP_IP = IPAddress();
   IPAddress AP_gateway = IPAddress();
   IPAddress AP_subnet_mask = IPAddress();
@@ -469,16 +468,6 @@ void CWIFI_Ctrler::ConnectOtherWiFiAP(String SSID, String PW)
 {
   WiFi.disconnect();
 
-  //? IP由WIFI基地台統一發送管理，這邊的程式碼單純為計錄用
-  //// IPAddress STA_IP = IPAddress();
-  //// IPAddress STA_gateway = IPAddress();
-  //// IPAddress STA_subnet_mask = IPAddress();
-  //// IPAddress primaryDNS(8, 8, 8, 8);   //optional
-  //// IPAddress secondaryDNS(8, 8, 4, 4); //optional
-  //// STA_IP.fromString((*Machine_Ctrl.spiffs.WifiConfig)["Remote"]["remote_IP"].as<String>());
-  //// STA_gateway.fromString((*Machine_Ctrl.spiffs.WifiConfig)["Remote"]["gateway"].as<String>());
-  //// STA_subnet_mask.fromString((*Machine_Ctrl.spiffs.WifiConfig)["Remote"]["subnet_mask"].as<String>());
-  //// WiFi.config(STA_IP, STA_gateway, STA_subnet_mask, primaryDNS, secondaryDNS);
   WiFi.begin(SSID.c_str(),PW.c_str());
   time_t connectTimeout = now();
   while (!WiFi.isConnected() & now()-connectTimeout < 5) {
@@ -607,9 +596,9 @@ void CWIFI_Ctrler::setAPIs()
           SendHTTPesponse(request, response);
         }
         else {
-          (*Machine_Ctrl.spiffs.DeviceSetting).clear();
-          (*Machine_Ctrl.spiffs.DeviceSetting).set(NewDeviceSetting.as<JsonObject>());
-          Machine_Ctrl.ReWriteDeviceSetting();
+          (*Machine_Ctrl.JSON__DeviceBaseInfo).clear();
+          (*Machine_Ctrl.JSON__DeviceBaseInfo).set(NewDeviceSetting.as<JsonObject>());
+          Machine_Ctrl.SPIFFS__ReWriteDeviceBaseInfo();
           AsyncWebServerResponse* response = request->beginResponse(200, "application/json", "{\"Result\":\"SUCCESS\"}");
           SendHTTPesponse(request, response);
         }
@@ -674,7 +663,7 @@ void CWIFI_Ctrler::setAPIs()
         configTempFile = SD.open("/pipelines/"+filename, FILE_WRITE);
         configTempFile.write(newConfigUpdateFileBuffer ,index + len);
         configTempFile.close();
-        Machine_Ctrl.UpdatePipelineConfigList();
+        Machine_Ctrl.SD__UpdatePipelineConfigList();
       } 
       else {
         Serial.printf("檔案 %s 正在傳輸， len: %d ，目前已接收 %d/%d bytes\n", filename.c_str(), len, index + len, request->contentLength());
@@ -717,7 +706,7 @@ void CWIFI_Ctrler::setAPIs()
         configTempFile = SD.open("/config/"+filename, FILE_WRITE);
         configTempFile.write(newConfigUpdateFileBuffer ,index + len);
         configTempFile.close();
-        Machine_Ctrl.UpdatePipelineConfigList();
+        Machine_Ctrl.SD__UpdatePipelineConfigList();
       } 
       else {
         Serial.printf("檔案 %s 正在傳輸， len: %d ，目前已接收 %d/%d bytes\n", filename.c_str(), len, index + len, request->contentLength());
@@ -735,7 +724,7 @@ void CWIFI_Ctrler::setAPIs()
       Serial.println("/pipelines/"+fileName);
       if (SD.exists("/pipelines/"+fileName)) {
         if (SD.remove("/pipelines/"+fileName)) {
-          Machine_Ctrl.UpdatePipelineConfigList();
+          Machine_Ctrl.SD__UpdatePipelineConfigList();
           responeData["result"].set("Delete Pipeline File: "+fileName+" Success");
           serializeJson(responeData, ResponeContent);
           response = request->beginResponse(200, "application/json", ResponeContent);
@@ -764,7 +753,7 @@ void CWIFI_Ctrler::setAPIs()
   );
   asyncServer.on("/api/piplines", HTTP_GET, [&](AsyncWebServerRequest *request){
     String pipelineFilesList;
-    serializeJsonPretty(*Machine_Ctrl.PipelineConfigList, pipelineFilesList);
+    serializeJsonPretty(*Machine_Ctrl.JSON__PipelineConfigList, pipelineFilesList);
     // serializeJsonPretty(ExFile_listDir(SD,"/pipelines"), pipelineFilesList);
 
     AsyncWebServerResponse* response = request->beginResponse(200, "application/json", pipelineFilesList);
@@ -851,7 +840,7 @@ void CWIFI_Ctrler::setAPIs()
 void WiFiConnecter(void* parameter)
 {
   JsonObject SSIDListChild =  Machine_Ctrl.BackendServer.SSIDList->createNestedObject();
-  JsonObject WiFiConfig = Machine_Ctrl.spiffs.WifiConfig->as<JsonObject>();
+  JsonObject WiFiConfig = (*Machine_Ctrl.JSON__WifiConfig).as<JsonObject>();
   for (;;) {
     if (!WiFi.isConnected()) {
       int wifiScanStatus = WiFi.scanComplete();
@@ -905,7 +894,7 @@ DynamicJsonDocument CWIFI_Ctrler::GetSSIDList()
 
 DynamicJsonDocument CWIFI_Ctrler::GetWifiInfo()
 {
-  JsonObject WifiConfigJSON = Machine_Ctrl.spiffs.WifiConfig->as<JsonObject>();
+  JsonObject WifiConfigJSON = (*Machine_Ctrl.JSON__WifiConfig).as<JsonObject>();
   DynamicJsonDocument json_doc(3000);
   JsonVariant json_obj = json_doc.to<JsonVariant>();
   WiFi.softAPgetHostname();

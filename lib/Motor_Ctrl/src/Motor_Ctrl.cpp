@@ -163,6 +163,7 @@ void C_Peristaltic_Motors_Ctrl::RunMotor(uint8_t *moduleDataList)
   if (xSemaphoreTake(Peristaltic_Motors_xMutex, portMAX_DELAY) == pdTRUE) {
     digitalWrite(STCP, LOW);
     vTaskDelay(10);
+    String settingContent = "";
     for (int index = moduleNum-1;index >= 0;index--) {
       shiftOut(DATA, SHCP, MSBFIRST, moduleDataList[index]);
 
@@ -171,9 +172,10 @@ void C_Peristaltic_Motors_Ctrl::RunMotor(uint8_t *moduleDataList)
       for (int i = 0; i <= 7; i++) {
         btyeContent[i] = ((moduleDataList[index] >> i) & 1) ? '1' : '0';
       }
-      ESP_LOGV("蠕動馬達", "當前設定: %d -> %s", index, btyeContent);
+      settingContent += String(btyeContent) + "|";
     }
     digitalWrite(STCP, HIGH);
+    ESP_LOGV("蠕動馬達", "當前設定: %s", settingContent.c_str());
     vTaskDelay(10);
     xSemaphoreGive(Peristaltic_Motors_xMutex);
   }

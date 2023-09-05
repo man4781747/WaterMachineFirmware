@@ -4,8 +4,7 @@
 
 #include <String.h>
 #include "CalcFunction.h"
-#include "../../lib/StorgeSystemExternalFunction/SD_ExternalFuncion.h"
-
+#include "StorgeSystemExternalFunction.h"
 #include <SD.h>
 #include <SPIFFS.h>
 #include <Wire.h>
@@ -60,100 +59,144 @@ double getRandomNumber(double mean, double stddev) {
   return mean + (double)((esp_random() % 1000)/1000.);
 }
 
-void SMachine_Ctrl::INIT_SD_Card()
-{
-  if (!SD.begin(8)) {
-    ESP_LOGE("SD", "initialization failed!");
-  } else {
-    ESP_LOGV("SD", "initialization done.");
-  }
-}
+
+//! SPIFFS 相關
 
 /**
  * @brief SPIFFS 初始化
  * 同時會讀取基礎資訊&參數設定檔
  * 
  */
-void SMachine_Ctrl::INIT_SPIFFS_config()
+void SMachine_Ctrl::INIT_SPIFFS_And_LoadConfigs()
 {
-  spiffs.INIT_SPIFFS();
-  spiffs.LoadDeviceBaseInfo();
-  // spiffs.GetDeviceSetting();
-  spiffs.LoadWiFiConfig();
+  INIT_SPIFFS();
+  SPIFFS__LoadDeviceBaseInfo();
+  SPIFFS__LoadWiFiConfig();
 }
 
-void SMachine_Ctrl::INIT_I2C_Wires()
+bool SMachine_Ctrl::INIT_SPIFFS()
 {
-  WireOne.end();
-  WireOne.begin(WireOne_SDA, WireOne_SCL);
-}
-
-/**
- * @brief 初始化各池的數值歷史紀錄
- * 若記錄檔存在，則讀取紀錄檔
- * 若不存在，則使用預設值
- * 
- */
-void SMachine_Ctrl::INIT_PoolData()
-{
-  JsonObject D_pools = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pools"];
-  for (JsonPair D_poolItem : D_pools) {
-    (*sensorDataSave)[D_poolItem.key()]["PoolID"].set(D_poolItem.key());
-    (*sensorDataSave)[D_poolItem.key()]["PoolName"].set(D_poolItem.value().as<JsonObject>()["title"].as<String>());
-    (*sensorDataSave)[D_poolItem.key()]["PoolDescription"].set(D_poolItem.value().as<JsonObject>()["desp"].as<String>());
-    (*sensorDataSave)[D_poolItem.key()]["NO2_wash_volt"].set(-1.);
-    (*sensorDataSave)[D_poolItem.key()]["NO2_test_volt"].set(-1.);
-    (*sensorDataSave)[D_poolItem.key()]["NO2"].set(-1.);
-    (*sensorDataSave)[D_poolItem.key()]["NH4_wash_volt"].set(-1.);
-    (*sensorDataSave)[D_poolItem.key()]["NH4_test_volt"].set(-1.);
-    (*sensorDataSave)[D_poolItem.key()]["NH4"].set(-1.);
-    (*sensorDataSave)[D_poolItem.key()]["pH_volt"].set(-1.);
-    (*sensorDataSave)[D_poolItem.key()]["pH"].set(-1.);
+  if(!SPIFFS.begin(true)){
+    ESP_LOGE("", "讀取SPIFFS失敗");
+    return false;
   }
+  ESP_LOGD("", "讀取SPIFFS成功");
+  return true;
+}
 
-  
-
-  if (SD.exists(LastDataSaveFilePath)) {
-    File tempData = SD.open(LastDataSaveFilePath, FILE_READ);
-    DeserializationError error = deserializeJson(*sensorDataSave, tempData.readString());
-    tempData.close();
+bool SMachine_Ctrl::SPIFFS__LoadDeviceBaseInfo()
+{
+  //STEP 首先判斷設定檔是否存在，如果不在就建立一個
+  if (!SPIFFS.exists(FilePath__SPIFFS__DeviceBaseInfo)) {
+    ESP_LOGW("", "找不到儀器基礎設定檔: %s，重建他!", FilePath__SPIFFS__DeviceBaseInfo.c_str());
+    ExFile_CreateFile(SPIFFS, FilePath__SPIFFS__DeviceBaseInfo);
+    (*JSON__DeviceBaseInfo)["device_no"].set("xxxxxx");
+    (*JSON__DeviceBaseInfo)["mode"].set("Mode_Slave");
+    return ExFile_WriteJsonFile(SPIFFS, FilePath__SPIFFS__DeviceBaseInfo, *JSON__DeviceBaseInfo);
+  }
+  else {
+    return ExFile_LoadJsonFile(SPIFFS, FilePath__SPIFFS__DeviceBaseInfo, *JSON__DeviceBaseInfo);
   }
 }
 
-// void SMachine_Ctrl::LoadPiplineConfig()
-// {
-//   if (SD.exists(SD__piplineConfigsFileFullPath)) {
-//     File file = SD.open(SD__piplineConfigsFileFullPath, FILE_READ);
-//     DeserializationError error = deserializeJson(*(spiffs.DeviceSetting), file);
-//   } else if (SPIFFS.exists("/config/event_config.json")) {
-//     File file = SPIFFS.open("/config/event_config.json", FILE_READ);
-    
-//   }
-// }
-bool SMachine_Ctrl::LoadJsonConfig(fs::FS& fileSystem, String FilePath, JsonDocument &doc)
+bool SMachine_Ctrl::SPIFFS__ReWriteDeviceBaseInfo()
 {
-  if (fileSystem.exists(FilePath)) {
-    File file = fileSystem.open(FilePath, FILE_READ);
-    DeserializationError error = deserializeJson(doc, file);
-    if (error) {
-      return false;
-    }
+  return ExFile_WriteJsonFile(SPIFFS, FilePath__SPIFFS__DeviceBaseInfo, *JSON__DeviceBaseInfo);
+}
+
+bool SMachine_Ctrl::SPIFFS__LoadWiFiConfig()
+{
+  //STEP 首先判斷設定檔是否存在，如果不在就建立一個
+  if (!SPIFFS.exists(FilePath__SPIFFS__WiFiConfig)) {
+    ESP_LOGW("", "找不到儀器基礎設定檔: %s，重建他!", FilePath__SPIFFS__WiFiConfig.c_str());
+    ExFile_CreateFile(SPIFFS, FilePath__SPIFFS__WiFiConfig);
+    (*JSON__WifiConfig)["AP_IP"].set("127.0.0.1");
+    (*JSON__WifiConfig)["AP_gateway"].set("127.0.0.1");
+    (*JSON__WifiConfig)["AP_subnet_mask"].set("255.255.255.0");
+    (*JSON__WifiConfig)["AP_Name"].set("AkiraTest");
+    (*JSON__WifiConfig)["AP_Password"].set("12345678");
+    (*JSON__WifiConfig)["remote_IP"].set("127.0.0.1");
+    (*JSON__WifiConfig)["remote_Name"].set("xxxxx");
+    (*JSON__WifiConfig)["remote_Password"].set("12345678");
+    return ExFile_WriteJsonFile(SPIFFS, FilePath__SPIFFS__WiFiConfig, *JSON__WifiConfig);
+  }
+  else {
+    return ExFile_LoadJsonFile(SPIFFS, FilePath__SPIFFS__WiFiConfig, *JSON__WifiConfig);
+  }
+}
+
+bool SMachine_Ctrl::SPIFFS__ReWriteWiFiConfig()
+{
+  return ExFile_WriteJsonFile(SPIFFS, FilePath__SPIFFS__WiFiConfig, *JSON__WifiConfig);
+}
+
+
+//! SD卡 相關
+
+void SMachine_Ctrl::INIT_SD_And_LoadConfigs()
+{
+  INIT_SD_Card();
+  ESP_LOGD("", "準備讀取光度感測器的設定檔");
+  SD__LoadspectrophotometerConfig();
+  ESP_LOGD("", "準備讀取PH感測器的設定檔");
+  SD__LoadPHmeterConfig();
+  ESP_LOGD("", "準備更新當前SD卡內有的Pipeline檔案列表");
+  SD__UpdatePipelineConfigList();
+}
+
+bool SMachine_Ctrl::INIT_SD_Card()
+{
+  if (!SD.begin(8)) {
+    ESP_LOGE("", "SD卡讀取失敗");
+    return false;
+  } else {
+    ESP_LOGD("", "SD卡讀取成功");
     return true;
   }
-  return false;
 }
 
-void SMachine_Ctrl::LoadPiplineConfig()
+void SMachine_Ctrl::SD__LoadspectrophotometerConfig()
 {
-  // serializeJsonPretty(ExFile_listDir(SD,"/pipelines"), Serial);
-  if (
-    LoadJsonConfig(SD, SD__piplineConfigsFileFullPath, *(spiffs.DeviceSetting)) == false
-  ) {
-    LoadJsonConfig(SPIFFS, SD__piplineConfigsFileFullPath, *(spiffs.DeviceSetting));
+  ExFile_LoadJsonFile(SD, FilePath__SD__SpectrophotometerConfig, *JSON__SpectrophotometerConfig);
+}
+
+void SMachine_Ctrl::SD__LoadPHmeterConfig()
+{
+  ExFile_LoadJsonFile(SD, FilePath__SD__PHmeterConfig, *JSON__PHmeterConfig);
+}
+
+void SMachine_Ctrl::SD__UpdatePipelineConfigList()
+{
+  (*JSON__PipelineConfigList).clear();
+  File folder = SD.open("/pipelines");
+  while (true) {
+    File Entry = folder.openNextFile();
+    if (! Entry) {
+      break;
+    }
+    String FileName = String(Entry.name());
+    if (FileName == "__temp__.json") {
+      continue;
+    }
+    DynamicJsonDocument fileInfo(500);
+    fileInfo["size"].set(Entry.size());
+    fileInfo["name"].set(FileName);
+    fileInfo["getLastWrite"].set(Entry.getLastWrite());
+    DynamicJsonDocument fileContent(60000);
+    DeserializationError error = deserializeJson(fileContent, Entry);
+    Entry.close();
+    if (error) {
+
+    } else {
+      fileInfo["title"].set(fileContent["title"].as<String>());
+      fileInfo["desp"].set(fileContent["desp"].as<String>());
+      fileInfo["tag"].set(fileContent["tag"].as<JsonArray>());
+    }
+    (*JSON__PipelineConfigList).add(fileInfo);
   }
 }
 
-void SMachine_Ctrl::LoadOldLogs()
+void SMachine_Ctrl::SD__LoadOldLogs()
 {
   std::vector<String> logFileNameList;
   File logsFolder = SD.open("/logs");
@@ -222,11 +265,52 @@ void SMachine_Ctrl::LoadOldLogs()
     logItem["title"].set(title);
     logItem["desp"].set(desp);
     // serializeJson(logItem, Serial);
-    logArray.add(logItem);
-    if (logArray.size() > 100) {
+    (*JSON__DeviceLogSave).add(logItem);
+    if ((*JSON__DeviceLogSave).size() > 100) {
       break;
     }
   }
+}
+
+
+void SMachine_Ctrl::INIT_I2C_Wires()
+{
+  WireOne.end();
+  WireOne.begin(WireOne_SDA, WireOne_SCL);
+}
+
+/**
+ * @brief 初始化各池的數值歷史紀錄
+ * 若記錄檔存在，則讀取紀錄檔
+ * 若不存在，則使用預設值
+ * 
+ */
+bool SMachine_Ctrl::INIT_PoolData()
+{
+  if (SD.exists(FilePath__SD__LastSensorDataSave)) {
+    if (ExFile_LoadJsonFile(SD, FilePath__SD__LastSensorDataSave, *JSON__sensorDataSave)) {
+      ESP_LOGD("", "讀取最新各池感測器測量數值成功");
+      return true;
+    } else {
+      ESP_LOGE("", "讀取最新各池感測器測量數值失敗");
+    }
+  }
+  ESP_LOGE("", "找不到或讀取最新各池感測器測量數值失敗，重建資料庫");
+  JsonObject D_pools = (*Machine_Ctrl.JSON__DeviceBaseInfo)["pools"].as<JsonObject>();
+  for (JsonPair D_poolItem : D_pools) {
+    (*JSON__sensorDataSave)[D_poolItem.key()]["PoolID"].set(D_poolItem.key());
+    (*JSON__sensorDataSave)[D_poolItem.key()]["PoolName"].set(D_poolItem.value().as<JsonObject>()["title"].as<String>());
+    (*JSON__sensorDataSave)[D_poolItem.key()]["PoolDescription"].set(D_poolItem.value().as<JsonObject>()["desp"].as<String>());
+    (*JSON__sensorDataSave)[D_poolItem.key()]["NO2_wash_volt"].set(-1.);
+    (*JSON__sensorDataSave)[D_poolItem.key()]["NO2_test_volt"].set(-1.);
+    (*JSON__sensorDataSave)[D_poolItem.key()]["NO2"].set(-1.);
+    (*JSON__sensorDataSave)[D_poolItem.key()]["NH4_wash_volt"].set(-1.);
+    (*JSON__sensorDataSave)[D_poolItem.key()]["NH4_test_volt"].set(-1.);
+    (*JSON__sensorDataSave)[D_poolItem.key()]["NH4"].set(-1.);
+    (*JSON__sensorDataSave)[D_poolItem.key()]["pH_volt"].set(-1.);
+    (*JSON__sensorDataSave)[D_poolItem.key()]["pH"].set(-1.);
+  }
+  return false;
 }
 
 void SMachine_Ctrl::StopDeviceAndINIT()
@@ -236,53 +320,6 @@ void SMachine_Ctrl::StopDeviceAndINIT()
   CleanAllStepTask();
   digitalWrite(48, LOW);
   xSemaphoreGive(LOAD__ACTION_V2_xMutex);
-}
-
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//! 儀器基礎設定
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-void SMachine_Ctrl::LoadspectrophotometerConfig()
-{
-  LoadJsonConfig(SD, spectrophotometerConfigFileFullPath, *spectrophotometerConfig);
-}
-
-void SMachine_Ctrl::LoadPHmeterConfig()
-{
-  LoadJsonConfig(SD, PHmeterConfigFileFullPath, *PHmeterConfig);
-}
-
-void SMachine_Ctrl::UpdatePipelineConfigList()
-{
-  (*PipelineConfigList).clear();
-  File folder = SD.open("/pipelines");
-  while (true) {
-    File Entry = folder.openNextFile();
-    if (! Entry) {
-      break;
-    }
-    String FileName = String(Entry.name());
-    if (FileName == "__temp__.json") {
-      continue;
-    }
-    DynamicJsonDocument fileInfo(500);
-    fileInfo["size"].set(Entry.size());
-    fileInfo["name"].set(FileName);
-    fileInfo["getLastWrite"].set(Entry.getLastWrite());
-    DynamicJsonDocument fileContent(60000);
-    DeserializationError error = deserializeJson(fileContent, Entry);
-    Entry.close();
-    if (error) {
-
-    } else {
-      fileInfo["title"].set(fileContent["title"].as<String>());
-      fileInfo["desp"].set(fileContent["desp"].as<String>());
-      fileInfo["tag"].set(fileContent["tag"].as<JsonArray>());
-    }
-    (*PipelineConfigList).add(fileInfo);
-  }
-
-  // serializeJsonPretty(*PipelineConfigList, Serial);
 }
 
 
@@ -297,33 +334,33 @@ void PiplelineFlowTask(void* parameter)
   //! TASK 有以下數種狀態
   //! 1. WAIT、2. NORUN、3. FAIL、4. SUCCESS、5. RUNNING、6. STOP_THIS_PIPELINE
   char* stepsGroupName = (char*)parameter;
-  String ThisPipelineTitle = (*Machine_Ctrl.pipelineConfig)["title"].as<String>();
+  String ThisPipelineTitle = (*Machine_Ctrl.JSON__pipelineConfig)["title"].as<String>();
   String stepsGroupNameString = String(stepsGroupName);
-  String ThisStepGroupTitle = (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["title"].as<String>();
+  String ThisStepGroupTitle = (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupNameString]["title"].as<String>();
   ESP_LOGI("", "建立 %s 的 Task", ThisStepGroupTitle.c_str());
   Machine_Ctrl.SetLog(
     3, "執行流程: "+ThisStepGroupTitle,"Pipeline: "+ThisPipelineTitle, Machine_Ctrl.BackendServer.ws_, NULL
   );
 
-  (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("RUNNING");
+  (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("RUNNING");
 
   //? 這個 Task 要執行的 steps_group 的 list
-  JsonArray stepsGroupArray = (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["steps"].as<JsonArray>();
+  JsonArray stepsGroupArray = (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupNameString]["steps"].as<JsonArray>();
 
   //? 這個 Task 要執行的 parent list
-  JsonObject parentList = (*Machine_Ctrl.pipelineConfig)["pipline"][stepsGroupNameString]["parentList"].as<JsonObject>();
+  JsonObject parentList = (*Machine_Ctrl.JSON__pipelineConfig)["pipline"][stepsGroupNameString]["parentList"].as<JsonObject>();
   
   bool isStepFail = false;
 
   for (String eventChose : stepsGroupArray) {
     //? eventChose: 待執行的event名稱
 
-    String thisEventTitle = (*Machine_Ctrl.pipelineConfig)["events"][eventChose]["title"].as<String>();
+    String thisEventTitle = (*Machine_Ctrl.JSON__pipelineConfig)["events"][eventChose]["title"].as<String>();
 
     ESP_LOGI("", " 執行: %s - %s", ThisStepGroupTitle.c_str(), thisEventTitle.c_str());
     Machine_Ctrl.SetLog(3, "執行事件: "+thisEventTitle,"流程: "+ThisStepGroupTitle, Machine_Ctrl.BackendServer.ws_, NULL);
 
-    JsonArray eventList = (*Machine_Ctrl.pipelineConfig)["events"][eventChose]["event"].as<JsonArray>();
+    JsonArray eventList = (*Machine_Ctrl.JSON__pipelineConfig)["events"][eventChose]["event"].as<JsonArray>();
     String taskResult = "SUCCESS";
     for (JsonObject eventItem : eventList) {
       //! 伺服馬達控制設定
@@ -436,7 +473,7 @@ void PiplelineFlowTask(void* parameter)
                     Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
                   }
                   endTimeCheckJSON["finish"].set(true);
-                  (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
+                  (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
                   Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
                   Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
                   free(stepsGroupName);
@@ -448,7 +485,7 @@ void PiplelineFlowTask(void* parameter)
                 }
                 else if (thisFailAction=="stopPipeline") {
                   ESP_LOGE("", "停止當前流程，若有下一個排隊中的流程就執行他");
-                  (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("STOP_THIS_PIPELINE");
+                  (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("STOP_THIS_PIPELINE");
                   Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
                   Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
                   free(stepsGroupName);
@@ -486,7 +523,7 @@ void PiplelineFlowTask(void* parameter)
                       Machine_Ctrl.peristalticMotorsCtrl.RunMotor(Machine_Ctrl.peristalticMotorsCtrl.moduleDataList);
                     }
                     endTimeCheckJSON["finish"].set(true);
-                    (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
+                    (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
                     Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
                     Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
                     free(stepsGroupName);
@@ -510,7 +547,7 @@ void PiplelineFlowTask(void* parameter)
       else if (eventItem.containsKey("spectrophotometer_list")) {
         for (JsonObject spectrophotometerItem : eventItem["spectrophotometer_list"].as<JsonArray>()) {
           int spectrophotometerIndex = spectrophotometerItem["index"].as<int>();
-          JsonObject spectrophotometerConfigChose = (*Machine_Ctrl.spectrophotometerConfig)[spectrophotometerIndex].as<JsonObject>();
+          JsonObject spectrophotometerConfigChose = (*Machine_Ctrl.JSON__SpectrophotometerConfig)[spectrophotometerIndex].as<JsonObject>();
           String spectrophotometerTitle = spectrophotometerConfigChose["title"].as<String>();
           String GainStr = spectrophotometerItem["gain"].as<String>();
           String targetChannel = spectrophotometerItem["channel"].as<String>();
@@ -728,8 +765,8 @@ void PiplelineFlowTask(void* parameter)
               value_name, -1, finalValue, -1
             );
             //? websocket相關的數值要限縮在小數點下第2位
-            (*Machine_Ctrl.sensorDataSave)[poolChose][value_name].set(String(finalValue,2).toDouble());
-            Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.LastDataSaveFilePath, (*Machine_Ctrl.sensorDataSave).as<JsonObject>());
+            (*Machine_Ctrl.JSON__sensorDataSave)[poolChose][value_name].set(String(finalValue,2).toDouble());
+            Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.FilePath__SD__LastSensorDataSave, (*Machine_Ctrl.JSON__sensorDataSave).as<JsonObject>());
             sprintf(logBuffer, "最終取調整值:%d, CH0 強度: %s, CH1 強度: %s", 
               spectrophotometerConfigChose["level"].as<int>(), String(Machine_Ctrl.lastLightValue_CH0, 2).c_str(),
               String(Machine_Ctrl.lastLightValue_CH1, 2).c_str()
@@ -739,7 +776,7 @@ void PiplelineFlowTask(void* parameter)
               ESP_LOGI("LOADED_ACTION","       - 調整光強度失敗 %s",String(logBuffer).c_str());
               if (failAction == "stepStop") {
                 //? 當前step流程中止
-                (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
+                (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
                 Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
                 Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
                 free(stepsGroupName);
@@ -812,8 +849,8 @@ void PiplelineFlowTask(void* parameter)
               failCheckPPM = CH1_after;
             }
             //? websocket相關的數值要限縮在小數點下第2位
-            (*Machine_Ctrl.sensorDataSave)[poolChose][value_name].set(String(failCheckValue,2).toDouble());
-            (*Machine_Ctrl.sensorDataSave)[poolChose][TargetType].set(String(failCheckPPM,2).toDouble());
+            (*Machine_Ctrl.JSON__sensorDataSave)[poolChose][value_name].set(String(failCheckValue,2).toDouble());
+            (*Machine_Ctrl.JSON__sensorDataSave)[poolChose][TargetType].set(String(failCheckPPM,2).toDouble());
             sprintf(
               logBuffer, 
               "測量結果: %s ,設定值: %d, 頻道: %s, 原始數值: %s, 轉換後PPM: %s",
@@ -828,7 +865,7 @@ void PiplelineFlowTask(void* parameter)
               DataFileFullPath,Machine_Ctrl.GetDatetimeString() ,spectrophotometerTitle, poolChose, GainStr, targetChannel,
               value_name, dilution, failCheckValue, failCheckPPM
             );
-            Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.LastDataSaveFilePath, (*Machine_Ctrl.sensorDataSave).as<JsonObject>());
+            Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.FilePath__SD__LastSensorDataSave, (*Machine_Ctrl.JSON__sensorDataSave).as<JsonObject>());
 
             if (failCheckValue < min or failCheckValue > max) {
               sprintf(
@@ -841,7 +878,7 @@ void PiplelineFlowTask(void* parameter)
 
               if (failAction == "stepStop") {
                 //? 當前step流程中止
-                (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
+                (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
                 Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
                 Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
                 free(stepsGroupName);
@@ -871,8 +908,8 @@ void PiplelineFlowTask(void* parameter)
           }
           //* 原始電壓數值獲得
           double PH_RowValue = afterFilterValue(phValue, 30);
-          double m = (*Machine_Ctrl.PHmeterConfig)[0]["calibration"][0]["ret"]["m"].as<String>().toDouble();
-          double b = (*Machine_Ctrl.PHmeterConfig)[0]["calibration"][0]["ret"]["b"].as<String>().toDouble();
+          double m = (*Machine_Ctrl.JSON__PHmeterConfig)[0]["calibration"][0]["ret"]["m"].as<String>().toDouble();
+          double b = (*Machine_Ctrl.JSON__PHmeterConfig)[0]["calibration"][0]["ret"]["b"].as<String>().toDouble();
           double pHValue = m*PH_RowValue + b;
           if (pHValue<0) {
             Machine_Ctrl.SetLog(2, "測量PH數值", "數值:"+String(pHValue,1)+"過低");
@@ -882,10 +919,10 @@ void PiplelineFlowTask(void* parameter)
             pHValue = 14.;
           }
           //? websocket相關的數值要限縮在小數點下第2位
-          (*Machine_Ctrl.sensorDataSave)[poolChose]["pH_volt"].set(String(PH_RowValue,2).toDouble());
-          (*Machine_Ctrl.sensorDataSave)[poolChose]["pH"].set(String(pHValue,2).toDouble());
+          (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["pH_volt"].set(String(PH_RowValue,2).toDouble());
+          (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["pH"].set(String(pHValue,2).toDouble());
           digitalWrite(7, LOW);
-          Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.LastDataSaveFilePath, (*Machine_Ctrl.sensorDataSave).as<JsonObject>());
+          Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.FilePath__SD__LastSensorDataSave, (*Machine_Ctrl.JSON__sensorDataSave).as<JsonObject>());
           String DataFileFullPath = Machine_Ctrl.SensorDataFolder + Machine_Ctrl.GetDateString("") + "_data.csv";
           Machine_Ctrl.SaveSensorData_photometer(
             DataFileFullPath,Machine_Ctrl.GetDatetimeString() ,"PH測量", poolChose, "", "",
@@ -914,7 +951,7 @@ void PiplelineFlowTask(void* parameter)
         serializeJsonPretty(eventItem, Serial);
         String poolChose = eventItem["upload"][0]["pool"].as<String>();
         ESP_LOGI("LOADED_ACTION","      更新 %s 資料時間",poolChose.c_str());
-        (*Machine_Ctrl.sensorDataSave)[poolChose]["Data_datetime"].set(Machine_Ctrl.GetDatetimeString());
+        (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["Data_datetime"].set(Machine_Ctrl.GetDatetimeString());
         Machine_Ctrl.BroadcastNewPoolData(poolChose);
       }
       //! log發出
@@ -932,10 +969,10 @@ void PiplelineFlowTask(void* parameter)
   }
 
   if (isStepFail) {
-    (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
+    (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
   }
   else {
-    (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("SUCCESS");
+    (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("SUCCESS");
   }
 
 
@@ -948,7 +985,7 @@ void PiplelineFlowTask(void* parameter)
 //? 建立新的流程Task
 void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
 {
-  if ((*pipelineConfig)["steps_group"].containsKey(stepsGroupName)) {
+  if ((*JSON__pipelineConfig)["steps_group"].containsKey(stepsGroupName)) {
     ESP_LOGI("","RUN: %s", stepsGroupName.c_str());
     TaskHandle_t *thisTaskHandle_t = new TaskHandle_t();
     BaseType_t xReturned;
@@ -956,7 +993,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
     int nameLength = stepsGroupName.length();
     char* charPtr = (char*)malloc((nameLength + 1) * sizeof(char));
     strcpy(charPtr, stepsGroupName.c_str());
-    (*pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("RUNNING");
+    (*JSON__pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("RUNNING");
     xReturned = xTaskCreate(
       PiplelineFlowTask, NULL,
       15000, (void*)charPtr, 3, thisTaskHandle_t
@@ -995,29 +1032,32 @@ void SMachine_Ctrl::CleanAllStepTask()
 void PipelineFlowScan(void* parameter)
 { 
   //? pipelineStackList: 多流程設定的列隊
+  ESP_LOGD("","開始執行流程管理Task");
   DynamicJsonDocument pipelineStackList = *((DynamicJsonDocument*)parameter);
+  ESP_LOGD("","一共有 %d 個流程會依序執行", pipelineStackList.size());
   for (int pipelineIndex = 0;pipelineIndex<pipelineStackList.size();pipelineIndex++) {
+    ESP_LOGI("", "開始執行第 %d 個流程", pipelineIndex+1);
     JsonObject pipelineChose = pipelineStackList[pipelineIndex].as<JsonObject>();
     String pipelineConfigFileFullPath = pipelineChose["FullFilePath"].as<String>();
     //STEP 1 檢查檔案是否存在
-    ESP_LOGI("PipelineFlowScan", "STEP 1 檢查檔案是否存在: %s", pipelineConfigFileFullPath.c_str());
+    ESP_LOGI("", "STEP 1 檢查檔案是否存在: %s", pipelineConfigFileFullPath.c_str());
     if (!SD.exists(pipelineConfigFileFullPath)) {
-      ESP_LOGE("PipelineFlowScan", "檔案: %s 不存在,跳至下一流程", pipelineConfigFileFullPath.c_str());
+      ESP_LOGE("", "檔案: %s 不存在,跳至下一流程", pipelineConfigFileFullPath.c_str());
       Machine_Ctrl.SetLog(1, "檔案不存在，跳至下一流程", pipelineConfigFileFullPath, Machine_Ctrl.BackendServer.ws_);
       continue;
     }
     //STEP 2 檢查檔案是否可以被讀取
-    ESP_LOGI("PipelineFlowScan", "STEP 2 檢查檔案是否可以被讀取");
+    ESP_LOGI("", "STEP 2 檢查檔案是否可以被讀取");
     File pipelineConfigFile = SD.open(pipelineConfigFileFullPath);
     if (!pipelineConfigFile) {
-      ESP_LOGE("PipelineFlowScan", "無法打開檔案: %s ,跳至下一流程", pipelineConfigFileFullPath.c_str());
+      ESP_LOGE("", "無法打開檔案: %s ,跳至下一流程", pipelineConfigFileFullPath.c_str());
       Machine_Ctrl.SetLog(1, "無法打開檔案，跳至下一流程", pipelineConfigFileFullPath, Machine_Ctrl.BackendServer.ws_);
       continue;
     }
     //STEP 3 檢查檔案是否可以被解析成JSON格式
-    ESP_LOGI("PipelineFlowScan", "STEP 3 檢查檔案是否可以被解析成JSON格式");
-    (*Machine_Ctrl.pipelineConfig).clear();
-    DeserializationError error = deserializeJson(*Machine_Ctrl.pipelineConfig, pipelineConfigFile,  DeserializationOption::NestingLimit(20));
+    ESP_LOGI("", "STEP 3 檢查檔案是否可以被解析成JSON格式");
+    (*Machine_Ctrl.JSON__pipelineConfig).clear();
+    DeserializationError error = deserializeJson(*Machine_Ctrl.JSON__pipelineConfig, pipelineConfigFile,  DeserializationOption::NestingLimit(20));
     pipelineConfigFile.close();
     if (error) {
       ESP_LOGE("LOAD__ACTION_V2", "JOSN解析失敗: %s ,跳至下一流程", error.c_str());
@@ -1025,7 +1065,7 @@ void PipelineFlowScan(void* parameter)
       continue;
     }
     //STEP 4 整理設定檔內容，以利後續使用
-    ESP_LOGI("PipelineFlowScan", "STEP 4 整理設定檔內容，以利後續使用");
+    ESP_LOGI("", "STEP 4 整理設定檔內容，以利後續使用");
     /**
     //* 範例
     //* [["NO3WashValueTest",["NO3ValueTest","NO3TestWarning"]],["NO3ValueTest",["NH4WashValueTest"]],["NH4WashValueTest",["NH4Test","NH4TestWarning"]]]
@@ -1066,7 +1106,8 @@ void PipelineFlowScan(void* parameter)
     DynamicJsonDocument piplineSave(65525);
     //? 若不指定Step
     if (onlyStepGroup == "") {
-      JsonArray piplineArray = (*Machine_Ctrl.pipelineConfig)["pipline"].as<JsonArray>();
+      ESP_LOGD("", "無指定Step，將會執行完整的流程內容");
+      JsonArray piplineArray = (*Machine_Ctrl.JSON__pipelineConfig)["pipline"].as<JsonArray>();
       for (JsonArray singlePiplineArray : piplineArray) {
         String ThisNodeNameString = singlePiplineArray[0].as<String>();
         if (!piplineSave.containsKey(ThisNodeNameString)) {
@@ -1089,40 +1130,45 @@ void PipelineFlowScan(void* parameter)
           }
         }
       }
-      (*Machine_Ctrl.pipelineConfig)["pipline"].set(piplineSave);
+      (*Machine_Ctrl.JSON__pipelineConfig)["pipline"].set(piplineSave);
       //? 將 steps_group 內的資料多加上key值: RESULT 來讓後續Task可以判斷流程是否正確執行
       //? 如果沒有"trigger"這個key值，則預設task觸發條件為"allDone"
-      JsonObject stepsGroup = (*Machine_Ctrl.pipelineConfig)["steps_group"].as<JsonObject>();
+      JsonObject stepsGroup = (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"].as<JsonObject>();
       for (JsonPair stepsGroupItem : stepsGroup) {
         String stepsGroupName = String(stepsGroupItem.key().c_str());
         //? 如果有"same"這個key值，則 steps 要繼承其他設定內容
-        if ((*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName].containsKey("same")) {
-          (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["steps"].set(
-            (*Machine_Ctrl.pipelineConfig)["steps_group"][
-              (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["same"].as<String>()
+        if ((*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupName].containsKey("same")) {
+          (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupName]["steps"].set(
+            (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][
+              (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupName]["same"].as<String>()
             ]["steps"].as<JsonArray>()
           );
         }
-        (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("WAIT");
-        if (!(*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName].containsKey("trigger")) {
-          (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["trigger"].set("allDone");
+        (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("WAIT");
+        if (!(*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupName].containsKey("trigger")) {
+          (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupName]["trigger"].set("allDone");
         }
       };
 
-      
+      if (CONFIG_ARDUHAL_LOG_DEFAULT_LEVEL==5) {
+        String piplineSaveString = "";
+        serializeJson((*Machine_Ctrl.JSON__pipelineConfig)["pipline"], piplineSaveString);
+        ESP_LOGV("", "流程設定檔: %s", piplineSaveString);
+      }
     }
     else {
-      JsonObject piplineArray = (*Machine_Ctrl.pipelineConfig)["steps_group"].as<JsonObject>();
+      ESP_LOGI("", "指定執行Step: %s", onlyStepGroup.c_str());
+      JsonObject piplineArray = (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"].as<JsonObject>();
       if (piplineArray.containsKey(onlyStepGroup)) {
         piplineSave[onlyStepGroup]["Name"] = onlyStepGroup;
         piplineSave[onlyStepGroup].createNestedObject("childList");
         piplineSave[onlyStepGroup].createNestedObject("parentList");
-        (*Machine_Ctrl.pipelineConfig)["pipline"].set(piplineSave);
-        (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["RESULT"].set("WAIT");
-        if ((*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup].containsKey("same")) {
-          (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["steps"].set(
-            (*Machine_Ctrl.pipelineConfig)["steps_group"][
-              (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["same"].as<String>()
+        (*Machine_Ctrl.JSON__pipelineConfig)["pipline"].set(piplineSave);
+        (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][onlyStepGroup]["RESULT"].set("WAIT");
+        if ((*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][onlyStepGroup].containsKey("same")) {
+          (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][onlyStepGroup]["steps"].set(
+            (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][
+              (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][onlyStepGroup]["same"].as<String>()
             ]["steps"].as<JsonArray>()
           );
         }
@@ -1130,19 +1176,19 @@ void PipelineFlowScan(void* parameter)
         if (onlyEvent != "") {
           //? 若有指定Event執行
           //? 防呆: 檢查此event是否存在
-          if (!(*Machine_Ctrl.pipelineConfig)["events"].containsKey(onlyEvent)) {
+          if (!(*Machine_Ctrl.JSON__pipelineConfig)["events"].containsKey(onlyEvent)) {
             //! 指定的event不存在
             ESP_LOGE("LOAD__ACTION_V2", "設定檔 %s 中找不到Event: %s ，終止流程執行", pipelineConfigFileFullPath.c_str(), onlyEvent.c_str());
             Machine_Ctrl.SetLog(1, "找不到事件: " + onlyEvent + "，終止流程執行", "設定檔名稱: "+pipelineConfigFileFullPath, Machine_Ctrl.BackendServer.ws_);
             continue;
           }
-          (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["steps"].clear();
-          (*Machine_Ctrl.pipelineConfig)["steps_group"][onlyStepGroup]["steps"].add(onlyEvent);
+          (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][onlyStepGroup]["steps"].clear();
+          (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][onlyStepGroup]["steps"].add(onlyEvent);
           int onlyIndex = pipelineChose["eventIndexChose"].as<int>();
           if (onlyIndex != -1) {
             //? 若有指定事件中的步驟執行
             //? 防呆: 檢查此步驟是否存在
-            if (onlyIndex >= (*Machine_Ctrl.pipelineConfig)["events"][onlyEvent]["event"].size()) {
+            if (onlyIndex >= (*Machine_Ctrl.JSON__pipelineConfig)["events"][onlyEvent]["event"].size()) {
               //! 指定的index不存在
               ESP_LOGE("LOAD__ACTION_V2", "設定檔 %s 中的Event: %s 並無步驟: %d，終止流程執行", pipelineConfigFileFullPath.c_str(), onlyEvent.c_str(), onlyIndex);
               Machine_Ctrl.SetLog(1, "事件: " + onlyEvent + "找不到步驟: " + String(onlyIndex) + "，終止流程執行", "設定檔名稱: "+pipelineConfigFileFullPath, Machine_Ctrl.BackendServer.ws_);
@@ -1151,49 +1197,52 @@ void PipelineFlowScan(void* parameter)
             DynamicJsonDocument newEventIndexArray(200);
             JsonArray array = newEventIndexArray.to<JsonArray>();
             array.add(
-              (*Machine_Ctrl.pipelineConfig)["events"][onlyEvent]["event"][onlyIndex]
+              (*Machine_Ctrl.JSON__pipelineConfig)["events"][onlyEvent]["event"][onlyIndex]
             );
-            (*Machine_Ctrl.pipelineConfig)["events"][onlyEvent]["event"].set(array);
+            (*Machine_Ctrl.JSON__pipelineConfig)["events"][onlyEvent]["event"].set(array);
           }
         }
       }
     }
     
     //STEP 5 開始執行流程判斷功能
-    ESP_LOGI("PipelineFlowScan", "STEP 5 開始執行流程判斷功能");
-    JsonObject stepsGroup = (*Machine_Ctrl.pipelineConfig)["steps_group"].as<JsonObject>();
-    JsonObject pipelineSet = (*Machine_Ctrl.pipelineConfig)["pipline"].as<JsonObject>();
+    ESP_LOGI("", "STEP 5 開始執行流程判斷功能");
+    JsonObject stepsGroup = (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"].as<JsonObject>();
+    JsonObject pipelineSet = (*Machine_Ctrl.JSON__pipelineConfig)["pipline"].as<JsonObject>();
     //? isAllDone: 用來判斷是否所有流程都運行完畢，如果都完畢，則此TASK也可以關閉
     //? 判斷完畢的邏輯: 全部step都不為 "WAIT"、"RUNNING" 則代表完畢
     bool isAllDone = false;
     while(isAllDone == false) {
       isAllDone = true;
       for (JsonPair stepsGroupItem : pipelineSet) {
-        //? stepsGroupName: 流程名稱
+        //? stepsGroupName: 流程ID
         String stepsGroupName = String(stepsGroupItem.key().c_str());
+        //? stepsGroupTitle: 流程名稱
+        String stepsGroupTitle = (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupName]["title"].as<String>();
         //? stepsGroupResult: 此流程的運行狀態
-        String stepsGroupResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].as<String>();
+        String stepsGroupResult = (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].as<String>();
         //? 只有在"WAIT"時，才有必要判斷是否要執行
         if (stepsGroupResult == "WAIT") {
           isAllDone = false;
           //? parentList: 此流程的parentList
-          JsonObject parentList = (*Machine_Ctrl.pipelineConfig)["pipline"][stepsGroupName]["parentList"].as<JsonObject>();
+          JsonObject parentList = (*Machine_Ctrl.JSON__pipelineConfig)["pipline"][stepsGroupName]["parentList"].as<JsonObject>();
           //? 如果此step狀態是WAIT並且parent數量為0，則直接觸發
           if (parentList.size() == 0) {
+            ESP_LOGI("", "發現初始流程: %s(%s)，準備執行", stepsGroupTitle.c_str(), stepsGroupName.c_str());
             Machine_Ctrl.AddNewPiplelineFlowTask(stepsGroupName);
             continue;
           }
 
           //? 程式執行到這邊，代表都不是ENTEY POINT
           //? TrigerRule: 此流程的觸發條件
-          String TrigerRule = (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["trigger"].as<String>();
+          String TrigerRule = (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupName]["trigger"].as<String>();
           //? 如果觸發條件是 allDone，則會等待parents都不為 "WAIT"、"RUNNING"、"NORUN" 時則會開始執行
           //? 而若任何一個parent為 "NORUN" 時，則本step則視為不再需要執行，立刻設定為 "NORUN"
           if (TrigerRule == "allDone") {
             bool stepRun = true;
             for (JsonPair parentItem : parentList ) {
               String parentName = String(parentItem.key().c_str());
-              String parentResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
+              String parentResult = (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
               if (parentResult=="WAIT" or parentResult=="RUNNING") {
                 //? 有任何一個parent還沒執行完畢，跳出
                 stepRun = false;
@@ -1201,12 +1250,13 @@ void PipelineFlowScan(void* parameter)
               } else if ( parentResult=="NORUN") {
                 //? 有任何一個parent不需執行，此step也不再需執行
                 ESP_LOGW("", "Task %s 不符合 allDone 的執行條件，關閉此Task", stepsGroupName.c_str());
-                (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("NORUN");
+                (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("NORUN");
                 stepRun = false;
                 break; 
               }
             }
             if (stepRun) {
+              ESP_LOGI("", "流程: %s(%s) 符合觸發條件: allDone，準備執行", stepsGroupTitle.c_str(), stepsGroupName.c_str());
               Machine_Ctrl.AddNewPiplelineFlowTask(stepsGroupName);
               continue;
             }
@@ -1217,21 +1267,22 @@ void PipelineFlowScan(void* parameter)
             bool setNoRun = true;
             for (JsonPair parentItem : parentList ) {
               String parentName = String(parentItem.key().c_str());
-              String parentResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
+              String parentResult = (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
               if (parentResult=="FAIL") {
+                ESP_LOGI("", "流程: %s(%s) 符合觸發條件: oneFail，準備執行", stepsGroupTitle.c_str(), stepsGroupName.c_str());
                 Machine_Ctrl.AddNewPiplelineFlowTask(stepsGroupName);
                 setNoRun = false;
                 break;
-            } else if (parentResult=="WAIT" or parentResult=="RUNNING") {
-              setNoRun = false;
-              break;
+              } else if (parentResult=="WAIT" or parentResult=="RUNNING") {
+                setNoRun = false;
+                break;
+              }
+            }
+            if (setNoRun) {
+              ESP_LOGW("", "Task %s(%s) 不符合 oneFail 的執行條件，關閉此Task", stepsGroupTitle.c_str(), stepsGroupName.c_str());
+              (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("NORUN");
             }
           }
-          if (setNoRun) {
-            ESP_LOGW("", "Task %s 不符合 oneFail 的執行條件，關閉此Task", stepsGroupName.c_str());
-            (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("NORUN");
-          }
-        }
           //? 如果觸發條件是 allSuccess，則會等待所有parent的RESULT變成 "SUCCESS" 就執行
           //? 如果任何一個parent為 "WAIT"、"RUNNING"，則繼續等待
           //? 如果任何一個parent為 "NORUN"、、"FAIL" 時，則本Task則視為不再需要執行，立刻設定為 "NORUN"，並且刪除Task
@@ -1239,10 +1290,10 @@ void PipelineFlowScan(void* parameter)
             bool stepRun = true;
             for (JsonPair parentItem : parentList ) {
               String parentName = String(parentItem.key().c_str());
-              String parentResult = (*Machine_Ctrl.pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
+              String parentResult = (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][parentName]["RESULT"].as<String>();
               if (parentResult=="NORUN" or parentResult=="FAIL") {
-                ESP_LOGW("", "Task %s 不符合 allSuccess 的執行條件，關閉此Task", stepsGroupName.c_str());
-                (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("NORUN");
+                ESP_LOGW("", "Task %s(%s) 不符合 allSuccess 的執行條件，關閉此Task", stepsGroupTitle.c_str(), stepsGroupName.c_str());
+                (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("NORUN");
                 stepRun = false;
                 break;
               }
@@ -1252,6 +1303,7 @@ void PipelineFlowScan(void* parameter)
               }
             }
             if (stepRun) {
+              ESP_LOGI("", "流程: %s(%s) 符合觸發條件: allSuccess，準備執行", stepsGroupTitle.c_str(), stepsGroupName.c_str());
               Machine_Ctrl.AddNewPiplelineFlowTask(stepsGroupName);
               continue;
             }
@@ -1259,9 +1311,13 @@ void PipelineFlowScan(void* parameter)
         } 
         else if (stepsGroupResult == "RUNNING") {isAllDone = false;}
         else if (stepsGroupResult == "STOP_THIS_PIPELINE") {
+          ESP_LOGI("", "發現有流程觸發了 STOP_THIS_PIPELINE");
+          ESP_LOGI("", " - 流程名稱:\t%s (%s)", stepsGroupTitle.c_str(), stepsGroupName.c_str());
+          ESP_LOGI("", "準備停止當前正在執行的各項Task");
           for (const auto& pipelineTaskHandle : Machine_Ctrl.pipelineTaskHandleMap) {
-            TaskHandle_t* taskChose = pipelineTaskHandle.second;
             String stepName = pipelineTaskHandle.first;
+            ESP_LOGI("", "停止流程: %s (%s)", (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepName]["title"].as<String>().c_str(), stepName.c_str());
+            TaskHandle_t* taskChose = pipelineTaskHandle.second;
             vTaskSuspend(*taskChose);
             vTaskDelete(*taskChose);
             Machine_Ctrl.pipelineTaskHandleMap.erase(stepName);
@@ -1274,19 +1330,21 @@ void PipelineFlowScan(void* parameter)
       };
       vTaskDelay(100/portTICK_PERIOD_MS);
     }
+    ESP_LOGI("", "第 %d 個流程執行完畢", pipelineIndex+1);
   }
   Machine_Ctrl.TASK__pipelineFlowScan = NULL;
   xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex); //! 釋放互斥鎖!!
   ESP_LOGI("", "所有流程已執行完畢");
   vTaskDelay(100/portTICK_PERIOD_MS);
   Machine_Ctrl.SetLog(
-    3, "所有流程已執行完畢", (*Machine_Ctrl.pipelineConfig)["Title"].as<String>(), Machine_Ctrl.BackendServer.ws_, NULL
+    3, "所有流程已執行完畢", (*Machine_Ctrl.JSON__pipelineConfig)["Title"].as<String>(), Machine_Ctrl.BackendServer.ws_, NULL
   );
   vTaskDelete(NULL);
 }
 
 //? 建立Pipeline排程的控制Task
 void SMachine_Ctrl::CreatePipelineFlowScanTask(DynamicJsonDocument *pipelineStackList) {
+  ESP_LOGD("", "準備建立流程管理Task");
   //!! 防呆，在此funtion內，互斥鎖: LOAD__ACTION_V2_xMutex 應該都是上鎖的狀態
   //!! 若判定執行失敗，則立刻釋放互斥鎖
   if (xSemaphoreTake(Machine_Ctrl.LOAD__ACTION_V2_xMutex, 0) == pdTRUE) {
@@ -1318,6 +1376,7 @@ void SMachine_Ctrl::CreatePipelineFlowScanTask(DynamicJsonDocument *pipelineStac
 
 bool SMachine_Ctrl::LOAD__ACTION_V2(DynamicJsonDocument *pipelineStackList)
 {
+  ESP_LOGD("", "收到執行排程的需求");
   //!! 防呆，在此funtion內，互斥鎖: LOAD__ACTION_V2_xMutex 應該都是上鎖的狀態
   //!! 若判定執行失敗，則立刻釋放互斥鎖
   if (xSemaphoreTake(Machine_Ctrl.LOAD__ACTION_V2_xMutex, 0) == pdTRUE) {
@@ -1325,6 +1384,11 @@ bool SMachine_Ctrl::LOAD__ACTION_V2(DynamicJsonDocument *pipelineStackList)
     SetLog(1, "發現不合理的流程觸發，終止流程執行", "請通知工程師排除");
     xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
     return false;
+  }
+  if (CONFIG_ARDUHAL_LOG_DEFAULT_LEVEL==5) {
+    String pipelineStackListString;
+    serializeJson(*pipelineStackList, pipelineStackListString);
+    ESP_LOGV("", "詳細流程設定: %s", pipelineStackListString.c_str());
   }
   CreatePipelineFlowScanTask(pipelineStackList);
   return true;
@@ -1381,7 +1445,7 @@ DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String descri
       if (SD.exists(logFileFullPath)) {
         logFile = SD.open(logFileFullPath, FILE_APPEND);
       } else {
-        ExSD_CreateFile(SD, logFileFullPath);
+        ExFile_CreateFile(SD, logFileFullPath);
         logFile = SD.open(logFileFullPath, FILE_APPEND);
         logFile.print("\xEF\xBB\xBF");
       }
@@ -1392,9 +1456,9 @@ DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String descri
       );
       logFile.close();
       xSemaphoreGive(SetLog_xMutex);
-      (*Machine_Ctrl.DeviceLogSave)["Log"].add(logItem);
-      if ((*Machine_Ctrl.DeviceLogSave)["Log"].size() > 100) {
-        (*Machine_Ctrl.DeviceLogSave)["Log"].remove(0);
+      (*Machine_Ctrl.JSON__DeviceLogSave)["Log"].add(logItem);
+      if ((*Machine_Ctrl.JSON__DeviceLogSave)["Log"].size() > 100) {
+        (*Machine_Ctrl.JSON__DeviceLogSave)["Log"].remove(0);
       }
 
     }
@@ -1460,7 +1524,7 @@ void SMachine_Ctrl::BroadcastNewPoolData(String poolID)
   D_baseInfo["action"]["target"].set("SinglePoolData");
   D_baseInfo["action"]["method"].set("Update");
   D_baseInfo["action"]["status"].set("OK");
-  D_baseInfo["parameter"][poolID].set((*sensorDataSave)[poolID]);
+  D_baseInfo["parameter"][poolID].set((*JSON__sensorDataSave)[poolID]);
   String AfterSensorData;
   serializeJsonPretty(D_baseInfo, AfterSensorData);
   BackendServer.ws_->binaryAll(AfterSensorData);
@@ -1588,52 +1652,6 @@ void SMachine_Ctrl::ShowIPAndQRCodeOnOled()
   INIT_I2C_Wires();
 }
 
-////////////////////////////////////////////////////
-// For 組合行為
-////////////////////////////////////////////////////
-
-
-
-//! 在寫入大檔案的時候，可能會觸發看門狗，因此單獨將寫檔案拉成獨立的Task，也可以不讓Server被卡住
-void BuildNewTempDeviceSettingFile(void* parameter)
-{ 
-  SPIFFS.begin(true);
-  for (int i=0;i<3;i++) {
-    File file = SPIFFS.open("/config/event_config_temp.json", FILE_WRITE);
-    size_t writeSize = serializeJson(*(Machine_Ctrl.spiffs.DeviceSetting), file);
-    file.close();
-    if ((int)writeSize != 0) {
-      SPIFFS.remove("/config/event_config.json");
-      SPIFFS.rename("/config/event_config_temp.json", "/config/event_config.json");
-      ESP_LOGI("SPIFFS", "檔案重建完成");
-      break;
-    }
-  }
-  Machine_Ctrl.TASK__SPIFFS_Working = NULL;
-  vTaskDelete(NULL);
-}
-String SMachine_Ctrl::ReWriteDeviceSetting()
-{
-  String test;
-  serializeJson(*(spiffs.DeviceSetting), test);
-  ExSD_ReWriteBigFile(
-    SD, "/config/event_config.json", test
-  );
-  return "";
-  // if (TASK__SPIFFS_Working == NULL) {
-  //   xTaskCreatePinnedToCore(
-  //     BuildNewTempDeviceSettingFile, "BuileNewSetting",
-  //     10000, NULL, 2, &TASK__SPIFFS_Working, 1
-  //   );
-  //   return "";
-  // }
-  // else {
-  //   // SetLog(2, "機器讀寫忙碌中", "請稍後在試", Machine_Ctrl.BackendServer.ws_, NULL);
-  //   return "BUSY";
-  // }
-}
-
-
 
 //! SD卡系統相關
 
@@ -1644,7 +1662,7 @@ void SMachine_Ctrl::SaveSensorData_photometer(
 {
   File SaveFile;
   if (SD.exists(filePath) == false) {
-    ExSD_CreateFile(SD, filePath);
+    ExFile_CreateFile(SD, filePath);
     SaveFile = SD.open(filePath, FILE_APPEND);
     SaveFile.print("\xEF\xBB\xBF");
   } else {
@@ -1659,7 +1677,7 @@ void SMachine_Ctrl::SaveSensorData_photometer(
 
 
 void SMachine_Ctrl::ReWriteLastDataSaveFile(String filePath, JsonObject tempData){
-  ExSD_CreateFile(SD, filePath);
+  ExFile_CreateFile(SD, filePath);
   File SaveFile = SD.open(filePath, FILE_WRITE);
   serializeJson(tempData, SaveFile);
   SaveFile.close();

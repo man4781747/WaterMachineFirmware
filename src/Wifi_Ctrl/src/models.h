@@ -11,170 +11,6 @@
 #include "Machine_Ctrl/src/Machine_Ctrl.h"
 extern SMachine_Ctrl Machine_Ctrl;
 
-JsonObject BuildPWNMotorEventJSONItem(JsonArray pwmMotorEventList){
-  JsonObject D_AllpwmMotorSetting = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pwm_motor"];
-  DynamicJsonDocument D_pwmMotorListItem(5000);
-  JsonArray L_allPwmEventList = D_pwmMotorListItem.createNestedArray("pwm_motor_list");
-  for (JsonVariant pwmMotorEventItem : pwmMotorEventList) {
-    String pwmID = pwmMotorEventItem["id"].as<String>();
-    if (!D_AllpwmMotorSetting.containsKey(pwmID)) {
-      continue;
-    }
-    DynamicJsonDocument D_OnePwmMotorSetItem(500);
-    D_OnePwmMotorSetItem["pwn_motor"]["index"].set(D_AllpwmMotorSetting[pwmID]["index"].as<int>());
-    D_OnePwmMotorSetItem["pwn_motor"]["title"].set(D_AllpwmMotorSetting[pwmID]["title"].as<String>());
-    D_OnePwmMotorSetItem["pwn_motor"]["desp"].set(D_AllpwmMotorSetting[pwmID]["desp"].as<String>());
-    D_OnePwmMotorSetItem["finish_time"].set(-1);
-    D_OnePwmMotorSetItem["status"].set(pwmMotorEventItem["status"].as<int>());
-    L_allPwmEventList.add(D_OnePwmMotorSetItem);
-  }
-  return D_pwmMotorListItem.as<JsonObject>();
-}
-
-JsonObject BuildPeristalticMotorEventJSONItem(JsonArray peristalticMotorEventList){
-  JsonObject D_AllPeristalticMotorSetting = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["peristaltic_motor"];
-  DynamicJsonDocument D_PeristalticMotorListItem(5000);
-  JsonArray L_allPeristalticEventList = D_PeristalticMotorListItem.createNestedArray("peristaltic_motor_list");
-  for (JsonVariant peristalticMotorEventItem : peristalticMotorEventList) {
-    String peristalticID = peristalticMotorEventItem["id"].as<String>();
-    if (!D_AllPeristalticMotorSetting.containsKey(peristalticID)) {
-      continue;
-    }
-    DynamicJsonDocument D_onePeristalticMotorSetItem(500);
-    D_onePeristalticMotorSetItem["peristaltic_motor"]["index"].set(D_AllPeristalticMotorSetting[peristalticID]["index"].as<int>());
-    D_onePeristalticMotorSetItem["peristaltic_motor"]["title"].set(D_AllPeristalticMotorSetting[peristalticID]["title"].as<String>());
-    D_onePeristalticMotorSetItem["peristaltic_motor"]["desp"].set(D_AllPeristalticMotorSetting[peristalticID]["desp"].as<String>());
-    D_onePeristalticMotorSetItem["finish_time"].set(-1);
-    D_onePeristalticMotorSetItem["status"].set(peristalticMotorEventItem["status"].as<int>());
-    D_onePeristalticMotorSetItem["time"].set(peristalticMotorEventItem["time"].as<float>());
-    D_onePeristalticMotorSetItem["until"].set(peristalticMotorEventItem["until"].as<String>());
-    L_allPeristalticEventList.add(D_onePeristalticMotorSetItem);
-  }
-  return D_PeristalticMotorListItem.as<JsonObject>();
-}
-
-JsonObject BuildSpectrophotometerEventJSONItem(JsonArray spectrophotometerEventList){
-  JsonObject D_AllSpectrophotometerSetting = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["spectrophotometer"];
-  DynamicJsonDocument D_SpectrophotometerListItem(5000);
-  JsonArray L_allSpectrophotometerEventList = D_SpectrophotometerListItem.createNestedArray("spectrophotometer_list");
-  for (JsonVariant spectrophotometerEventItem : spectrophotometerEventList) {
-    String spectrophotometerID = spectrophotometerEventItem["id"].as<String>();
-    if (!D_AllSpectrophotometerSetting.containsKey(spectrophotometerID)) {
-      continue;
-    }
-    DynamicJsonDocument D_oneSpectrophotometerSetItem(500);
-    D_oneSpectrophotometerSetItem["spectrophotometer"]["index"].set(D_AllSpectrophotometerSetting[spectrophotometerID]["index"].as<int>());
-    D_oneSpectrophotometerSetItem["spectrophotometer"]["title"].set(D_AllSpectrophotometerSetting[spectrophotometerID]["title"].as<String>());
-    D_oneSpectrophotometerSetItem["spectrophotometer"]["desp"].set(D_AllSpectrophotometerSetting[spectrophotometerID]["desp"].as<String>());
-    D_oneSpectrophotometerSetItem["id"].set(spectrophotometerEventItem["id"].as<String>());
-    D_oneSpectrophotometerSetItem["finish_time"].set(-1);
-    D_oneSpectrophotometerSetItem["gain"].set(spectrophotometerEventItem["gain"].as<String>());
-    D_oneSpectrophotometerSetItem["value_name"].set(spectrophotometerEventItem["value_name"].as<String>());
-    D_oneSpectrophotometerSetItem["channel"].set(spectrophotometerEventItem["channel"].as<String>());
-    D_oneSpectrophotometerSetItem["target"].set(spectrophotometerEventItem["target"].as<int>());
-    D_oneSpectrophotometerSetItem["dilution"].set(spectrophotometerEventItem["dilution"].as<double>());
-    L_allSpectrophotometerEventList.add(D_oneSpectrophotometerSetItem);
-  }
-  return D_SpectrophotometerListItem.as<JsonObject>();
-}
-
-JsonObject BuildEventJSONItem(String S_thisEventKey, JsonObject D_thisEventSetting) {
-  DynamicJsonDocument eventGroupItem(10000);
-  eventGroupItem[S_thisEventKey]["title"].set(D_thisEventSetting["title"].as<String>());
-  eventGroupItem[S_thisEventKey]["desp"].set(D_thisEventSetting["desp"].as<String>());
-  eventGroupItem[S_thisEventKey]["finish_time"].set(-1);
-  JsonArray L_eventList = eventGroupItem[S_thisEventKey].createNestedArray("event_list");
-
-  JsonObject D_pwmMotorSetting = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pwm_motor"];
-  JsonObject D_peristalticMotorSetting = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["peristaltic_motor"];
-
-  for (JsonVariant eventItem : D_thisEventSetting["event"].as<JsonArray>()) {
-    if (eventItem.containsKey("pwm_motor_list")) {
-      JsonObject PWMMotorEventJSON = BuildPWNMotorEventJSONItem(
-        eventItem["pwm_motor_list"].as<JsonArray>()
-      );
-      L_eventList.add(PWMMotorEventJSON);
-    }
-    else if (eventItem.containsKey("peristaltic_motor_list")) {
-
-      JsonObject PeristalticMotorEventItemJSON = BuildPeristalticMotorEventJSONItem(
-        eventItem["peristaltic_motor_list"].as<JsonArray>()
-      );
-      L_eventList.add(PeristalticMotorEventItemJSON);
-    }
-    else if (eventItem.containsKey("spectrophotometer_list")) {
-      JsonObject SpectrophotometerEventItemJSON = BuildSpectrophotometerEventJSONItem(
-        eventItem["spectrophotometer_list"].as<JsonArray>()
-      );
-      L_eventList.add(SpectrophotometerEventItemJSON);
-    }
-    //TODO 目前ph計只需一組，先以寫死方式運作
-    else if (eventItem.containsKey("ph_meter")) {
-      DynamicJsonDocument phMeterListItem(500);
-      JsonArray L_phMeterEventList = phMeterListItem.createNestedArray("ph_meter");
-      DynamicJsonDocument phMeterItem(200);
-      phMeterItem["id"].set("A");
-      L_phMeterEventList.add(phMeterItem);
-      L_eventList.add(phMeterListItem.as<JsonObject>());
-    }
-    else if (eventItem.containsKey("wait")) {
-      DynamicJsonDocument WaitItem(200);
-      WaitItem["wait"].set(eventItem["wait"].as<int>());
-      L_eventList.add(WaitItem.as<JsonObject>());
-    }
-    else if (eventItem.containsKey("upload")) {
-      DynamicJsonDocument UploadItem(200);
-      UploadItem.createNestedObject("upload");
-      L_eventList.add(UploadItem.as<JsonObject>());
-    }
-  }
-  return eventGroupItem.as<JsonObject>();
-}
-
-JsonObject BuildStepJSONItem(String S_thisStepKey, JsonObject D_thisStepSetting) {
-  DynamicJsonDocument stepItem(50000);
-  stepItem[S_thisStepKey]["title"].set(D_thisStepSetting["title"].as<String>());
-  stepItem[S_thisStepKey]["desp"].set(D_thisStepSetting["desp"].as<String>());
-  stepItem[S_thisStepKey]["finish_time"].set(-1);
-  JsonArray L_eventGroupList = stepItem[S_thisStepKey].createNestedArray("event_group_list");
-  JsonObject D_EventGroupSetting = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["event_group"];
-  for (JsonVariant EventGroupID : D_thisStepSetting["steps"].as<JsonArray>()) {
-    String EventGroupIDString = EventGroupID.as<String>();
-    if (D_EventGroupSetting.containsKey(EventGroupIDString)) {
-      JsonObject EventJSONItemJSON = BuildEventJSONItem(EventGroupIDString, D_EventGroupSetting[EventGroupIDString].as<JsonObject>());
-      L_eventGroupList.add(EventJSONItemJSON);
-    }
-  }
-  return stepItem.as<JsonObject>();
-}
-
-JsonObject BuildPipelineJSONItem(String S_thisPipelineKey, JsonObject D_thisPipelineSetting) {
-  DynamicJsonDocument pipelineItem(100000);
-  pipelineItem["title"].set(D_thisPipelineSetting["title"].as<String>());
-  pipelineItem["desp"].set(D_thisPipelineSetting["desp"].as<String>());
-  pipelineItem["finish_time"].set(-1);
-  time_t nowTime = now();
-  char datetimeChar[30];
-  sprintf(datetimeChar, "%04d-%02d-%02d %02d:%02d:%02d",
-    year(nowTime), month(nowTime), day(nowTime),
-    hour(nowTime), minute(nowTime), second(nowTime)
-  );
-  pipelineItem["create_time"].set(nowTime);
-  pipelineItem["pool"].set(D_thisPipelineSetting["pool"].as<String>());
-  JsonArray L_stepList = pipelineItem.createNestedArray("step_list");
-  JsonObject D_StepSetting = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["steps_group"];
-
-  for (JsonVariant StepID : D_thisPipelineSetting["steps"].as<JsonArray>()) {
-    String StepIDString = StepID.as<String>();
-    if (D_StepSetting.containsKey(StepIDString)) {
-      JsonObject StepItemJSON = BuildStepJSONItem(StepIDString, D_StepSetting[StepIDString].as<JsonObject>());
-      L_stepList.add(StepItemJSON);
-    }
-  }
-  return pipelineItem.as<JsonObject>();
-}
-
-
 /**
  * @brief 強制停止所有動作
  * 
@@ -196,12 +32,10 @@ void ws_StopAllActionTask(AsyncWebSocket *server, AsyncWebSocketClient *client, 
 void ws_GetDeiveConfig(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
 {
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
-
-
   D_baseInfoJSON["status"].set("OK");
   D_baseInfoJSON["action"]["target"].set("DeiveConfig");
   D_baseInfoJSON["action"]["method"].set("Update");
-  D_baseInfoJSON["parameter"].set(Machine_Ctrl.spiffs.DeviceBaseInfo->as<JsonObject>());
+  D_baseInfoJSON["parameter"].set(Machine_Ctrl.JSON__DeviceBaseInfo->as<JsonObject>());
   String returnString;
   serializeJsonPretty(D_baseInfoJSON, returnString);
   client->binary(returnString);
@@ -210,7 +44,7 @@ void ws_GetDeiveConfig(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
 void ws_PatchDeiveConfig(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
 {
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
-  JsonObject D_oldConfig = Machine_Ctrl.spiffs.DeviceBaseInfo->as<JsonObject>();
+  JsonObject D_oldConfig = (*Machine_Ctrl.JSON__DeviceBaseInfo).as<JsonObject>();;
   JsonObject D_newConfig = D_FormData->as<JsonObject>();
   for (JsonPair newConfigItem : D_newConfig) {
     if (D_oldConfig[newConfigItem.key()].as<String>() != newConfigItem.value().as<String>()) {
@@ -257,7 +91,7 @@ void ws_GetLogs(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJso
 
   JsonArray logsArray = D_baseInfoJSON["parameter"].createNestedArray("logs");
 
-  JsonArray logSaves = (*Machine_Ctrl.DeviceLogSave)["Log"].as<JsonArray>();
+  JsonArray logSaves = (*Machine_Ctrl.JSON__DeviceLogSave).as<JsonArray>();
 
   int lastIndex = logSaves.size() - 1;
   int startIndex = lastIndex - MaxLogNum;
@@ -269,15 +103,6 @@ void ws_GetLogs(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJso
   }
 
   // int logCount = 0;
-  // for (JsonVariant logItem : (*Machine_Ctrl.DeviceLogSave)["Log"].as<JsonArray>()) {
-  //   if (logCount >= MaxLogNum) {
-  //     break;
-  //   }
-  //   logsArray.add(
-  //     logItem.as<JsonObject>()
-  //   );
-  //   logCount ++;
-  // }
   String returnString;
   serializeJsonPretty(D_baseInfoJSON, returnString);
   client->binary(returnString);
@@ -298,11 +123,11 @@ void ws_GetAllPoolData(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
     (*D_baseInfo)["action"]["message"].set("獲得各蝦池最新感測器資料");
   }
 
-  for (JsonPair D_poolItem : (*Machine_Ctrl.spiffs.DeviceSetting)["pools"].as<JsonObject>()) {
-    if ((*Machine_Ctrl.sensorDataSave)[D_poolItem.key()].containsKey("Data_datetime") == false) {
-      (*Machine_Ctrl.sensorDataSave)[D_poolItem.key()]["Data_datetime"].set("");
+  for (JsonPair D_poolItem : (*Machine_Ctrl.JSON__DeviceBaseInfo)["pools"].as<JsonObject>()) {
+    if ((*Machine_Ctrl.JSON__sensorDataSave)[D_poolItem.key()].containsKey("Data_datetime") == false) {
+      (*Machine_Ctrl.JSON__sensorDataSave)[D_poolItem.key()]["Data_datetime"].set("");
     }
-    (*D_baseInfo)["parameter"][D_poolItem.key()].set((*Machine_Ctrl.sensorDataSave)[D_poolItem.key()]);
+    (*D_baseInfo)["parameter"][D_poolItem.key()].set((*Machine_Ctrl.JSON__sensorDataSave)[D_poolItem.key()]);
   }
   String returnString;
   serializeJsonPretty((*D_baseInfo), returnString);
@@ -318,7 +143,7 @@ void ws_PatchPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyna
   String TargetName = D_PathParameter->as<JsonObject>()["name"];
   ESP_LOGD("Websocket", "Patch Spectrophotometer Name: %s", TargetName.c_str());
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
-  JsonObject D_pools = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pools"];
+  JsonObject D_pools = (*Machine_Ctrl.JSON__DeviceBaseInfo)["pools"].as<JsonObject>();
   if (D_pools.containsKey(TargetName)) {
     JsonObject D_newConfig = D_FormData->as<JsonObject>();
     JsonObject D_oldConfig = D_pools[TargetName];
@@ -342,14 +167,7 @@ void ws_PatchPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyna
       "事件組名稱: " + D_oldConfig["title"].as<String>(),
       server, NULL
     );
-    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
-    if (RewriteConfigResult == "BUSY") {
-      Machine_Ctrl.SetLog(
-        1,
-        "機器讀寫忙碌中", "請稍後再試",
-        NULL, client
-      );
-    }
+    Machine_Ctrl.SPIFFS__ReWriteDeviceBaseInfo();
   } else {
     Machine_Ctrl.SetLog(
       1,
@@ -366,7 +184,7 @@ void ws_DeletePoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
   String TargetName = D_PathParameter->as<JsonObject>()["name"];
   ESP_LOGD("Websocket", "Get Peristaltic Motor Name: %s", TargetName.c_str());
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
-  JsonObject D_pools = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pools"];
+  JsonObject D_pools = (*Machine_Ctrl.JSON__DeviceBaseInfo)["pools"].as<JsonObject>();
   if (D_pools.containsKey(TargetName)) {
     D_pools.remove(TargetName);
     D_baseInfoJSON["action"]["status"].set("OK");
@@ -383,14 +201,8 @@ void ws_DeletePoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
       "蝦池設定ID: " + TargetName,
       server, NULL
     );
-    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
-    if (RewriteConfigResult == "BUSY") {
-      Machine_Ctrl.SetLog(
-        1,
-        "機器讀寫忙碌中", "請稍後再試",
-        NULL, client
-      );
-    }
+    Machine_Ctrl.SPIFFS__ReWriteDeviceBaseInfo();
+
   } else {
     Machine_Ctrl.SetLog(
       1,
@@ -406,7 +218,7 @@ void ws_GetPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynami
   String TargetName = D_PathParameter->as<JsonObject>()["name"];
   ESP_LOGD("Websocket", "Get Pools Name: %s", TargetName.c_str());
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
-  JsonObject D_pools = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pools"];
+  JsonObject D_pools = (*Machine_Ctrl.JSON__DeviceBaseInfo)["pools"].as<JsonObject>();
   if (D_pools.containsKey(TargetName)) {
     D_baseInfoJSON["action"]["status"].set("OK");
     D_baseInfoJSON["action"]["message"].set("查詢蝦池設定完畢");
@@ -429,7 +241,7 @@ void ws_GetPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dynami
 void ws_GetAllPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
 {
   JsonObject D_baseInfoJSON = D_baseInfo->as<JsonObject>();
-  JsonObject D_pools = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pools"];
+  JsonObject D_pools = (*Machine_Ctrl.JSON__DeviceBaseInfo)["pools"].as<JsonObject>();
   D_baseInfoJSON["parameter"].set(D_pools);
 
   D_baseInfoJSON["action"]["status"].set("OK");
@@ -459,7 +271,7 @@ void ws_AddNewPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
     for (int i = 0; i < sizeof(random_bytes); i++) {
       sprintf(&random_name[i*2], "%02x", random_bytes[i]);
     }
-    JsonObject D_pools = Machine_Ctrl.spiffs.DeviceSetting->as<JsonObject>()["pools"];
+    JsonObject D_pools = (*Machine_Ctrl.JSON__DeviceBaseInfo)["pools"].as<JsonObject>();
     D_pools[String(random_name)]["title"].set(D_newConfig["title"].as<String>());
     D_pools[String(random_name)]["desp"].set(D_newConfig["desp"].as<String>());
     D_baseInfoJSON["action"]["status"].set("OK");
@@ -475,14 +287,8 @@ void ws_AddNewPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
       "說明: " + D_newConfig["desp"].as<String>(),
       server, NULL
     );
-    String RewriteConfigResult = Machine_Ctrl.ReWriteDeviceSetting();
-    if (RewriteConfigResult == "BUSY") {
-      Machine_Ctrl.SetLog(
-        1,
-        "機器讀寫忙碌中", "請稍後再試",
-        NULL, client
-      );
-    }
+
+    Machine_Ctrl.SPIFFS__ReWriteDeviceBaseInfo();
   }
 }
 
@@ -490,12 +296,13 @@ void ws_AddNewPoolInfo(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
 
 void ws_v2_RunPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
 {
+  ESP_LOGD("WebSocket API", "收到Pipeline執行需求");
+
   //? 先判斷儀器是否空閒
   //! 注意，這邊流程只有失敗時會釋放互斥鎖，但如果收到訓則會將互斥鎖鎖起來，要記得再其他流程釋放他
   //! 如果執行失敗，要記得釋放
   if (xSemaphoreTake(Machine_Ctrl.LOAD__ACTION_V2_xMutex, 0) == pdTRUE) {
-    DynamicJsonDocument singlePipelineSetting(10000);
-
+    DynamicJsonDocument singlePipelineSetting(60000);
     String stepChose = "";
     String eventChose = "";
     int eventIndexChose = -1;
@@ -515,48 +322,18 @@ void ws_v2_RunPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
     singlePipelineSetting["stepChose"].set(stepChose);
     singlePipelineSetting["eventChose"].set(eventChose);
     singlePipelineSetting["eventIndexChose"].set(eventIndexChose);
-
-    (*Machine_Ctrl.pipelineStack).clear();
-    (*Machine_Ctrl.pipelineStack).add(singlePipelineSetting);
-    
-    Machine_Ctrl.LOAD__ACTION_V2(Machine_Ctrl.pipelineStack);
-
-    // if (SD.exists(FullFilePath)) {
-    //   if (Machine_Ctrl.LOAD__ACTION_V2(FullFilePath, stepChose, eventChose, eventIndexChose)) {
-    //     Machine_Ctrl.SetLog(
-    //       5,
-    //       "即將執行流程",
-    //       "流程設定讀取成功",
-    //       NULL, client, false
-    //     );
-    //     //! 這邊不釋放互斥鎖，交由後續執行釋放
-    //   } else {
-    //     Machine_Ctrl.SetLog(
-    //       1,
-    //       "流程設定失敗",
-    //       "檔案讀取失敗",
-    //       NULL, client, false
-    //     );
-    //     xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
-    //   }
-    // } else {
-    //   Machine_Ctrl.SetLog(
-    //     1,
-    //     "流程設定失敗",
-    //     "找不到流程設定檔案: " + TargetName+".json",
-    //     NULL, client, false
-    //   );
-    //   xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
-    // }
- 
+    (*Machine_Ctrl.JSON__pipelineStack).clear();
+    (*Machine_Ctrl.JSON__pipelineStack).add(singlePipelineSetting);
+    ESP_LOGD("WebSocket", " - 檔案路徑:\t%s", FullFilePath.c_str());
+    ESP_LOGD("WebSocket", " - 目標名稱:\t%s", TargetName.c_str());
+    ESP_LOGD("WebSocket", " - 指定步驟:\t%s", stepChose.c_str());
+    ESP_LOGD("WebSocket", " - 指定事件:\t%s", eventChose.c_str());
+    ESP_LOGD("WebSocket", " - 指定事件編號:\t%d", eventIndexChose);
+    Machine_Ctrl.LOAD__ACTION_V2(Machine_Ctrl.JSON__pipelineStack);
   }
   else {
-    Machine_Ctrl.SetLog(
-      1,
-      "儀器忙碌中，請稍後再試",
-      "",
-      NULL, client, false
-    );
+    ESP_LOGD("WebSocket", "儀器忙碌中");
+    Machine_Ctrl.SetLog(1,"儀器忙碌中，請稍後再試","",NULL, client, false);
   }
 }
 
@@ -612,10 +389,10 @@ void ws_v2_RunPwmMotor(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
     singlePipelineSetting["eventChose"].set("");
     singlePipelineSetting["eventIndexChose"].set(-1);
 
-    (*Machine_Ctrl.pipelineStack).clear();
-    (*Machine_Ctrl.pipelineStack).add(singlePipelineSetting);
+    (*Machine_Ctrl.JSON__pipelineStack).clear();
+    (*Machine_Ctrl.JSON__pipelineStack).add(singlePipelineSetting);
     
-    Machine_Ctrl.LOAD__ACTION_V2(Machine_Ctrl.pipelineStack);
+    Machine_Ctrl.LOAD__ACTION_V2(Machine_Ctrl.JSON__pipelineStack);
   }
   else {
     Machine_Ctrl.SetLog(
@@ -680,10 +457,10 @@ void ws_v2_RunPeristalticMotor(AsyncWebSocket *server, AsyncWebSocketClient *cli
     singlePipelineSetting["eventChose"].set("");
     singlePipelineSetting["eventIndexChose"].set(-1);
 
-    (*Machine_Ctrl.pipelineStack).clear();
-    (*Machine_Ctrl.pipelineStack).add(singlePipelineSetting);
+    (*Machine_Ctrl.JSON__pipelineStack).clear();
+    (*Machine_Ctrl.JSON__pipelineStack).add(singlePipelineSetting);
     
-    Machine_Ctrl.LOAD__ACTION_V2(Machine_Ctrl.pipelineStack);
+    Machine_Ctrl.LOAD__ACTION_V2(Machine_Ctrl.JSON__pipelineStack);
   }
   else {
     Machine_Ctrl.SetLog(
@@ -699,11 +476,12 @@ void ws_v2_RunPeristalticMotor(AsyncWebSocket *server, AsyncWebSocketClient *cli
 //? 目的在於執行時，他會依序執行所有池的資料，每池檢測完後丟出一次NewData
 void ws_RunAllPoolPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client, DynamicJsonDocument *D_baseInfo, DynamicJsonDocument *D_PathParameter, DynamicJsonDocument *D_QueryParameter, DynamicJsonDocument *D_FormData)
 {
-  ESP_LOGI("websocket API", "執行所有檢測流程所需的排程");
+  ESP_LOGD("WebSocket API", "收到多項Pipeline執行需求");
   if (xSemaphoreTake(Machine_Ctrl.LOAD__ACTION_V2_xMutex, 0) == pdTRUE) {
     if ((*D_QueryParameter).containsKey("order")) {
       String orderString = (*D_QueryParameter)["order"].as<String>();
       if (orderString.length() == 0) {
+        ESP_LOGD("WebSocket API", "執行蝦池數值檢測流程失敗，order參數不得為空");
         Machine_Ctrl.SetLog(1, "執行蝦池數值檢測流程失敗", "order參數不得為空", NULL, client, false);
         xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
       }
@@ -711,8 +489,9 @@ void ws_RunAllPoolPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client,
         //* 分割order文字
         int splitIndex = -1;
         int prevSpliIndex = 0;
+        int eventCount = 0;
         splitIndex = orderString.indexOf(',', prevSpliIndex);
-        (*Machine_Ctrl.pipelineStack).clear();
+        (*Machine_Ctrl.JSON__pipelineStack).clear();
         while (splitIndex != -1) {
           String token = orderString.substring(prevSpliIndex, splitIndex);
           String TargetName = token+".json";
@@ -723,9 +502,13 @@ void ws_RunAllPoolPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client,
           singlePipelineSetting["stepChose"].set("");
           singlePipelineSetting["eventChose"].set("");
           singlePipelineSetting["eventIndexChose"].set(-1);
-          (*Machine_Ctrl.pipelineStack).add(singlePipelineSetting);
+          (*Machine_Ctrl.JSON__pipelineStack).add(singlePipelineSetting);
           prevSpliIndex = splitIndex +1;
+          eventCount++;
           splitIndex = orderString.indexOf(',', prevSpliIndex);
+          ESP_LOGD("WebSocket", " - 事件 %d", eventCount);
+          ESP_LOGD("WebSocket", "   - 檔案路徑:\t%s", FullFilePath.c_str());
+          ESP_LOGD("WebSocket", "   - 目標名稱:\t%s", TargetName.c_str());
         }
         String lastToken = orderString.substring(prevSpliIndex);
         if (lastToken.length() > 0) {
@@ -737,17 +520,22 @@ void ws_RunAllPoolPipeline(AsyncWebSocket *server, AsyncWebSocketClient *client,
           singlePipelineSetting["stepChose"].set("");
           singlePipelineSetting["eventChose"].set("");
           singlePipelineSetting["eventIndexChose"].set(-1);
-          (*Machine_Ctrl.pipelineStack).add(singlePipelineSetting);
+          (*Machine_Ctrl.JSON__pipelineStack).add(singlePipelineSetting);
+          ESP_LOGD("WebSocket", " - 事件 %d", eventCount+1);
+          ESP_LOGD("WebSocket", "   - 檔案路徑:\t%s", FullFilePath.c_str());
+          ESP_LOGD("WebSocket", "   - 目標名稱:\t%s", TargetName.c_str());
         }
-        Machine_Ctrl.LOAD__ACTION_V2(Machine_Ctrl.pipelineStack);
+        Machine_Ctrl.LOAD__ACTION_V2(Machine_Ctrl.JSON__pipelineStack);
       }
     } 
     else {
+      ESP_LOGD("WebSocket API", "執行蝦池數值檢測流程失敗，API需要order參數");
       Machine_Ctrl.SetLog(1,"執行蝦池數值檢測流程失敗","API需要order參數",NULL, client, false);
       xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex);
     }
   }
   else {
+    ESP_LOGD("WebSocket API", "儀器忙碌中");
     Machine_Ctrl.SetLog(2,"執行流程設定失敗","儀器忙碌中，請稍後再試",NULL, client, false);  
   }
 }
