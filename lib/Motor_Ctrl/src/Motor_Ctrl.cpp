@@ -108,6 +108,14 @@ void Motor_Ctrl::SetMotorTo(String motorID, int angle)
   // }
 }
 
+void Motor_Ctrl::ResetPCA9685()
+{
+  pwm_1->reset();
+  pwm_1->setPWMFreq(50);
+  pwm_2->reset();
+  pwm_2->setPWMFreq(50);
+}
+
 /**
  * @brief 馬達狀態正式變更
  * 

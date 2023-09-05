@@ -38,9 +38,11 @@ class Motor_Ctrl
     Motor_Ctrl(void);
     void INIT_Motors(TwoWire &Wire_);
     void AddNewMotor(int channelIndex_, String motorID="", String motorName="", String descrption="");
-    
+
     void SetMotorTo(int channelIndex_, int angle);
     void SetMotorTo(String motorID, int angle);
+
+    void ResetPCA9685();
     
     void MotorStatusChange(int channelIndex_);
     void MotorStatusChange(String motorID);

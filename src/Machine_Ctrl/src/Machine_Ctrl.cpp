@@ -330,6 +330,7 @@ void PiplelineFlowTask(void* parameter)
       if (eventItem.containsKey("pwm_motor_list")) {
         pinMode(4, OUTPUT);
         digitalWrite(4, HIGH);
+        Machine_Ctrl.motorCtrl.ResetPCA9685();
         for (JsonObject pwmMotorItem : eventItem["pwm_motor_list"].as<JsonArray>()) {
           // ESP_LOGI("LOADED_ACTION","       - %d 轉至 %d 度", 
           //   pwmMotorItem["index"].as<int>(), 
@@ -339,6 +340,7 @@ void PiplelineFlowTask(void* parameter)
           vTaskDelay(50/portTICK_PERIOD_MS);
         }
         vTaskDelay(2000/portTICK_PERIOD_MS);
+        Machine_Ctrl.motorCtrl.ResetPCA9685();
         digitalWrite(4, LOW);
       }
       //! 蠕動馬達控制設定
