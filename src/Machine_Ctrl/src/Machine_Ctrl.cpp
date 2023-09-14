@@ -1384,6 +1384,15 @@ void SMachine_Ctrl::CreatePipelineFlowScanTask(DynamicJsonDocument *pipelineStac
 bool SMachine_Ctrl::LOAD__ACTION_V2(DynamicJsonDocument *pipelineStackList)
 {
   ESP_LOGD("", "收到執行排程的需求");
+
+  if (xPortGetFreeHeapSize() < 30000) {
+    SetLog(1, "記憶體數量不足，強制重開機", "記憶體數量不足，強制重開機");
+    ESP_LOGE("", "記憶體數量不足，強制重開機");
+    ESP.restart();
+  }
+
+
+
   //!! 防呆，在此funtion內，互斥鎖: LOAD__ACTION_V2_xMutex 應該都是上鎖的狀態
   //!! 若判定執行失敗，則立刻釋放互斥鎖
   if (xSemaphoreTake(Machine_Ctrl.LOAD__ACTION_V2_xMutex, 0) == pdTRUE) {
