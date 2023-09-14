@@ -58,8 +58,6 @@ double getRandomNumber(double mean, double stddev) {
   // double sample = dist(gen); 
   return mean + (double)((esp_random() % 1000)/1000.);
 }
-
-
 //! SPIFFS 相關
 
 /**
@@ -974,8 +972,6 @@ void PiplelineFlowTask(void* parameter)
   else {
     (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("SUCCESS");
   }
-
-
   Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
   Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
   free(stepsGroupName);
@@ -1000,6 +996,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
     );
     if (xReturned != pdPASS) {
       Serial.println("Create Fail");
+      
     }
   }
   else {
@@ -1032,12 +1029,20 @@ void SMachine_Ctrl::CleanAllStepTask()
 void PipelineFlowScan(void* parameter)
 { 
   //? pipelineStackList: 多流程設定的列隊
+
   ESP_LOGD("","開始執行流程管理Task");
-  DynamicJsonDocument pipelineStackList = *((DynamicJsonDocument*)parameter);
-  ESP_LOGD("","一共有 %d 個流程會依序執行", pipelineStackList.size());
-  for (int pipelineIndex = 0;pipelineIndex<pipelineStackList.size();pipelineIndex++) {
+
+  // DynamicJsonDocument pipelineStackList = *((DynamicJsonDocument*)parameter);
+  //! 注意: Task中的參數傳遞請不要用 *((DynamicJsonDocument*)parameter) 這種方式建立
+  //! 要使用指針的方式 (DynamicJsonDocument*)parameter
+  //! 不然等Task刪除後，記憶體不會釋放
+  DynamicJsonDocument* pipelineStackList = (DynamicJsonDocument*)parameter;
+  // ESP_LOGD("", "記憶體Check: %d", xPortGetFreeHeapSize());
+
+  ESP_LOGD("","一共有 %d 個流程會依序執行", (*pipelineStackList).size());
+  for (int pipelineIndex = 0;pipelineIndex<(*pipelineStackList).size();pipelineIndex++) {
     ESP_LOGI("", "開始執行第 %d 個流程", pipelineIndex+1);
-    JsonObject pipelineChose = pipelineStackList[pipelineIndex].as<JsonObject>();
+    JsonObject pipelineChose = (*pipelineStackList)[pipelineIndex].as<JsonObject>();
     String pipelineConfigFileFullPath = pipelineChose["FullFilePath"].as<String>();
     //STEP 1 檢查檔案是否存在
     ESP_LOGI("", "STEP 1 檢查檔案是否存在: %s", pipelineConfigFileFullPath.c_str());
@@ -1332,6 +1337,7 @@ void PipelineFlowScan(void* parameter)
     }
     ESP_LOGI("", "第 %d 個流程執行完畢", pipelineIndex+1);
   }
+  
   Machine_Ctrl.TASK__pipelineFlowScan = NULL;
   xSemaphoreGive(Machine_Ctrl.LOAD__ACTION_V2_xMutex); //! 釋放互斥鎖!!
   ESP_LOGI("", "所有流程已執行完畢");
@@ -1339,6 +1345,7 @@ void PipelineFlowScan(void* parameter)
   Machine_Ctrl.SetLog(
     3, "所有流程已執行完畢", (*Machine_Ctrl.JSON__pipelineConfig)["Title"].as<String>(), Machine_Ctrl.BackendServer.ws_, NULL
   );
+  ESP_LOGD("", "剩餘記憶體: %d", xPortGetFreeHeapSize());
   vTaskDelete(NULL);
 }
 
@@ -1388,7 +1395,7 @@ bool SMachine_Ctrl::LOAD__ACTION_V2(DynamicJsonDocument *pipelineStackList)
   if (CONFIG_ARDUHAL_LOG_DEFAULT_LEVEL==5) {
     String pipelineStackListString;
     serializeJson(*pipelineStackList, pipelineStackListString);
-    ESP_LOGV("", "詳細流程設定: %s", pipelineStackListString.c_str());
+    ESP_LOGD("", "詳細流程設定: %s", pipelineStackListString.c_str());
   }
   CreatePipelineFlowScanTask(pipelineStackList);
   return true;
