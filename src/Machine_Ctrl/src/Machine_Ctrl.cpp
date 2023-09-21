@@ -990,13 +990,19 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
     char* charPtr = (char*)malloc((nameLength + 1) * sizeof(char));
     strcpy(charPtr, stepsGroupName.c_str());
     (*JSON__pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("RUNNING");
-    xReturned = xTaskCreate(
-      PiplelineFlowTask, NULL,
-      15000, (void*)charPtr, 3, thisTaskHandle_t
-    );
+    for (int i=0;i<10;i++) {
+      xReturned = xTaskCreate(
+        PiplelineFlowTask, NULL,
+        15000, (void*)charPtr, 3, thisTaskHandle_t
+      );
+      if (xReturned == pdPASS) {
+        break;
+      }
+    }
     if (xReturned != pdPASS) {
       Serial.println("Create Fail");
-      
+      Serial.println(xReturned);
+      ESP.restart();
     }
   }
   else {

@@ -13,7 +13,9 @@
 #include "Machine_Ctrl/src/Machine_Ctrl.h"
 
 //TODO oled暫時這樣寫死
+// #include <Wire.h> 
 // #include <Adafruit_GFX.h>
+// #include "Adafruit_SH1106.h"
 // #include <Adafruit_SSD1306.h>
 #include <U8g2lib.h>
 #include "../lib/QRCode/src/qrcode.h"
@@ -39,95 +41,49 @@
 
 void testWeb(int index, int type, String desp);
 
-const char* FIRMWARE_VERSION = "V2.23.84.1";
+const char* FIRMWARE_VERSION = "V3.23.91.0";
 
 void scanI2C();
 
-
 void setup() {
   Serial.begin(115200);
-  Machine_Ctrl.INIT_SD_Card();
-  Machine_Ctrl.INIT_SPIFFS_config();
-  Machine_Ctrl.LoadPiplineConfig();
-  Machine_Ctrl.LoadspectrophotometerConfig();
-  Machine_Ctrl.LoadPHmeterConfig();
-  Machine_Ctrl.UpdatePipelineConfigList();
+  ESP_LOGD("", "儀器啟動，韌體版本為: %s", FIRMWARE_VERSION);
+  Machine_Ctrl.PrintOnScreen("Rebooting...");
+  Machine_Ctrl.PrintOnScreen("Load SD");
+  ESP_LOGD("", "準備讀取SD卡內資訊");
+  Machine_Ctrl.INIT_SD_And_LoadConfigs();
+  Machine_Ctrl.PrintOnScreen("Load SPIFFS");
+  ESP_LOGD("", "準備讀取SPIFFS內資訊");
+  Machine_Ctrl.INIT_SPIFFS_And_LoadConfigs();
   
-  Machine_Ctrl.INIT_I2C_Wires();
+  Machine_Ctrl.PrintOnScreen("Load Configs");
+  ESP_LOGD("", "準備更新最新的各池感測器資料");
   Machine_Ctrl.INIT_PoolData();
-  
+
+  Machine_Ctrl.PrintOnScreen("INIT Motors");
+  ESP_LOGD("", "準備初始化蠕動馬達控制模組");
   Machine_Ctrl.peristalticMotorsCtrl.INIT_Motors(42,41,40,2);
-
+  ESP_LOGD("", "準備初始化伺服馬達控制模組(PCA9685)");
   Machine_Ctrl.motorCtrl.INIT_Motors(Machine_Ctrl.WireOne);
-
+  ESP_LOGD("", "停止所有馬達動作");
   Machine_Ctrl.StopDeviceAndINIT();
- 
-  Machine_Ctrl.LoadOldLogs();
 
+  Machine_Ctrl.PrintOnScreen("Load Logs");
+  ESP_LOGD("", "準備讀取log資訊");
+  Machine_Ctrl.SD__LoadOldLogs();
+
+  ESP_LOGD("", "準備使用WIFI連線");
+  Machine_Ctrl.PrintOnScreen("Connect Wifi");
   Machine_Ctrl.BackendServer.ConnectToWifi();
+  Machine_Ctrl.PrintOnScreen("Update Time");
+  ESP_LOGD("", "準備更新儀器時間");
   Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
+  Machine_Ctrl.PrintOnScreen("API Server Start");
+  ESP_LOGD("", "準備啟動Server");
   Machine_Ctrl.BackendServer.ServerStart();
   Machine_Ctrl.ShowIPAndQRCodeOnOled();
   Machine_Ctrl.SetLog(3, "機器開機", "");
-  
-  //TODO
-  // DynamicJsonDocument pipelineConfig(65525);
-  // File testContent = SD.open("/pipelines/test_1.json", FILE_READ);
-  // deserializeJson((*Machine_Ctrl.pipelineConfig), testContent.readString());
-  // testContent.close();
-  // // serializeJsonPretty(testConfig["pipline"], Serial);
-
-  // //? pipelineConfig: 整個流程運行中都要存在的變數
-  // JsonArray piplineArray = (*Machine_Ctrl.pipelineConfig)["pipline"].as<JsonArray>();
-
-  // //? 將原本的pipeline流程設定轉換成後面Task好追蹤的格式
-  // DynamicJsonDocument piplineSave(65525);
-  // for (JsonArray singlePiplineArray : piplineArray) {
-  //   // serializeJson(singlePiplineArray, Serial);
-  //   // Serial.println();
-  //   String ThisNodeNameString = singlePiplineArray[0].as<String>();
-  //   // ESP_LOGI("", "處裡流成: %s", ThisNodeNameString.c_str());
-  //   if (!piplineSave.containsKey(ThisNodeNameString)) {
-  //     piplineSave[ThisNodeNameString]["Name"] = ThisNodeNameString;
-  //     piplineSave[ThisNodeNameString].createNestedObject("childList");
-  //     piplineSave[ThisNodeNameString].createNestedObject("parentList");
-  //   }
-  //   for (String piplineChildName :  singlePiplineArray[1].as<JsonArray>()) {
-  //     if (!piplineSave.containsKey(piplineChildName)) {
-  //       piplineSave[piplineChildName]["Name"] = piplineChildName;
-  //       piplineSave[piplineChildName].createNestedObject("childList");
-  //       piplineSave[piplineChildName].createNestedObject("parentList");
-  //     }
-
-  //     if (!piplineSave[ThisNodeNameString]["childList"].containsKey(piplineChildName)){
-  //       piplineSave[ThisNodeNameString]["childList"].createNestedObject(piplineChildName);
-  //       // ESP_LOGI("", "%s 新增一個 child: %s", ThisNodeNameString.c_str(), piplineChildName.c_str());
-  //     }
-
-  //     if (!piplineSave[piplineChildName]["parentList"].containsKey(ThisNodeNameString)){
-  //       piplineSave[piplineChildName]["parentList"].createNestedObject(ThisNodeNameString);
-  //       // ESP_LOGI("", "%s 新增一個 parent: %s", piplineChildName.c_str(), ThisNodeNameString.c_str());
-  //     }
-  //   }
-  // }
-  // (*Machine_Ctrl.pipelineConfig)["pipline"].set(piplineSave);
-  // //? 將 steps_group 內的資料多加上key值: RESULT 來讓後續Task可以判斷流程是否正確執行
-  // JsonObject stepsGroup = (*Machine_Ctrl.pipelineConfig)["steps_group"].as<JsonObject>();
-  // for (JsonPair stepsGroupItem : stepsGroup) {
-  //   String stepsGroupName = String(stepsGroupItem.key().c_str());
-  //   (*Machine_Ctrl.pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("WAIT");
-  // };
-  // for (JsonPair stepsGroupItem : stepsGroup) {
-  //   String stepsGroupName = String(stepsGroupItem.key().c_str());
-  //   Machine_Ctrl.AddNewPiplelineFlowTask(stepsGroupName);
-  // };
-  //TODO
-
-  
-  // Machine_Ctrl.WireOne.beginTransmission(0x70);
-  // Machine_Ctrl.WireOne.write(1 << 0);
-  // Machine_Ctrl.WireOne.endTransmission();
-  // Machine_Ctrl.MULTI_LTR_329ALS_01_Ctrler.openSensorByIndex(7);
+  ESP_LOGD("", "儀器啟動完畢!");
   delay(1000);
 }
 
