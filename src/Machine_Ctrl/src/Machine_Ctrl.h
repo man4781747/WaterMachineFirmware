@@ -71,7 +71,7 @@ class SMachine_Ctrl
     //? JSON__pipelineStack: 待執行的Step列表
     DynamicJsonDocument *JSON__pipelineStack = new DynamicJsonDocument(60000);
     //? JSON__pipelineConfig: 當前運行的Pipeline詳細設定
-    DynamicJsonDocument *JSON__pipelineConfig = new DynamicJsonDocument(65525);
+    DynamicJsonDocument *JSON__pipelineConfig = new DynamicJsonDocument(120000);
     //? pipelineTaskHandleMap: 記錄了當前正在執行Step的Task，Key為Step名稱、Value為TaskHandle_t
     std::map<String, TaskHandle_t*> pipelineTaskHandleMap;
     bool LOAD__ACTION_V2(DynamicJsonDocument *pipelineStackList);
