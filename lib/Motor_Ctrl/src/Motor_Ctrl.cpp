@@ -162,10 +162,23 @@ void C_Peristaltic_Motors_Ctrl::RunMotor(uint8_t *moduleDataList)
 {
   if (xSemaphoreTake(Peristaltic_Motors_xMutex, portMAX_DELAY) == pdTRUE) {
     digitalWrite(STCP, LOW);
-    vTaskDelay(10);
+    vTaskDelay(5);
     String settingContent = "";
     for (int index = moduleNum-1;index >= 0;index--) {
-      shiftOut(DATA, SHCP, MSBFIRST, moduleDataList[index]);
+      uint8_t i;
+
+      for(i = 0; i < 8; i++) {
+          digitalWrite(DATA, !!(moduleDataList[index] & (1 << (7 - i))));
+          vTaskDelay(5);
+          digitalWrite(SHCP, HIGH);
+          vTaskDelay(5);
+          digitalWrite(SHCP, LOW);
+          vTaskDelay(5);
+      }
+
+
+
+      // shiftOut(DATA, SHCP, MSBFIRST, moduleDataList[index]);
 
       char btyeContent[9];
       btyeContent[8] = '\0';
