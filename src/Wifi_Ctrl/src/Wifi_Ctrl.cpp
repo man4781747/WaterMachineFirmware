@@ -714,7 +714,7 @@ void CWIFI_Ctrler::setAPIs()
     }
   );
 
-  asyncServer.on("^\\/api\\/pipeline\\/([a-zA-Z0-9_.]+)$", HTTP_DELETE, 
+  asyncServer.on("^\\/api\\/pipeline\\/([a-zA-Z0-9_.-]+)$", HTTP_DELETE, 
     [&](AsyncWebServerRequest *request)
     { 
       DynamicJsonDocument responeData(1000);
