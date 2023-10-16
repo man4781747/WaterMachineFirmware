@@ -48,9 +48,9 @@ void Motor_Ctrl::INIT_Motors(TwoWire &Wire_)
   pwm_1 = new Adafruit_PWMServoDriver(0x40, Wire_);
   pwm_1->begin();
   pwm_1->setPWMFreq(50);
-  pwm_2 = new Adafruit_PWMServoDriver(0x41, Wire_);
-  pwm_2->begin();
-  pwm_2->setPWMFreq(50);
+  // pwm_2 = new Adafruit_PWMServoDriver(0x41, Wire_);
+  // pwm_2->begin();
+  // pwm_2->setPWMFreq(50);
 }
 
 /**
@@ -73,8 +73,8 @@ void Motor_Ctrl::SetMotorTo(int channelIndex_, int angle)
   int pulse_wide = map(angle, 0, 180, 500, 2500);
   int pulse_width = int((float)pulse_wide / 1000000.*50.*4096.);
   if (channelIndex_/16 == 1) {
-    pwm_2->setPWM(channelIndex_%16, 0, pulse_width);
-    pwm_2->setPWM(channelIndex_%16, 0, pulse_width);
+    // pwm_2->setPWM(channelIndex_%16, 0, pulse_width);
+    // pwm_2->setPWM(channelIndex_%16, 0, pulse_width);
   } else {
     pwm_1->setPWM(channelIndex_%16, 0, pulse_width);
     pwm_1->setPWM(channelIndex_%16, 0, pulse_width);
@@ -112,8 +112,8 @@ void Motor_Ctrl::ResetPCA9685()
 {
   pwm_1->reset();
   pwm_1->setPWMFreq(50);
-  pwm_2->reset();
-  pwm_2->setPWMFreq(50);
+  // pwm_2->reset();
+  // pwm_2->setPWMFreq(50);
 }
 
 /**
@@ -128,7 +128,7 @@ void Motor_Ctrl::MotorStatusChange(String motorID)
   int pulse_wide = map(motorsDict[std::string(motorID.c_str())].motorStatus, 0, 180, 500, 2500);
   int pulse_width = int((float)pulse_wide / 1000000.*50.*4096.);
   if (channelIndex_/16 == 1) {
-    pwm_2->setPWM(channelIndex_%16, 0, pulse_width);
+    // pwm_2->setPWM(channelIndex_%16, 0, pulse_width);
   } else {
     pwm_1->setPWM(channelIndex_%16, 0, pulse_width);
   }
