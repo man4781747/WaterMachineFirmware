@@ -1,0 +1,59 @@
+{
+  "title": "測試蠕動馬達的錯誤觸發功能",
+  "desp": "使用第一顆蠕動馬達測試",
+  "tag": ["測試"],
+  "events": {
+    "Test_1": {
+      "title": "超時觸發與繼續執行測試",
+      "desp": "3秒內沒觸發RO腳導通則觸發錯誤",
+      "event": [
+        {"peristaltic_motor_list": [
+          {"index": 0,"status": 1,"time": 3,"until": "RO", "failType": "timeout", "failAction": "continue"}
+        ]},
+        {"log":{"level": 0, "title": "無論馬達有沒有觸發timeout錯誤,則會看到此訊息", "desp": "-"}}
+      ]
+    },
+    "Test_2": {
+      "title": "超時觸發與當前流程停止測試",
+      "desp": "3秒內沒觸發RO腳導通則觸發錯誤,而且觸發後不會在往下執行流程發出訊息",
+      "event": [
+        {"peristaltic_motor_list": [
+          {"index": 0,"status": 1,"time": 2,"until": "RO", "failType": "timeout", "failAction": "stepStop"}
+        ]},
+        {"log":{"level": 0, "title": "若馬達沒有觸發timeout錯誤,則會看到此訊息", "desp": "-"}}
+      ]
+    },
+    "Test_3": {
+      "title": "導通觸發與繼續執行測試",
+      "desp": "3秒內觸發RO腳導通則觸發錯誤",
+      "event": [
+        {"peristaltic_motor_list": [
+          {"index": 0,"status": 1,"time": 3,"until": "RO", "failType": "connect", "failAction": "continue"}
+        ]},
+        {"log":{"level": 0, "title": "無論馬達有沒有觸發connect錯誤,則會看到此訊息", "desp": "-"}}
+      ]
+    },
+    "Test_4": {
+      "title": "導通觸發與當前流程停止測試",
+      "desp": "3秒內觸發RO腳導通則觸發錯誤,而且觸發後不會在往下執行流程發出訊息",
+      "event": [
+        {"peristaltic_motor_list": [
+          {"index": 0,"status": 1,"time": 2,"until": "RO", "failType": "connect", "failAction": "stepStop"}
+        ]},
+        {"log":{"level": 0, "title": "若馬達沒有觸發connect錯誤,則會看到此訊息", "desp": "-"}}
+      ]
+    }
+  },
+  "steps_group": {
+    "AllTest": {
+      "title": "所有蠕動馬達依序測試",
+      "desp": "",
+      "steps": [
+        "Test_1","Test_2","Test_3","Test_4"
+      ]
+    }
+  },
+  "pipline": [
+    ["AllTest", []]
+  ]
+}

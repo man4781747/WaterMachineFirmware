@@ -1,5 +1,5 @@
 {
-  "title": "獲得第一池的所有資訊",
+  "title": "光度不斷進出測試",
   "desp": "",
   "tag": ["正式","池1"],
   "events": {
@@ -178,7 +178,72 @@
           {"index": 13,"status": 0}
         ]},
         {"peristaltic_motor_list": [
-          {"index": 3,"status": 1,"time": 12,"until": "-"}
+          {"index": 3,"status": 1,"time": 5,"until": "-"}
+        ]},
+
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": 1,"time": 1,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": -1,"time": 0.5,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": 1,"time": 1,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": -1,"time": 0.5,"until": "-"}
+        ]},
+        
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": 1,"time": 1,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": -1,"time": 0.5,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": 1,"time": 1,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": -1,"time": 0.5,"until": "-"}
+        ]},
+        
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": 1,"time": 1,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": -1,"time": 0.5,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": 1,"time": 1,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": -1,"time": 0.5,"until": "-"}
+        ]},
+        
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": 1,"time": 1,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": -1,"time": 0.5,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": 1,"time": 1,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": -1,"time": 0.5,"until": "-"}
+        ]},
+        
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": 1,"time": 1,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": -1,"time": 0.5,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": 1,"time": 1,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": -1,"time": 0.5,"until": "-"}
         ]}
       ]
     },
@@ -192,6 +257,24 @@
         ]},
         {"peristaltic_motor_list": [
           {"index": 3,"status": 1,"time": 10,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": -1,"time": 0.5,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": 1,"time": 0.5,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": -1,"time": 0.5,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": 1,"time": 0.5,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": -1,"time": 0.5,"until": "-"}
+        ]},
+        {"peristaltic_motor_list": [
+          {"index": 3,"status": 1,"time": 0.5,"until": "-"}
         ]}
       ]
     },
@@ -209,7 +292,7 @@
       "desp": "亞硝酸鹽量測數值獲得",
       "event": [
         {"spectrophotometer_list": [
-          {"index": 1,"gain": "96X","channel": "CH1","value_name": "NO2_wash_volt", "pool": "pool-1" ,"type": "Measurement", "dilution": 2, "max": 50000, "min": 30000, "failAction": "continue"}
+          {"index": 1,"gain": "96X","channel": "CH1","value_name": "NO2_test_volt", "pool": "pool-1" ,"type": "Measurement", "dilution": 2, "max": 55000, "min": 10000, "failAction": "continue"}
         ]}
       ]
     },
@@ -227,7 +310,7 @@
       "desp": "",
       "event": [
         {"spectrophotometer_list": [
-          {"index": 0,"gain": "48X","channel": "CH0","value_name": "NH4_test_volt", "pool": "pool-1" ,"type": "Measurement", "dilution": 2, "max": 50000, "min": 30000, "failAction": "continue"}
+          {"index": 0,"gain": "48X","channel": "CH0","value_name": "NH4_test_volt", "pool": "pool-1" ,"type": "Measurement", "dilution": 2, "max": 55000, "min": 30000, "failAction": "continue"}
         ]}
       ]
     },
@@ -399,27 +482,30 @@
         {"wait": 300}
       ]
     },
+    "Wait_10_sec": {
+      "title": "等待10秒",
+      "desp": "",
+      "event": [
+        {"wait": 10}
+      ]
+    },
     "Clear_PH_Sensor_To_MixRoom": {
       "title": "清空PH檢測儀與混和室",
       "desp": "",
       "event": [
         {"pwm_motor_list": [
           {"index": 21,"status": 180},
-          {"index": 20,"status": 90},
-          {"index": 7,"status": 90},
-          {"index": 6,"status": 90},
-          {"index": 5,"status": 90},
-          {"index": 4,"status": 90},
+          {"index": 20,"status": 0},
           {"index": 11,"status": 0},
           {"index": 14,"status": 0}
         ]},
         {"peristaltic_motor_list": [
           {"index": 2,"status": -1,"time": 35,"until": "-"},
-          {"index": 3,"status": 1,"time": 40,"until": "-"},
-          {"index": 4,"status": 1,"time": 35,"until": "-"}
+          {"index": 3,"status": 1,"time": 40,"until": "-"}
         ]},
         {"pwm_motor_list": [
           {"index": 21,"status": 90},
+          {"index": 20,"status": 90},
           {"index": 11,"status": 90},
           {"index": 14,"status": 90}
         ]}
@@ -589,137 +675,50 @@
         "Clear_MixRoom_40sec"
       ]
     },
-    "Wash_All_Path_With_Sample_2": {
-      "same": "Wash_All_Path_With_Sample_1",
-      "trigger": "allSuccess",
-      "title": "第二次-池水清洗儀器"
-    },
-    "Wash_All_Path_With_Sample_3": {
-      "same": "Wash_All_Path_With_Sample_1",
-      "trigger": "allSuccess",
-      "title": "第三次-池水清洗儀器"
-    },
-    "Wash_All_Path_With_Sample_4": {
-      "same": "Wash_All_Path_With_Sample_1",
-      "trigger": "allSuccess",
-      "title": "第四次-池水清洗儀器"
-    },
     "NO3_Original_Value_Get": {
       "title": "亞硝酸鹽原點檢測",
       "desp": "",
-      "steps": [
-        "Reset_All_PWM_Motor",
-        "FORWASHVALUE__Push_Sample_Liquid_To_MixRoom",
-        "Push_MixRoom_To_NO3_SensorRoom",
-        "NO3_Wash_Value_Get",
-        "Clear_NO3_SensorRoom_To_MixRoom",
-        "Clear_MixRoom_40sec"
-      ]
-    },
-    "NO3_Sample_Value_Get": {
-      "title": "亞硝酸鹽試劑檢測",
-      "desp": "RO水(22.5s)、池水(2.5s)、試劑(1s)",
-      "steps": [
-        "Reset_All_PWM_Motor",
-        "FORNO3_Push_RO_Liquid_To_MixRoom",
-        "FORNO3_Push_Sample_Liquid",
-        "Mix_Liquid_In_MixRoom",
-        "Push_NO2_Liquid_To_MixRoom",
-        "Mix_Liquid_In_MixRoom",
-        "Wait_5_Min",
-        "Push_MixRoom_To_NO3_SensorRoom",
-        "NO3_Test_Value_Get",
-        "Clear_NO3_SensorRoom_To_MixRoom",
-        "Clear_MixRoom_40sec"
-      ]
-    },
-    "NH4_Original_Value_Get": {
-      "title": "氨氮原點檢測",
-      "desp": "氨氮原點檢測",
       "trigger": "allSuccess",
       "steps": [
         "Reset_All_PWM_Motor",
         "FORWASHVALUE__Push_Sample_Liquid_To_MixRoom",
-        "Push_MixRoom_To_NH4_SensorRoom",
-        "NH4_Wash_Value_Get",
-        "Clear_NH4_SensorRoom_To_MixRoom",
-        "Clear_MixRoom_40sec"
-      ]
-    },
-    "NH4_Sample_Value_Get": {
-      "title": "氨氮試劑檢測",
-      "desp": "OR水(12.5s)、池水(12.5s)、R1試劑(0.5s)、R2試劑(0.75s)",
-      "steps": [
-        "Reset_All_PWM_Motor",
-        "FORNH4_Push_RO_Liquid_To_MixRoom",
-        "FORNH4_Push_Sample_Liquid",
-        "Push_NH4R1_Liquid_To_MixRoom",
-        "Mix_Liquid_In_MixRoom",
-        "Push_NH4R2_Liquid_To_MixRoom",
-        "Mix_Liquid_In_MixRoom",
-        "Wait_5_Min",
-        "Push_MixRoom_To_NH4_SensorRoom",
-        "NH4_Test_Value_Get",
-        "Clear_NH4_SensorRoom_To_MixRoom",
-        "Clear_MixRoom_40sec"
-      ]
-    },
-    "PH_Value_Get": {
-      "title": "樣本PH數值獲得",
-      "desp": "",
-      "steps": [
-        "Reset_All_PWM_Motor",
-        "Clear_PH_Sensor_To_MixRoom",
-        "Push_Sample_Liquid_To_PH_Sensor",
-        "PH_Value_Get",
-        "Clear_PH_Sensor_To_MixRoom",
-        "Push_RO_Liquid_To_PH_Sensor",
-        "Clear_PH_Sensor_To_MixRoom",
-        "Push_RO_Liquid_To_PH_Sensor"
-      ]
-    },
-    "Return_To_Initial_From_Pool1_State": {
-      "title": "從檢測池1的流程中回歸初始",
-      "desp": "-",
-      "steps": [
-        "Reset_All_PWM_Motor",
-        "Clean_Sample_Liquid_Room_To_POOL1_Water",
+
+        "Push_MixRoom_To_NO3_SensorRoom",
         "Clear_NO3_SensorRoom_To_MixRoom",
-        "Clear_NH4_SensorRoom_To_MixRoom",
+        "Push_MixRoom_To_NO3_SensorRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
+        "Push_MixRoom_To_NO3_SensorRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
+        "Push_MixRoom_To_NO3_SensorRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
+        "Push_MixRoom_To_NO3_SensorRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
+        "Push_MixRoom_To_NO3_SensorRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
+        "Push_MixRoom_To_NO3_SensorRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
+        "Push_MixRoom_To_NO3_SensorRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
+        "Push_MixRoom_To_NO3_SensorRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
+        "Push_MixRoom_To_NO3_SensorRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
+        "Push_MixRoom_To_NO3_SensorRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
+        "Push_MixRoom_To_NO3_SensorRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
+        "Push_MixRoom_To_NO3_SensorRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
+        "Push_MixRoom_To_NO3_SensorRoom",
+        "Clear_NO3_SensorRoom_To_MixRoom",
+        
         "Clear_MixRoom_40sec"
-      ]
-    },
-    "UpdateDataTime": {
-      "title": "更新池1資料",
-      "desp": "",
-      "steps": [
-        "UpdateDataTime"
       ]
     }
   },
   "pipline": [
     ["Clear_All_Path", ["GetPool1SimpleStep_1", "GetROWater_1"]],
-    ["GetPool1SimpleStep_1", ["Wash_All_Path_With_Sample_1"]],
-    ["GetROWater_1", ["Wash_All_Path_With_Sample_1"]],
-    ["Wash_All_Path_With_Sample_1", ["GetPool1SimpleStep_2", "GetROWater_2"]],
-    ["GetPool1SimpleStep_2", ["Wash_All_Path_With_Sample_2"]],
-    ["GetROWater_2", ["Wash_All_Path_With_Sample_2"]],
-    ["Wash_All_Path_With_Sample_2", ["GetPool1SimpleStep_3", "GetROWater_3"]],
-    ["GetPool1SimpleStep_3", ["NO3_Original_Value_Get"]],
-    ["GetROWater_3", ["NO3_Original_Value_Get"]],
-    ["NO3_Original_Value_Get", ["NO3_Sample_Value_Get"]],
-    ["NO3_Sample_Value_Get", ["Wash_All_Path_With_Sample_3"]],
-    ["Wash_All_Path_With_Sample_3", ["GetPool1SimpleStep_4", "GetROWater_4"]],
-    ["GetPool1SimpleStep_4", ["Wash_All_Path_With_Sample_4"]],
-    ["GetROWater_4", ["Wash_All_Path_With_Sample_4"]],
-    ["Wash_All_Path_With_Sample_4", ["GetPool1SimpleStep_5", "GetROWater_5"]],
-    ["GetPool1SimpleStep_5", ["NH4_Original_Value_Get"]],
-    ["GetROWater_5", ["NH4_Original_Value_Get"]],
-    ["NH4_Original_Value_Get", ["NH4_Sample_Value_Get"]],
-    ["NH4_Sample_Value_Get", ["PH_Value_Get"]],
-    ["PH_Value_Get", ["Return_To_Initial_From_Pool1_State"]],
-    ["Return_To_Initial_From_Pool1_State", ["Wash_All_Path_With_RO_1"]],
-    ["Wash_All_Path_With_RO_1", ["Wash_All_Path_With_RO_2"]],
-    ["Wash_All_Path_With_RO_2", ["UpdateDataTime"]]
+    ["GetPool1SimpleStep_1", ["NO3_Original_Value_Get"]],
+    ["GetROWater_1", ["NO3_Original_Value_Get"]]
   ]
 }

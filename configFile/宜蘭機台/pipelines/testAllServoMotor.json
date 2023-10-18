@@ -52,25 +52,6 @@
           {"index": 15,"status": 0}
         ]},
         {"pwm_motor_list": [
-          {"index": 28,"status": 90},
-          {"index": 29,"status": 90},
-          {"index": 30,"status": 90},
-          {"index": 31,"status": 90},
-          {"index": 23,"status": 90},
-          {"index": 22,"status": 90},
-          {"index": 21,"status": 90},
-          {"index": 20,"status": 90},
-          {"index": 7,"status": 90},
-          {"index": 6,"status": 90},
-          {"index": 5,"status": 90},
-          {"index": 4,"status": 90},
-          {"index": 11,"status": 90},
-          {"index": 12,"status": 90},
-          {"index": 13,"status": 90},
-          {"index": 14,"status": 90},
-          {"index": 15,"status": 90}
-        ]},
-        {"pwm_motor_list": [
           {"index": 28,"status": 180},
           {"index": 29,"status": 180},
           {"index": 30,"status": 180},
@@ -109,6 +90,6 @@
     }
   },
   "pipline": [
-    ["TestAllServoMotor", ["End"]]
+    ["TestAllServoMotor", []]
   ]
 }

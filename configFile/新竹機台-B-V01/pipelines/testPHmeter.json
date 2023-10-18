@@ -1,0 +1,26 @@
+{
+  "title": "PH感測器測試",
+  "desp": "",
+  "tag": ["測試"],
+  "events": {
+    "PH_Test": {
+      "title": "PH感測器測試",
+      "desp": "",
+      "event": [
+        {"ph_meter": [{ "index": 0 , "pool": "pool-1"}]}
+      ]
+    }
+  },
+  "steps_group": {
+    "PH_Test": {
+      "title": "PH感測器測試",
+      "desp": "",
+      "steps": [
+        "PH_Test"
+      ]
+    }
+  },
+  "pipline": [
+    ["PH_Test", []]
+  ]
+}
