@@ -147,6 +147,8 @@ bool SMachine_Ctrl::INIT_SD_Card()
 {
   if (!SD.begin(8)) {
     ESP_LOGE("", "SD卡讀取失敗");
+    vTaskDelay(1000/portTICK_PERIOD_MS);
+    ESP.restart();
     return false;
   } else {
     ESP_LOGD("", "SD卡讀取成功");
@@ -828,6 +830,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
       if (xReturned == pdPASS) {
         break;
       }
+      vTaskDelay(100/portTICK_PERIOD_MS);
     }
     if (xReturned != pdPASS) {
       Serial.println("Create Fail");
