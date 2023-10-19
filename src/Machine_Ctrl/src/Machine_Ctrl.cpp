@@ -20,7 +20,8 @@
 // #endif
 // #endif
 // #endif /* U8X8_HAVE_HW_I2C */
-
+#include <Adafruit_GFX.h>
+#include "Adafruit_SH1106.h"
 #include "../lib/QRCode/src/qrcode.h"
 
 #include <ESPAsyncWebServer.h>
@@ -186,13 +187,16 @@ void SMachine_Ctrl::SD__UpdatePipelineConfigList()
     DynamicJsonDocument fileContent(60000);
     DeserializationError error = deserializeJson(fileContent, Entry);
     Entry.close();
-    if (error) {
+    fileInfo["title"].set(fileContent["title"].as<String>());
+    fileInfo["desp"].set(fileContent["desp"].as<String>());
+    fileInfo["tag"].set(fileContent["tag"].as<JsonArray>());
+    // if (error) {
 
-    } else {
-      fileInfo["title"].set(fileContent["title"].as<String>());
-      fileInfo["desp"].set(fileContent["desp"].as<String>());
-      fileInfo["tag"].set(fileContent["tag"].as<JsonArray>());
-    }
+    // } else {
+    //   fileInfo["title"].set(fileContent["title"].as<String>());
+    //   fileInfo["desp"].set(fileContent["desp"].as<String>());
+    //   fileInfo["tag"].set(fileContent["tag"].as<JsonArray>());
+    // }
     (*JSON__PipelineConfigList).add(fileInfo);
   }
 }
@@ -277,7 +281,7 @@ void SMachine_Ctrl::SD__LoadOldLogs()
 void SMachine_Ctrl::INIT_I2C_Wires()
 {
   WireOne.end();
-  WireOne.begin(WireOne_SDA, WireOne_SCL);
+  WireOne.begin(WireOne_SDA, WireOne_SCL, 100000);
 }
 
 /**
@@ -589,6 +593,7 @@ void PiplelineFlowTask(void* parameter)
             ESP_LOGI("LOADED_ACTION","       - %s",String(logBuffer).c_str());
 
             digitalWrite(activePin, HIGH);
+            vTaskDelay(500/portTICK_PERIOD_MS);
             INA226 ina226(Machine_Ctrl.WireOne);
             ina226.begin(sensorAddr);
 
@@ -652,6 +657,7 @@ void PiplelineFlowTask(void* parameter)
             ESP_LOGI("LOADED_ACTION","       - %s", logString.c_str());
             Machine_Ctrl.SetLog(3, "測量PPM數值", logString, Machine_Ctrl.BackendServer.ws_);
             digitalWrite(activePin, HIGH);
+             vTaskDelay(500/portTICK_PERIOD_MS);
             INA226 ina226(Machine_Ctrl.WireOne);
             ina226.begin(sensorAddr);
 
@@ -1539,3 +1545,4 @@ void SMachine_Ctrl::ReWriteLastDataSaveFile(String filePath, JsonObject tempData
 }
 
 SMachine_Ctrl Machine_Ctrl;
+Adafruit_SH1106 display;
