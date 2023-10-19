@@ -122,16 +122,6 @@ void ws_GetAllPoolData(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
   if (!(*D_baseInfo)["action"].containsKey("message")) {
     (*D_baseInfo)["action"]["message"].set("獲得各蝦池最新感測器資料");
   }
-  Serial.println("ws_GetAllPoolData");
-  // serializeJsonPretty((*Machine_Ctrl.JSON__DeviceBaseInfo)["pools"], Serial);
-  serializeJsonPretty((*Machine_Ctrl.JSON__sensorDataSave), Serial);
-
-  // for (JsonPair D_poolItem : (*Machine_Ctrl.JSON__DeviceBaseInfo)["pools"].as<JsonObject>()) {
-  //   if ((*Machine_Ctrl.JSON__sensorDataSave)[D_poolItem.key()].containsKey("Data_datetime") == false) {
-  //     (*Machine_Ctrl.JSON__sensorDataSave)[D_poolItem.key()]["Data_datetime"].set("");
-  //   }
-  //   (*D_baseInfo)["parameter"][D_poolItem.key()].set((*Machine_Ctrl.JSON__sensorDataSave)[D_poolItem.key()]);
-  // }
   (*D_baseInfo)["parameter"].set(*Machine_Ctrl.JSON__sensorDataSave);
   String returnString;
   serializeJsonPretty((*D_baseInfo), returnString);
