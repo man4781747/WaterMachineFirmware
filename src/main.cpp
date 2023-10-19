@@ -88,6 +88,10 @@ void setup() {
   Machine_Ctrl.ShowIPAndQRCodeOnOled();
   Machine_Ctrl.SetLog(3, "機器開機", "");
   ESP_LOGD("", "儀器啟動完畢!");
+  pinMode(16, OUTPUT);
+  digitalWrite(16, LOW);
+  pinMode(17, OUTPUT);
+  digitalWrite(17, LOW);
   delay(1000);
 }
 
