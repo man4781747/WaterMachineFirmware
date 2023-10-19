@@ -385,6 +385,36 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
 // For 初始化
 ////////////////////////////////////////////////////
 
+void WiFiConnectChecker(void* parameter) {
+  time_t lasUpdatetime = -1;
+  //? 每1秒檢查WiFi是否還連線
+  for (;;) {
+    if (!WiFi.isConnected()) {
+      // Machine_Ctrl.PrintOnScreen("Connect Wifi");
+      Machine_Ctrl.SetLog(3, "偵測到WiFi斷線", "嘗試重新連接", NULL, NULL);
+      ESP_LOGW(LOG_TAG_WIFI,"偵測到WiFi斷線，嘗試重新連接");
+      WiFi.disconnect();
+      WiFi.begin(
+        (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Name"].as<String>().c_str(),
+        (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Password"].as<String>().c_str()
+      );
+      lasUpdatetime = -1;
+    } else {
+      if (now() > lasUpdatetime + 3600) {
+        ESP_LOGD("", "準備更新儀器時間");
+        Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
+        lasUpdatetime = now();
+      }
+      // ESP_LOGD("", "準備更新儀器時間");
+      // Machine_Ctrl.PrintOnScreen("Update Time");
+      // Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
+      // Machine_Ctrl.ShowIPAndQRCodeOnOled();
+    }
+    vTaskDelay(1000/portTICK_PERIOD_MS);
+  }
+}
+
+
 void OTAServiceTask(void* parameter) {
   ArduinoOTA.setPort(3232);
   ArduinoOTA.onStart([]() {
@@ -424,20 +454,43 @@ void OTAServiceTask(void* parameter) {
   }
 }
 
+
 /**
  * @brief 與Wifi連線
  * 
  */
+
+
+
 void CWIFI_Ctrler::ConnectToWifi()
 {
   WiFi.mode(WIFI_AP_STA);
-  JsonObject WifiConfigJSON = (*Machine_Ctrl.JSON__WifiConfig).as<JsonObject>();
   ESP_LOGI(LOG_TAG_WIFI, "Start to connect to wifi");
-  // StartWiFiConnecter();
   CreateSoftAP();
-  ConnectOtherWiFiAP(
-    WifiConfigJSON["Remote"]["remote_Name"].as<String>(),
-    WifiConfigJSON["Remote"]["remote_Password"].as<String>()
+  // WiFi.disconnect();
+  // WiFi.begin(
+  //   (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Name"].as<String>().c_str(),
+  //   (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Password"].as<String>().c_str()
+  // );
+  // int failCount = 0;
+  // int reTryCount = 0;
+  // while (!WiFi.isConnected()) {
+  //   Machine_Ctrl.PrintOnScreen("Try Connect Wifi\nRetry: "+String(reTryCount));
+  //   if (failCount > 15) {
+  //     failCount = 0;
+  //     reTryCount++;
+  //     WiFi.disconnect();
+  //     WiFi.begin(
+  //       (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Name"].as<String>().c_str(),
+  //       (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Password"].as<String>().c_str()
+  //     );
+  //   }
+  //   vTaskDelay(1000/portTICK_PERIOD_MS);
+  //   failCount++;
+  // }
+  xTaskCreate(
+    WiFiConnectChecker, "WiFiConnect",
+    10000, NULL, 2, NULL
   );
   xTaskCreate(
     OTAServiceTask, "TASK__OTAService",
@@ -458,7 +511,8 @@ bool CWIFI_Ctrler::CreateSoftAP()
   WiFi.softAPdisconnect();
   WiFi.softAPConfig(AP_IP, AP_gateway, AP_subnet_mask);
   bool ISsuccess = WiFi.softAP(WifiConfigJSON["AP"]["AP_Name"].as<String>(),WifiConfigJSON["AP"]["AP_Password"].as<String>());
-
+  ESP_LOGI(LOG_TAG_WIFI,"AP Name:\t%s", WifiConfigJSON["AP"]["AP_Name"].as<String>().c_str());
+  ESP_LOGI(LOG_TAG_WIFI,"AP PW:\t%s", WifiConfigJSON["AP"]["AP_Password"].as<String>().c_str());
   ESP_LOGI(LOG_TAG_WIFI,"AP IP:\t%s", WiFi.softAPIP().toString().c_str());
   ESP_LOGI(LOG_TAG_WIFI,"AP MAC:\t%s", WiFi.softAPmacAddress().c_str());
   return ISsuccess;
