@@ -47,6 +47,10 @@ void scanI2C();
 
 void setup() {
   Serial.begin(115200);
+  pinMode(16, OUTPUT);
+  digitalWrite(16, HIGH);
+  pinMode(17, OUTPUT);
+  digitalWrite(17, HIGH);
   ESP_LOGD("", "儀器啟動，韌體版本為: %s", FIRMWARE_VERSION);
   Machine_Ctrl.PrintOnScreen("Rebooting...");
   Machine_Ctrl.PrintOnScreen("Load SD");
