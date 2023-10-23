@@ -15,6 +15,8 @@
 #include <TimeLib.h>   
 
 #include <U8g2lib.h>
+#include <Adafruit_GFX.h>
+#include "Adafruit_SH1106.h"
 #include "../lib/QRCode/src/qrcode.h"
 
 #include "Wifi_Ctrl/src/Wifi_Ctrl.h"
@@ -110,8 +112,11 @@ class SMachine_Ctrl
     DynamicJsonDocument *JSON__SpectrophotometerConfig = new DynamicJsonDocument(4000);
     String FilePath__SD__PHmeterConfig = "/config/PHmeter_config.json";
     DynamicJsonDocument *JSON__PHmeterConfig = new DynamicJsonDocument(2000);
+    String FilePath__SD__PoolConfig = "/config/pool_config.json";
+    DynamicJsonDocument *JSON__PoolConfig = new DynamicJsonDocument(2000);
     void SD__LoadspectrophotometerConfig();
     void SD__LoadPHmeterConfig();
+    void SD__LoadPoolConfig();
     DynamicJsonDocument *JSON__PipelineConfigList = new DynamicJsonDocument(10000);
     //? 更新當前pipeline列表資料
     //? 以下情況需要觸發他: 1. 剛開機時、2. pipeline檔案有變動時
@@ -173,5 +178,6 @@ class SMachine_Ctrl
   private:
 };
 extern SMachine_Ctrl Machine_Ctrl;
+extern Adafruit_SH1106 display;
 // extern U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2;
 #endif

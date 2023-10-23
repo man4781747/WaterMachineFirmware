@@ -140,6 +140,8 @@ void SMachine_Ctrl::INIT_SD_And_LoadConfigs()
   SD__LoadspectrophotometerConfig();
   ESP_LOGD("", "準備讀取PH感測器的設定檔");
   SD__LoadPHmeterConfig();
+  ESP_LOGD("", "準備讀取蝦池的設定檔");
+  SD__LoadPoolConfig();
   ESP_LOGD("", "準備更新當前SD卡內有的Pipeline檔案列表");
   SD__UpdatePipelineConfigList();
 }
@@ -165,6 +167,11 @@ void SMachine_Ctrl::SD__LoadspectrophotometerConfig()
 void SMachine_Ctrl::SD__LoadPHmeterConfig()
 {
   ExFile_LoadJsonFile(SD, FilePath__SD__PHmeterConfig, *JSON__PHmeterConfig);
+}
+
+void SMachine_Ctrl::SD__LoadPoolConfig()
+{
+  ExFile_LoadJsonFile(SD, FilePath__SD__PoolConfig, *JSON__PoolConfig);
 }
 
 void SMachine_Ctrl::SD__UpdatePipelineConfigList()
@@ -301,20 +308,73 @@ bool SMachine_Ctrl::INIT_PoolData()
     }
   }
   ESP_LOGE("", "找不到或讀取最新各池感測器測量數值失敗，重建資料庫");
-  JsonObject D_pools = (*Machine_Ctrl.JSON__DeviceBaseInfo)["pools"].as<JsonObject>();
-  for (JsonPair D_poolItem : D_pools) {
-    (*JSON__sensorDataSave)[D_poolItem.key()]["PoolID"].set(D_poolItem.key());
-    (*JSON__sensorDataSave)[D_poolItem.key()]["PoolName"].set(D_poolItem.value().as<JsonObject>()["title"].as<String>());
-    (*JSON__sensorDataSave)[D_poolItem.key()]["PoolDescription"].set(D_poolItem.value().as<JsonObject>()["desp"].as<String>());
-    (*JSON__sensorDataSave)[D_poolItem.key()]["NO2_wash_volt"].set(-1.);
-    (*JSON__sensorDataSave)[D_poolItem.key()]["NO2_test_volt"].set(-1.);
-    (*JSON__sensorDataSave)[D_poolItem.key()]["NO2"].set(-1.);
-    (*JSON__sensorDataSave)[D_poolItem.key()]["NH4_wash_volt"].set(-1.);
-    (*JSON__sensorDataSave)[D_poolItem.key()]["NH4_test_volt"].set(-1.);
-    (*JSON__sensorDataSave)[D_poolItem.key()]["NH4"].set(-1.);
-    (*JSON__sensorDataSave)[D_poolItem.key()]["pH_volt"].set(-1.);
-    (*JSON__sensorDataSave)[D_poolItem.key()]["pH"].set(-1.);
+  // for (int poolIndex=1;poolIndex<5;poolIndex++) {
+  //   String poolName = "pool-"+String(poolIndex);
+  //   (*JSON__sensorDataSave)[poolName]["PoolID"].set(poolName);
+  //   (*JSON__sensorDataSave)[poolName]["PoolName"].set(D_poolItem.value().as<JsonObject>()["title"].as<String>());
+  //   (*JSON__sensorDataSave)[poolName]["PoolDescription"].set(D_poolItem.value().as<JsonObject>()["desp"].as<String>());
+  //   (*JSON__sensorDataSave)[poolName]["NO2_wash_volt"]["Value"].set(-1.);
+  //   (*JSON__sensorDataSave)[poolName]["NO2_wash_volt"]["data_time"].set("1990-01-01 00:00:00");
+  //   (*JSON__sensorDataSave)[poolName]["NO2_test_volt"]["Value"].set(-1.);
+  //   (*JSON__sensorDataSave)[poolName]["NO2_test_volt"]["data_time"].set("1990-01-01 00:00:00");
+  //   (*JSON__sensorDataSave)[poolName]["NO2"]["Value"].set(-1.);
+  //   (*JSON__sensorDataSave)[poolName]["NO2"]["data_time"].set("1990-01-01 00:00:00");
+  //   (*JSON__sensorDataSave)[poolName]["NH4_wash_volt"]["Value"].set(-1.);
+  //   (*JSON__sensorDataSave)[poolName]["NH4_wash_volt"]["data_time"].set("1990-01-01 00:00:00");
+  //   (*JSON__sensorDataSave)[poolName]["NH4_test_volt"]["Value"].set(-1.);
+  //   (*JSON__sensorDataSave)[poolName]["NH4_test_volt"]["data_time"].set("1990-01-01 00:00:00");
+  //   (*JSON__sensorDataSave)[poolName]["NH4"]["Value"].set(-1.);
+  //   (*JSON__sensorDataSave)[poolName]["NH4"]["data_time"].set("1990-01-01 00:00:00");
+  //   (*JSON__sensorDataSave)[poolName]["pH_volt"]["Value"].set(-1.);
+  //   (*JSON__sensorDataSave)[poolName]["pH_volt"]["data_time"].set("1990-01-01 00:00:00");
+  //   (*JSON__sensorDataSave)[poolName]["pH"]["Value"].set(-1.);
+  //   (*JSON__sensorDataSave)[poolName]["pH"]["data_time"].set("1990-01-01 00:00:00");
+  // }
+  for (JsonVariant SinPoolInfo : (*JSON__PoolConfig).as<JsonArray>()) {
+    JsonObject Array_SinPoolInfo = SinPoolInfo.as<JsonObject>();
+    String PoolID = Array_SinPoolInfo["id"].as<String>();
+    (*JSON__sensorDataSave)[PoolID]["PoolID"].set(PoolID);
+    (*JSON__sensorDataSave)[PoolID]["PoolName"].set(Array_SinPoolInfo["title"].as<String>());
+    (*JSON__sensorDataSave)[PoolID]["PoolDescription"].set(Array_SinPoolInfo["desp"].as<String>());
+    (*JSON__sensorDataSave)[PoolID]["DataItem"]["NO2_wash_volt"]["Value"].set(-1.);
+    (*JSON__sensorDataSave)[PoolID]["DataItem"]["NO2_wash_volt"]["data_time"].set("1990-01-01 00:00:00");
+    (*JSON__sensorDataSave)[PoolID]["DataItem"]["NO2_test_volt"]["Value"].set(-1.);
+    (*JSON__sensorDataSave)[PoolID]["DataItem"]["NO2_test_volt"]["data_time"].set("1990-01-01 00:00:00");
+    (*JSON__sensorDataSave)[PoolID]["DataItem"]["NO2"]["Value"].set(-1.);
+    (*JSON__sensorDataSave)[PoolID]["DataItem"]["NO2"]["data_time"].set("1990-01-01 00:00:00");
+    (*JSON__sensorDataSave)[PoolID]["DataItem"]["NH4_wash_volt"]["Value"].set(-1.);
+    (*JSON__sensorDataSave)[PoolID]["DataItem"]["NH4_wash_volt"]["data_time"].set("1990-01-01 00:00:00");
+    (*JSON__sensorDataSave)[PoolID]["DataItem"]["NH4_test_volt"]["Value"].set(-1.);
+    (*JSON__sensorDataSave)[PoolID]["DataItem"]["NH4_test_volt"]["data_time"].set("1990-01-01 00:00:00");
+    (*JSON__sensorDataSave)[PoolID]["DataItem"]["NH4"]["Value"].set(-1.);
+    (*JSON__sensorDataSave)[PoolID]["DataItem"]["NH4"]["data_time"].set("1990-01-01 00:00:00");
+    (*JSON__sensorDataSave)[PoolID]["DataItem"]["pH_volt"]["Value"].set(-1.);
+    (*JSON__sensorDataSave)[PoolID]["DataItem"]["pH_volt"]["data_time"].set("1990-01-01 00:00:00");
+    (*JSON__sensorDataSave)[PoolID]["DataItem"]["pH"]["Value"].set(-1.);
+    (*JSON__sensorDataSave)[PoolID]["DataItem"]["pH"]["data_time"].set("1990-01-01 00:00:00");
   }
+  // JsonObject D_pools = (*Machine_Ctrl.JSON__DeviceBaseInfo)["pools"].as<JsonObject>();
+  // for (JsonPair D_poolItem : D_pools) {
+  //   (*JSON__sensorDataSave)[D_poolItem.key()]["PoolID"].set(D_poolItem.key());
+  //   (*JSON__sensorDataSave)[D_poolItem.key()]["PoolName"].set(D_poolItem.value().as<JsonObject>()["title"].as<String>());
+  //   (*JSON__sensorDataSave)[D_poolItem.key()]["PoolDescription"].set(D_poolItem.value().as<JsonObject>()["desp"].as<String>());
+  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NO2_wash_volt"]["Value"].set(-1.);
+  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NO2_wash_volt"]["data_time"].set("1990-01-01 00:00:00");
+  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NO2_test_volt"]["Value"].set(-1.);
+  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NO2_test_volt"]["data_time"].set("1990-01-01 00:00:00");
+  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NO2"]["Value"].set(-1.);
+  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NO2"]["data_time"].set("1990-01-01 00:00:00");
+  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NH4_wash_volt"]["Value"].set(-1.);
+  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NH4_wash_volt"]["data_time"].set("1990-01-01 00:00:00");
+  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NH4_test_volt"]["Value"].set(-1.);
+  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NH4_test_volt"]["data_time"].set("1990-01-01 00:00:00");
+  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NH4"]["Value"].set(-1.);
+  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NH4"]["data_time"].set("1990-01-01 00:00:00");
+  //   (*JSON__sensorDataSave)[D_poolItem.key()]["pH_volt"]["Value"].set(-1.);
+  //   (*JSON__sensorDataSave)[D_poolItem.key()]["pH_volt"]["data_time"].set("1990-01-01 00:00:00");
+  //   (*JSON__sensorDataSave)[D_poolItem.key()]["pH"]["Value"].set(-1.);
+  //   (*JSON__sensorDataSave)[D_poolItem.key()]["pH"]["data_time"].set("1990-01-01 00:00:00");
+  // }
   return false;
 }
 
@@ -624,7 +684,8 @@ void PiplelineFlowTask(void* parameter)
               DataFileFullPath,Machine_Ctrl.GetDatetimeString() ,spectrophotometerTitle, poolChose, "-", "-",
               value_name, -1, finalValue, -1
             );
-            (*Machine_Ctrl.JSON__sensorDataSave)[poolChose][value_name].set(String(finalValue,2).toDouble());
+            (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"][value_name]["Value"].set(String(finalValue,2).toDouble());
+            (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"][value_name]["data_time"].set(Machine_Ctrl.GetDatetimeString());
             Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.FilePath__SD__LastSensorDataSave, (*Machine_Ctrl.JSON__sensorDataSave).as<JsonObject>());
 
             sprintf(
@@ -686,8 +747,13 @@ void PiplelineFlowTask(void* parameter)
             double finalValue_after = (-log10(finalValue/Machine_Ctrl.lastLightValue)-bValue)/mValue * dilution;
 
             //? websocket相關的數值要限縮在小數點下第2位
-            (*Machine_Ctrl.JSON__sensorDataSave)[poolChose][value_name].set(String(finalValue,2).toDouble());
-            (*Machine_Ctrl.JSON__sensorDataSave)[poolChose][TargetType].set(String(finalValue_after,2).toDouble());
+            // (*Machine_Ctrl.JSON__sensorDataSave)[poolChose][value_name].set(String(finalValue,2).toDouble());
+            // (*Machine_Ctrl.JSON__sensorDataSave)[poolChose][TargetType].set(String(finalValue_after,2).toDouble());
+            (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"][value_name]["Value"].set(String(finalValue,2).toDouble());
+            (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"][value_name]["data_time"].set(Machine_Ctrl.GetDatetimeString());
+            (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"][TargetType]["Value"].set(String(finalValue_after,2).toDouble());
+            (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"][TargetType]["data_time"].set(Machine_Ctrl.GetDatetimeString());
+
             sprintf(
               logBuffer, 
               "測量結果: %s, 初始強度 %s, 當前樣本數值: %s, 轉換後PPM: %s",
@@ -755,8 +821,13 @@ void PiplelineFlowTask(void* parameter)
             pHValue = 14.;
           }
           //? websocket相關的數值要限縮在小數點下第2位
-          (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["pH_volt"].set(String(PH_RowValue,2).toDouble());
-          (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["pH"].set(String(pHValue,2).toDouble());
+
+          (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"]["pH_volt"]["Value"].set(String(PH_RowValue,2).toDouble());
+          (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"]["pH_volt"]["data_time"].set(Machine_Ctrl.GetDatetimeString());
+          (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"]["pH"]["Value"].set(String(pHValue,2).toDouble());
+          (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"]["pH"]["data_time"].set(Machine_Ctrl.GetDatetimeString());
+          // (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["pH_volt"].set(String(PH_RowValue,2).toDouble());
+          // (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["pH"].set(String(pHValue,2).toDouble());
           digitalWrite(7, LOW);
           Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.FilePath__SD__LastSensorDataSave, (*Machine_Ctrl.JSON__sensorDataSave).as<JsonObject>());
           String DataFileFullPath = Machine_Ctrl.SensorDataFolder + Machine_Ctrl.GetDateString("") + "_data.csv";

@@ -122,7 +122,29 @@ void ws_GetAllPoolData(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
   if (!(*D_baseInfo)["action"].containsKey("message")) {
     (*D_baseInfo)["action"]["message"].set("獲得各蝦池最新感測器資料");
   }
-  (*D_baseInfo)["parameter"].set(*Machine_Ctrl.JSON__sensorDataSave);
+  JsonArray parameterList = (*D_baseInfo).createNestedArray("parameter");
+  for (JsonPair JsonPair_poolsSensorData : (*Machine_Ctrl.JSON__sensorDataSave).as<JsonObject>()) {
+    DynamicJsonDocument D_poolSensorDataSended(5000);
+    JsonObject D_poolsSensorData = JsonPair_poolsSensorData.value();
+    String S_PoolID = String(JsonPair_poolsSensorData.key().c_str());
+    Serial.println(S_PoolID);
+    D_poolSensorDataSended["PoolID"] = S_PoolID;
+    D_poolSensorDataSended["PoolName"] = D_poolsSensorData["PoolName"].as<String>();
+    D_poolSensorDataSended["PoolDescription"] = D_poolsSensorData["PoolDescription"].as<String>();
+    JsonArray DataItemList = D_poolSensorDataSended.createNestedArray("DataItem");
+    for (JsonPair JsonPair_SensorData : D_poolsSensorData["DataItem"].as<JsonObject>()) {
+      JsonObject D_SensorData = JsonPair_SensorData.value();
+      D_SensorData["ItemName"] = String(JsonPair_SensorData.key().c_str());
+      DataItemList.add(D_SensorData);
+    }
+
+    parameterList.add(D_poolSensorDataSended);
+  }
+
+
+
+
+  // (*D_baseInfo)["parameter"].set(*Machine_Ctrl.JSON__sensorDataSave);
   String returnString;
   serializeJsonPretty((*D_baseInfo), returnString);
   client->binary(returnString);
