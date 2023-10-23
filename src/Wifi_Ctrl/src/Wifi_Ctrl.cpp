@@ -386,7 +386,7 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
 ////////////////////////////////////////////////////
 
 void WiFiConnectChecker(void* parameter) {
-  time_t lasUpdatetime = -1;
+  time_t lasUpdatetime = 0;
   //? 每1秒檢查WiFi是否還連線
   for (;;) {
     if (!WiFi.isConnected()) {
@@ -398,8 +398,11 @@ void WiFiConnectChecker(void* parameter) {
         (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Name"].as<String>().c_str(),
         (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Password"].as<String>().c_str()
       );
-      lasUpdatetime = -1;
+      lasUpdatetime = -9999;
     } else {
+      // Serial.println("*****");
+      // Serial.println(lasUpdatetime);
+      // Serial.println(now());
       if (now() > lasUpdatetime + 3600) {
         ESP_LOGD("", "準備更新儀器時間");
         Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
@@ -793,16 +796,6 @@ void CWIFI_Ctrler::setAPIs()
         response = request->beginResponse(400, "application/json", ResponeContent);
       }
       SendHTTPesponse(request, response);
-
-      // int args = request->args();
-      // for (int paraIndex=0;paraIndex<args:paraIndex++) {
-      //   Serial.println(request->argName(paraIndex));
-      // }
-      // int params = request->params();
-      // for (int paraIndex=0;paraIndex<params:params++) {
-      //   AsyncWebParameter *p = request->getParam(paraIndex);
-        
-      // }
     }
   );
   asyncServer.on("/api/piplines", HTTP_GET, [&](AsyncWebServerRequest *request){
