@@ -1,0 +1,51 @@
+{
+  "pool-1": {
+    "PoolID": "pool-1",
+    "PoolName": "蝦池1",
+    "PoolDescription": "蝦池1sdf",
+    "NO2_wash_volt": 50095.9,
+    "NO2_test_volt": 49981.39,
+    "NO2": -0.41,
+    "NH4_wash_volt": 50046.1,
+    "NH4_test_volt": 48881.67,
+    "NH4": 0.22,
+    "pH_volt": 2142.24,
+    "pH": 6.46,
+    "Data_datetime": "2023-10-19 08:51:57"
+  },
+  "pool-2": {
+    "PoolID": "pool-2",
+    "PoolName": "蝦池2",
+    "PoolDescription": "蝦池2",
+    "NO2_wash_volt": 50042,
+    "NO2_test_volt": 49907.03,
+    "NO2": -0.41,
+    "NH4_wash_volt": 50054.9,
+    "NH4_test_volt": 49020.5,
+    "NH4": 0.19,
+    "pH_volt": 2118.17,
+    "pH": 6.41,
+    "Data_datetime": "2023-10-19 09:45:46"
+  }
+}
+
+[
+  {
+    "PoolID": "pool-1",
+    "PoolName": "蝦池1",
+    "PoolDescription": "蝦池1",
+    "dataitem": [
+      {"itemname":"NO2_wash_volt","Value":50095.9,"data_time":"2023-10-19 08:51:57"},
+      {"itemname":"NO2","Value":123,"data_time":"2023-10-19 08:51:57"}
+    ]
+  },
+  {
+    "PoolID": "pool-2",
+    "PoolName": "蝦池2",
+    "PoolDescription": "蝦池2",
+    "dataitem": [
+      {"itemname":"NO2_wash_volt","Value":50095.9,"data_time":"2023-10-19 08:51:57"},
+      {"itemname":"NO2","Value":123,"data_time":"2023-10-19 08:51:57"}
+    ]
+  }
+]

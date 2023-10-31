@@ -187,13 +187,15 @@ void SMachine_Ctrl::SD__UpdatePipelineConfigList()
     if (FileName == "__temp__.json") {
       continue;
     }
+    ESP_LOGD("", "準備讀取設定檔: %s", FileName.c_str());
     DynamicJsonDocument fileInfo(500);
     fileInfo["size"].set(Entry.size());
     fileInfo["name"].set(FileName);
     fileInfo["getLastWrite"].set(Entry.getLastWrite());
-    DynamicJsonDocument fileContent(60000);
+    DynamicJsonDocument fileContent(120000);
     DeserializationError error = deserializeJson(fileContent, Entry);
     Entry.close();
+    ESP_LOGD("", "設定檔讀取完畢: %s", FileName.c_str());
     fileInfo["title"].set(fileContent["title"].as<String>());
     fileInfo["desp"].set(fileContent["desp"].as<String>());
     fileInfo["tag"].set(fileContent["tag"].as<JsonArray>());
@@ -638,7 +640,8 @@ void PiplelineFlowTask(void* parameter)
             sensorAddr = 0x4F;
           } else {
             activePin = 17;
-            sensorAddr = 0x4A;
+            sensorAddr = 0x45;
+            // sensorAddr = 0x4F;
           }
 
           if (type == "Adjustment") {
@@ -675,7 +678,8 @@ void PiplelineFlowTask(void* parameter)
             double shuntvoltage_ina226 = shuntvoltageBuffer_ina226/countNum;
             // Serial.printf("shuntvoltage_ina226: %.2f\n", shuntvoltage_ina226);
             double busvoltage_ina226 = busvoltageBuffer_ina226/countNum;
-            double finalValue = (busvoltage_ina226 + (shuntvoltage_ina226))*1000;
+            // double finalValue = (busvoltage_ina226 + (shuntvoltage_ina226))*1000;
+            double finalValue = busvoltage_ina226*1000;
             Serial.printf("%.2f\n", finalValue);
             digitalWrite(activePin, LOW);
             Machine_Ctrl.lastLightValue = finalValue;
