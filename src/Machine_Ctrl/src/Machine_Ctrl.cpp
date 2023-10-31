@@ -382,9 +382,9 @@ bool SMachine_Ctrl::INIT_PoolData()
 
 void SMachine_Ctrl::StopDeviceAndINIT()
 {
+  CleanAllStepTask();
   peristalticMotorsCtrl.SetAllMotorStop();
   MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
-  CleanAllStepTask();
   digitalWrite(48, LOW);
   xSemaphoreGive(LOAD__ACTION_V2_xMutex);
 }
@@ -395,12 +395,25 @@ void SMachine_Ctrl::StopDeviceAndINIT()
 //! 流程設定相關
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+struct TaskInfo {
+  char* stepsGroupName;
+  int TaskThreadIndex;
+  bool* TaskThreadFree;
+  StackType_t* TaskThreadStackBuffer;
+  StaticTask_t* TaskThreadTaskBuffer;
+};
+
+
 //? pipeline task詳細執行過程
 void PiplelineFlowTask(void* parameter)
 { 
   //! TASK 有以下數種狀態
   //! 1. WAIT、2. NORUN、3. FAIL、4. SUCCESS、5. RUNNING、6. STOP_THIS_PIPELINE
-  char* stepsGroupName = (char*)parameter;
+  // char* stepsGroupName = (char*)parameter;
+
+  TaskInfo TaskInfoItem = *((TaskInfo*)parameter);
+  char* stepsGroupName = TaskInfoItem.stepsGroupName;
+
   String ThisPipelineTitle = (*Machine_Ctrl.JSON__pipelineConfig)["title"].as<String>();
   String stepsGroupNameString = String(stepsGroupName);
   String ThisStepGroupTitle = (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupNameString]["title"].as<String>();
@@ -546,9 +559,9 @@ void PiplelineFlowTask(void* parameter)
                   }
                   endTimeCheckJSON["finish"].set(true);
                   (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
-                  Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
                   Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
                   free(stepsGroupName);
+                  *TaskInfoItem.TaskThreadFree = true;
                   vTaskDelete(NULL);
                 }
                 else if (thisFailAction=="stopImmediately") {
@@ -558,9 +571,9 @@ void PiplelineFlowTask(void* parameter)
                 else if (thisFailAction=="stopPipeline") {
                   ESP_LOGE("", "停止當前流程，若有下一個排隊中的流程就執行他");
                   (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("STOP_THIS_PIPELINE");
-                  Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
                   Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
                   free(stepsGroupName);
+                  *TaskInfoItem.TaskThreadFree = true;
                   vTaskDelete(NULL);
                 }
                 //? 若非，則正常停止馬達運行
@@ -596,9 +609,9 @@ void PiplelineFlowTask(void* parameter)
                     }
                     endTimeCheckJSON["finish"].set(true);
                     (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
-                    Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
                     Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
                     free(stepsGroupName);
+                    *TaskInfoItem.TaskThreadFree = true;
                     vTaskDelete(NULL);
                   }
                   else if (thisFailAction=="stopImmediately") {
@@ -785,9 +798,9 @@ void PiplelineFlowTask(void* parameter)
               if (failAction == "stepStop") {
                 //? 當前step流程中止
                 (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("FAIL");
-                Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
                 Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
                 free(stepsGroupName);
+                *TaskInfoItem.TaskThreadFree = true;
                 vTaskDelete(NULL);
               }
               else if (failAction == "stopImmediately") {
@@ -885,39 +898,68 @@ void PiplelineFlowTask(void* parameter)
   else {
     (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepsGroupNameString]["RESULT"].set("SUCCESS");
   }
-  Machine_Ctrl.pipelineTaskHandleMap[stepsGroupNameString] = NULL;
   Machine_Ctrl.pipelineTaskHandleMap.erase(stepsGroupNameString);
   free(stepsGroupName);
+  *TaskInfoItem.TaskThreadFree = true;
   vTaskDelete(NULL);
 }
+
 
 //? 建立新的流程Task
 void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
 {
   if ((*JSON__pipelineConfig)["steps_group"].containsKey(stepsGroupName)) {
     ESP_LOGI("","RUN: %s", stepsGroupName.c_str());
-    TaskHandle_t *thisTaskHandle_t = new TaskHandle_t();
-    BaseType_t xReturned;
-    pipelineTaskHandleMap[stepsGroupName] = thisTaskHandle_t;
+    TaskInfo* ThisTaskInfo = new TaskInfo();
     int nameLength = stepsGroupName.length();
-    char* charPtr = (char*)malloc((nameLength + 1) * sizeof(char));
-    strcpy(charPtr, stepsGroupName.c_str());
+    (*ThisTaskInfo).stepsGroupName = (char*)malloc((nameLength + 1) * sizeof(char));
+    strcpy((*ThisTaskInfo).stepsGroupName, stepsGroupName.c_str());
+
     (*JSON__pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("RUNNING");
-    for (int i=0;i<10;i++) {
-      xReturned = xTaskCreate(
-        PiplelineFlowTask, NULL,
-        15000, (void*)charPtr, 3, thisTaskHandle_t
-      );
-      if (xReturned == pdPASS) {
-        break;
-      }
-      vTaskDelay(100/portTICK_PERIOD_MS);
+
+    if (TaskThread_Free_1) {
+      TaskThread_Free_1 = false;
+      Serial.println("使用第一");
+      (*ThisTaskInfo).TaskThreadFree = &TaskThread_Free_1;
+      (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_1;
+      (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_1;
     }
-    if (xReturned != pdPASS) {
-      Serial.println("Create Fail");
-      Serial.println(xReturned);
-      ESP.restart();
+    else if (TaskThread_Free_2) {
+      TaskThread_Free_2 = false;
+      Serial.println("使用第2");
+      (*ThisTaskInfo).TaskThreadFree = &TaskThread_Free_2;
+      (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_2;
+      (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_2;
     }
+    else if (TaskThread_Free_3) {
+      TaskThread_Free_3 = false;
+      Serial.println("使用第3");
+      (*ThisTaskInfo).TaskThreadFree = &TaskThread_Free_3;
+      (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_3;
+      (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_3;
+    }
+    else if (TaskThread_Free_4) {
+      TaskThread_Free_4 = false;
+      Serial.println("使用第4");
+      (*ThisTaskInfo).TaskThreadFree = &TaskThread_Free_4;
+      (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_4;
+      (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_4;
+    }
+    else if (TaskThread_Free_5) {
+      TaskThread_Free_5 = false;
+      Serial.println("使用第5");
+      (*ThisTaskInfo).TaskThreadFree = &TaskThread_Free_5;
+      (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_5;
+      (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_5;
+    }
+    else if (TaskThread_Free_6) {
+      TaskThread_Free_6 = false;
+      Serial.println("使用第6");
+      (*ThisTaskInfo).TaskThreadFree = &TaskThread_Free_6;
+      (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_6;
+      (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_6;
+    }
+    pipelineTaskHandleMap[stepsGroupName] = xTaskCreateStatic(PiplelineFlowTask, NULL, 15000, (void*)ThisTaskInfo, 3, (*ThisTaskInfo).TaskThreadStackBuffer, (*ThisTaskInfo).TaskThreadTaskBuffer);
   }
   else {
     ESP_LOGE("", "設定中找不到名為: %s 的 steps group", stepsGroupName.c_str());
@@ -935,13 +977,18 @@ void SMachine_Ctrl::CleanAllStepTask()
     TASK__pipelineFlowScan = NULL;
   }
   for (const auto& pipelineTaskHandle : pipelineTaskHandleMap) {
-    TaskHandle_t* taskChose = pipelineTaskHandle.second;
+    TaskHandle_t taskChose = pipelineTaskHandle.second;
     String stepName = pipelineTaskHandle.first;
-    Serial.println(stepName);
-    vTaskSuspend(*taskChose);
-    vTaskDelete(*taskChose);
+    vTaskSuspend(taskChose);
+    vTaskDelete(taskChose);
     pipelineTaskHandleMap.erase(stepName);
   }
+  TaskThread_Free_1 = true;
+  TaskThread_Free_2 = true;
+  TaskThread_Free_3 = true;
+  TaskThread_Free_4 = true;
+  TaskThread_Free_5 = true;
+  TaskThread_Free_6 = true;
 }
 
 //? 負責檢查Pipeline目前進度，以及判斷是否要執行
@@ -1242,9 +1289,9 @@ void PipelineFlowScan(void* parameter)
           for (const auto& pipelineTaskHandle : Machine_Ctrl.pipelineTaskHandleMap) {
             String stepName = pipelineTaskHandle.first;
             ESP_LOGI("", "停止流程: %s (%s)", (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"][stepName]["title"].as<String>().c_str(), stepName.c_str());
-            TaskHandle_t* taskChose = pipelineTaskHandle.second;
-            vTaskSuspend(*taskChose);
-            vTaskDelete(*taskChose);
+            TaskHandle_t taskChose = pipelineTaskHandle.second;
+            vTaskSuspend(taskChose);
+            vTaskDelete(taskChose);
             Machine_Ctrl.pipelineTaskHandleMap.erase(stepName);
           }
           Machine_Ctrl.peristalticMotorsCtrl.SetAllMotorStop();
@@ -1281,9 +1328,13 @@ void SMachine_Ctrl::CreatePipelineFlowScanTask(DynamicJsonDocument *pipelineStac
   }
   else {
     if (TASK__pipelineFlowScan == NULL) {
-      xTaskCreate(
-        PipelineFlowScan, "PipelineScan",
-        20000, (void*)pipelineStackList, 4, &TASK__pipelineFlowScan
+      // xTaskCreate(
+      //   PipelineFlowScan, "PipelineScan",
+      //   20000, (void*)pipelineStackList, 4, &TASK__pipelineFlowScan
+      // );
+      TASK__pipelineFlowScan = xTaskCreateStatic(
+        PipelineFlowScan, "PipelineScan", 20000,(void*)pipelineStackList, 4,
+        PipelineFlowScanTask_xStack, &PipelineFlowScanTask_xTaskBuffer
       );
     }
     else {

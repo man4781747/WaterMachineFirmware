@@ -21,33 +21,6 @@
 
 #include "Wifi_Ctrl/src/Wifi_Ctrl.h"
 
-
-////////////////////////////////////////////////////
-// 事件類別 - START
-////////////////////////////////////////////////////
-
-
-struct EVENT_RESULT {
-  int status = 99;
-  String message = "";
-};
-
-struct Peristaltic_task_config {
-  int index;
-  int status;
-  float time;
-  int until;
-  bool timeoutFail = false;
-  long startTime;
-  long endTime;
-};
-
-
-////////////////////////////////////////////////////
-// 事件類別 - END
-////////////////////////////////////////////////////
-
-
 /**
  * 儀器控制主體
 */
@@ -74,12 +47,41 @@ class SMachine_Ctrl
     DynamicJsonDocument *JSON__pipelineStack = new DynamicJsonDocument(60000);
     //? JSON__pipelineConfig: 當前運行的Pipeline詳細設定
     DynamicJsonDocument *JSON__pipelineConfig = new DynamicJsonDocument(120000);
+    //? pipelineTaskHandleMap: 記錄了Task專用的記憶體空間
+    void INIT_TaskMemeryPoolItemMap();
     //? pipelineTaskHandleMap: 記錄了當前正在執行Step的Task，Key為Step名稱、Value為TaskHandle_t
-    std::map<String, TaskHandle_t*> pipelineTaskHandleMap;
+    std::map<String, TaskHandle_t> pipelineTaskHandleMap;
     bool LOAD__ACTION_V2(DynamicJsonDocument *pipelineStackList);
     void AddNewPiplelineFlowTask(String stepsGroupName);
     void CleanAllStepTask();
-    void CreatePipelineFlowScanTask();
+
+    //? PipelineFlowScanTask專用記憶體空間
+    StackType_t PipelineFlowScanTask_xStack[20000* sizeof(StackType_t)];
+    StaticTask_t PipelineFlowScanTask_xTaskBuffer; 
+  
+    //? TaskThread專用記憶體空間
+    //? 目前最多可以支援6個Task同時執行
+    //TODO 目前使用比較白癡的寫法，待之後成功用 std::map與struct來放置資料後再改掉
+    StackType_t TaskThread_xStack_1[15000* sizeof(StackType_t)];
+    StaticTask_t TaskThread_xTaskBuffer_1; 
+    bool TaskThread_Free_1 = true;
+    StackType_t TaskThread_xStack_2[15000* sizeof(StackType_t)];
+    StaticTask_t TaskThread_xTaskBuffer_2; 
+    bool TaskThread_Free_2 = true;
+    StackType_t TaskThread_xStack_3[15000* sizeof(StackType_t)];
+    StaticTask_t TaskThread_xTaskBuffer_3; 
+    bool TaskThread_Free_3 = true;
+    StackType_t TaskThread_xStack_4[15000* sizeof(StackType_t)];
+    StaticTask_t TaskThread_xTaskBuffer_4; 
+    bool TaskThread_Free_4 = true;
+    StackType_t TaskThread_xStack_5[15000* sizeof(StackType_t)];
+    StaticTask_t TaskThread_xTaskBuffer_5; 
+    bool TaskThread_Free_5 = true;
+    StackType_t TaskThread_xStack_6[15000* sizeof(StackType_t)];
+    StaticTask_t TaskThread_xTaskBuffer_6; 
+    bool TaskThread_Free_6 = true;
+    //TODO END
+
     void CreatePipelineFlowScanTask(DynamicJsonDocument *pipelineStackList);
     //? 排程狀態檢視Task，負責檢查排程進度、觸發排程執行
     TaskHandle_t TASK__pipelineFlowScan = NULL;

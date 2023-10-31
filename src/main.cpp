@@ -8,8 +8,6 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <esp_log.h>
-#include <ArduinoJson.h>
-#include "CalcFunction.h"
 #include "Machine_Ctrl/src/Machine_Ctrl.h"
 
 //TODO oled暫時這樣寫死
@@ -21,19 +19,7 @@
 #include "../lib/QRCode/src/qrcode.h"
 //TODO oled暫時這樣寫死
 
-//TODO
-#include <vector>
-#include <map>
-//TODO
-
-
-#include <SD.h>
-// #include <Adafruit_Sensor.h>
-// #include <DHT.h>
-// #include <DHT_U.h>
-#include <HTTPClient.h>
-
-const char* FIRMWARE_VERSION = "V3.23.1003.0";
+const char* FIRMWARE_VERSION = "V3.23.1005.0";
 
 void scanI2C();
 
@@ -41,16 +27,17 @@ void setup() {
   Serial.begin(115200);
   pinMode(16, OUTPUT);
   pinMode(17, OUTPUT);
+  digitalWrite(16, HIGH);
+  digitalWrite(17, HIGH);
+  // Machine_Ctrl.INIT_TaskMemeryPoolItemMap();
   Machine_Ctrl.INIT_I2C_Wires();
   ESP_LOGD("", "儀器啟動，韌體版本為: %s", FIRMWARE_VERSION);
   ESP_LOGD("", "準備讀取SD卡內資訊");
   Machine_Ctrl.INIT_SD_And_LoadConfigs();
   ESP_LOGD("", "準備讀取SPIFFS內資訊");
   Machine_Ctrl.INIT_SPIFFS_And_LoadConfigs();
-  
   ESP_LOGD("", "準備更新最新的各池感測器資料");
   Machine_Ctrl.INIT_PoolData();
-
   ESP_LOGD("", "準備初始化蠕動馬達控制模組");
   Machine_Ctrl.peristalticMotorsCtrl.INIT_Motors(42,41,40,2);
   ESP_LOGD("", "準備初始化伺服馬達控制模組(PCA9685)");
@@ -59,7 +46,6 @@ void setup() {
   Machine_Ctrl.StopDeviceAndINIT();
   ESP_LOGD("", "準備讀取log資訊");
   Machine_Ctrl.SD__LoadOldLogs();
-
   ESP_LOGD("", "準備使用WIFI連線");
   Machine_Ctrl.BackendServer.ConnectToWifi();
   ESP_LOGD("", "準備啟動Server");
@@ -67,7 +53,8 @@ void setup() {
   // Machine_Ctrl.ShowIPAndQRCodeOnOled();
   Machine_Ctrl.SetLog(3, "儀器啟動完畢", "");
   ESP_LOGD("", "儀器啟動完畢!");
-  
+  digitalWrite(16, LOW);
+  digitalWrite(17, LOW);
   delay(1000);
 }
 
