@@ -688,21 +688,23 @@ void CWIFI_Ctrler::setAPIs()
   asyncServer.on("/api/pipeline/config", HTTP_POST, 
     [&](AsyncWebServerRequest *request)
     { 
-      String FileContent = String(newConfigUpdateFileBuffer ,newConfigUpdateFileBufferLen);
       free(newConfigUpdateFileBuffer);
-      DynamicJsonDocument NewDeviceSetting(300000);
-      DeserializationError error = deserializeJson(NewDeviceSetting, FileContent);
-      if (error) {
-        Serial.print("deserializeJson() failed: ");
-        Serial.println(error.f_str());
-        AsyncWebServerResponse* response = request->beginResponse(400, "application/json", "{\"Result\":\"FAIL\"}");
-        SendHTTPesponse(request, response);
-      }
-      else {
-        AsyncWebServerResponse* response = request->beginResponse(200, "application/json", FileContent);
-        SendHTTPesponse(request, response);
-      }
-
+      // String FileContent = String(newConfigUpdateFileBuffer ,newConfigUpdateFileBufferLen);
+      // free(newConfigUpdateFileBuffer);
+      // DynamicJsonDocument NewDeviceSetting(300000);
+      // DeserializationError error = deserializeJson(NewDeviceSetting, FileContent);
+      // if (error) {
+      //   Serial.print("deserializeJson() failed: ");
+      //   Serial.println(error.f_str());
+      //   AsyncWebServerResponse* response = request->beginResponse(400, "application/json", "{\"Result\":\"FAIL\"}");
+      //   SendHTTPesponse(request, response);
+      // }
+      // else {
+      //   AsyncWebServerResponse* response = request->beginResponse(200, "application/json", FileContent);
+      //   SendHTTPesponse(request, response);
+      // }
+      AsyncWebServerResponse* response = request->beginResponse(200, "application/json", "{\"Result\":\"OK\"}");
+      SendHTTPesponse(request, response);
     },
     [&](AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final)
     {
@@ -720,6 +722,7 @@ void CWIFI_Ctrler::setAPIs()
         configTempFile = SD.open("/pipelines/"+filename, FILE_WRITE);
         configTempFile.write(newConfigUpdateFileBuffer ,index + len);
         configTempFile.close();
+        Serial.printf("檔案更新完成\n", filename.c_str());
         Machine_Ctrl.SD__UpdatePipelineConfigList();
       } 
       else {
