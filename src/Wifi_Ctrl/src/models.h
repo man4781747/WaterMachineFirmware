@@ -127,6 +127,16 @@ void ws_GetAllPoolData(AsyncWebSocket *server, AsyncWebSocketClient *client, Dyn
     DynamicJsonDocument D_poolSensorDataSended(5000);
     JsonObject D_poolsSensorData = JsonPair_poolsSensorData.value();
     String S_PoolID = String(JsonPair_poolsSensorData.key().c_str());
+
+    for (JsonVariant value : (*Machine_Ctrl.JSON__PoolConfig).as<JsonArray>()) {
+      JsonObject PoolConfigItem = value.as<JsonObject>();
+      if (PoolConfigItem["id"].as<String>() == S_PoolID) {
+        if (PoolConfigItem["external_mapping"].as<String>() != "") {
+          S_PoolID = PoolConfigItem["external_mapping"].as<String>();
+        }
+        break;
+      }
+    }
     Serial.println(S_PoolID);
     D_poolSensorDataSended["PoolID"] = S_PoolID;
     D_poolSensorDataSended["PoolName"] = D_poolsSensorData["PoolName"].as<String>();

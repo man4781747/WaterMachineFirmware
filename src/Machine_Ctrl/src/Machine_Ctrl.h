@@ -89,6 +89,13 @@ class SMachine_Ctrl
     SemaphoreHandle_t LOAD__ACTION_V2_xMutex = NULL;
     double lastLightValue;
 
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //! 排程功能相關
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    //? 建立排程管理Task，負責定期檢查當前時間是否有排程需要執行
+    void CreateScheduleManagerTask();
+    TaskHandle_t TASK__ScheduleManager = NULL;
 
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //! SPIFFS系統相關
@@ -110,15 +117,22 @@ class SMachine_Ctrl
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     void INIT_SD_And_LoadConfigs();
     bool INIT_SD_Card();
+    String FilePath__SD__DeviceConfig = "/config/device_config.json";
+    DynamicJsonDocument *JSON__DeviceConfig = new DynamicJsonDocument(1000);
     String FilePath__SD__SpectrophotometerConfig = "/config/spectrophotometer_config.json";
     DynamicJsonDocument *JSON__SpectrophotometerConfig = new DynamicJsonDocument(4000);
     String FilePath__SD__PHmeterConfig = "/config/PHmeter_config.json";
     DynamicJsonDocument *JSON__PHmeterConfig = new DynamicJsonDocument(2000);
     String FilePath__SD__PoolConfig = "/config/pool_config.json";
     DynamicJsonDocument *JSON__PoolConfig = new DynamicJsonDocument(2000);
+    String FilePath__SD__ScheduleConfig = "/config/schedule_config.json";
+    DynamicJsonDocument *JSON__ScheduleConfig = new DynamicJsonDocument(10000);
+    void SD__DeviceConfig();
     void SD__LoadspectrophotometerConfig();
     void SD__LoadPHmeterConfig();
     void SD__LoadPoolConfig();
+    void SD__LoadScheduleConfig();
+    void SD__ReWriteScheduleConfig();
     DynamicJsonDocument *JSON__PipelineConfigList = new DynamicJsonDocument(10000);
     //? 更新當前pipeline列表資料
     //? 以下情況需要觸發他: 1. 剛開機時、2. pipeline檔案有變動時

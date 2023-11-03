@@ -50,6 +50,8 @@ void setup() {
   Machine_Ctrl.BackendServer.ConnectToWifi();
   ESP_LOGD("", "準備啟動Server");
   Machine_Ctrl.BackendServer.ServerStart();
+  ESP_LOGD("", "準備建立排程管理");
+  Machine_Ctrl.CreateScheduleManagerTask();
   // Machine_Ctrl.ShowIPAndQRCodeOnOled();
   Machine_Ctrl.SetLog(3, "儀器啟動完畢", "");
   ESP_LOGD("", "儀器啟動完畢!");

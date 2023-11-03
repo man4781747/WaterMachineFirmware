@@ -136,6 +136,8 @@ bool SMachine_Ctrl::SPIFFS__ReWriteWiFiConfig()
 void SMachine_Ctrl::INIT_SD_And_LoadConfigs()
 {
   INIT_SD_Card();
+  ESP_LOGD("", "準備讀取儀器基礎設定檔");
+  SD__DeviceConfig();
   ESP_LOGD("", "準備讀取光度感測器的設定檔");
   SD__LoadspectrophotometerConfig();
   ESP_LOGD("", "準備讀取PH感測器的設定檔");
@@ -144,6 +146,8 @@ void SMachine_Ctrl::INIT_SD_And_LoadConfigs()
   SD__LoadPoolConfig();
   ESP_LOGD("", "準備更新當前SD卡內有的Pipeline檔案列表");
   SD__UpdatePipelineConfigList();
+  ESP_LOGD("", "準備讀取排程的設定檔");
+  SD__LoadScheduleConfig();
 }
 
 bool SMachine_Ctrl::INIT_SD_Card()
@@ -159,6 +163,11 @@ bool SMachine_Ctrl::INIT_SD_Card()
   }
 }
 
+void SMachine_Ctrl::SD__DeviceConfig()
+{
+  ExFile_LoadJsonFile(SD, FilePath__SD__DeviceConfig, *JSON__DeviceConfig);
+}
+
 void SMachine_Ctrl::SD__LoadspectrophotometerConfig()
 {
   ExFile_LoadJsonFile(SD, FilePath__SD__SpectrophotometerConfig, *JSON__SpectrophotometerConfig);
@@ -172,6 +181,16 @@ void SMachine_Ctrl::SD__LoadPHmeterConfig()
 void SMachine_Ctrl::SD__LoadPoolConfig()
 {
   ExFile_LoadJsonFile(SD, FilePath__SD__PoolConfig, *JSON__PoolConfig);
+}
+
+void SMachine_Ctrl::SD__LoadScheduleConfig()
+{
+  ExFile_LoadJsonFile(SD, FilePath__SD__ScheduleConfig, *JSON__ScheduleConfig);
+}
+
+void SMachine_Ctrl::SD__ReWriteScheduleConfig()
+{
+  ExFile_WriteJsonFile(SD, FilePath__SD__ScheduleConfig, *JSON__ScheduleConfig);
 }
 
 void SMachine_Ctrl::SD__UpdatePipelineConfigList()
@@ -389,7 +408,63 @@ void SMachine_Ctrl::StopDeviceAndINIT()
   xSemaphoreGive(LOAD__ACTION_V2_xMutex);
 }
 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! 排程功能相關
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+void ScheduleManager(void* parameter)
+{ 
+  for(;;) {
+    ESP_LOGI("", "準備檢查是否有排程設定");
+    time_t nowTime = now();
+    if ( nowTime < 946656000 ) {
+      ESP_LOGW("", "儀器時間有誤，暫時跳過排程設定檢查");
+      vTaskDelay(1000/portTICK_PERIOD_MS);
+      continue;
+    }
+    //? 每5分鐘檢查一次排程
+    if (minute(nowTime) % 5 == 0) {
+      int Weekday = weekday(nowTime);
+      int Hour = hour(nowTime);
+      int Minute = minute(nowTime);
+
+      for (JsonPair ScheduleConfigChose : (*Machine_Ctrl.JSON__ScheduleConfig).as<JsonObject>()) {
+        String ScheduleConfigID = String(ScheduleConfigChose.key().c_str());
+        JsonObject ScheduleConfig = ScheduleConfigChose.value().as<JsonObject>();
+        for (JsonVariant weekdayItem : ScheduleConfig["schedule"].as<JsonArray>()[1].as<JsonArray>()) {
+          if (weekdayItem.as<int>() == Weekday) {
+            for (JsonVariant hourItem : ScheduleConfig["schedule"].as<JsonArray>()[2].as<JsonArray>()) {
+              if (hourItem.as<int>() == Hour) {
+                for (JsonVariant minuteItem : ScheduleConfig["schedule"].as<JsonArray>()[3].as<JsonArray>()) {
+                  if (minuteItem.as<int>() == Minute) {
+                    Serial.println("執行排程瞜");
+                    serializeJsonPretty(ScheduleConfig, Serial);
+                    break;
+                  }
+                }
+                break;
+              }
+            }
+            break;
+          }
+        }
+      }
+    }
+    ESP_LOGI("", "排程檢查完畢，等待下一個檢查時段");
+    vTaskDelay(1000*60*1/portTICK_PERIOD_MS);
+  }
+}
+
+
+void SMachine_Ctrl::CreateScheduleManagerTask() 
+{
+  if (TASK__ScheduleManager == NULL) {
+    xTaskCreate(
+      ScheduleManager, "ScheduleManager",
+      10000, NULL, 4, &TASK__ScheduleManager
+    );
+  }
+}
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //! 流程設定相關
@@ -650,7 +725,7 @@ void PiplelineFlowTask(void* parameter)
           int sensorAddr;
           if (spectrophotometerIndex == 0) {
             activePin = 16;
-            sensorAddr = 0x4F;
+            sensorAddr = 0x44;
           } else {
             activePin = 17;
             sensorAddr = 0x45;
