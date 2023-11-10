@@ -437,8 +437,30 @@ void ScheduleManager(void* parameter)
               if (hourItem.as<int>() == Hour) {
                 for (JsonVariant minuteItem : ScheduleConfig["schedule"].as<JsonArray>()[3].as<JsonArray>()) {
                   if (minuteItem.as<int>() == Minute) {
-                    Serial.println("執行排程瞜");
-                    serializeJsonPretty(ScheduleConfig, Serial);
+                    if (xSemaphoreTake(Machine_Ctrl.LOAD__ACTION_V2_xMutex, 0) == pdTRUE) {
+                      ESP_LOGD("本雞排程", "執行排程瞜");
+                      (*Machine_Ctrl.JSON__pipelineStack).clear();
+                      int eventCount = 0;
+                      for (JsonVariant poolScheduleItem : ScheduleConfig["schedule"].as<JsonArray>()[0].as<JsonArray>()) {
+                        int targetIndex = poolScheduleItem.as<int>();
+                        String TargetName = "pool_"+String(targetIndex+1)+"_all_data_get.json";
+                        String FullFilePath = "/pipelines/"+TargetName;
+                        DynamicJsonDocument singlePipelineSetting(10000);
+                        singlePipelineSetting["FullFilePath"].set(FullFilePath);
+                        singlePipelineSetting["TargetName"].set(TargetName);
+                        singlePipelineSetting["stepChose"].set("");
+                        singlePipelineSetting["eventChose"].set("");
+                        singlePipelineSetting["eventIndexChose"].set(-1);
+                        (*Machine_Ctrl.JSON__pipelineStack).add(singlePipelineSetting);
+                        ESP_LOGD("WebSocket", " - 事件 %d", eventCount+1);
+                        ESP_LOGD("WebSocket", "   - 檔案路徑:\t%s", FullFilePath.c_str());
+                        ESP_LOGD("WebSocket", "   - 目標名稱:\t%s", TargetName.c_str());
+                      }
+                      Machine_Ctrl.LOAD__ACTION_V2(Machine_Ctrl.JSON__pipelineStack);
+                    }
+                    else {
+                      ESP_LOGD("本雞排程", "儀器忙碌中，跳過本次排程");
+                    }
                     break;
                   }
                 }
@@ -520,8 +542,8 @@ void PiplelineFlowTask(void* parameter)
     for (JsonObject eventItem : eventList) {
       //! 伺服馬達控制設定
       if (eventItem.containsKey("pwm_motor_list")) {
-        digitalWrite(16, HIGH);
-        digitalWrite(17, HIGH);
+        // digitalWrite(16, HIGH);
+        // digitalWrite(17, HIGH);
         pinMode(4, OUTPUT);
         digitalWrite(4, HIGH);
         vTaskDelay(50/portTICK_PERIOD_MS);
@@ -537,8 +559,8 @@ void PiplelineFlowTask(void* parameter)
         vTaskDelay(2000/portTICK_PERIOD_MS);
         Machine_Ctrl.motorCtrl.ResetPCA9685();
         digitalWrite(4, LOW);
-        digitalWrite(16, LOW);
-        digitalWrite(17, LOW);
+        // digitalWrite(16, LOW);
+        // digitalWrite(17, LOW);
       }
       //! 蠕動馬達控制設定
       else if (eventItem.containsKey("peristaltic_motor_list")) {

@@ -27,8 +27,10 @@ void setup() {
   Serial.begin(115200);
   pinMode(16, OUTPUT);
   pinMode(17, OUTPUT);
-  digitalWrite(16, HIGH);
-  digitalWrite(17, HIGH);
+  digitalWrite(16, LOW);
+  digitalWrite(17, LOW);
+  // digitalWrite(16, HIGH);
+  // digitalWrite(17, HIGH);
   // Machine_Ctrl.INIT_TaskMemeryPoolItemMap();
   Machine_Ctrl.INIT_I2C_Wires();
   ESP_LOGD("", "儀器啟動，韌體版本為: %s", FIRMWARE_VERSION);
@@ -55,8 +57,8 @@ void setup() {
   // Machine_Ctrl.ShowIPAndQRCodeOnOled();
   Machine_Ctrl.SetLog(3, "儀器啟動完畢", "");
   ESP_LOGD("", "儀器啟動完畢!");
-  digitalWrite(16, LOW);
-  digitalWrite(17, LOW);
+  // digitalWrite(16, LOW);
+  // digitalWrite(17, LOW);
   delay(1000);
 }
 
