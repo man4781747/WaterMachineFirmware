@@ -391,13 +391,19 @@ void WiFiConnectChecker(void* parameter) {
   for (;;) {
     if (!WiFi.isConnected()) {
       // Machine_Ctrl.PrintOnScreen("Connect Wifi");
-      Machine_Ctrl.SetLog(3, "偵測到WiFi斷線", "嘗試重新連接", NULL, NULL);
+      // Machine_Ctrl.SetLog(3, "偵測到WiFi斷線", "嘗試重新連接", NULL, NULL);
       ESP_LOGW(LOG_TAG_WIFI,"偵測到WiFi斷線，嘗試重新連接");
       WiFi.disconnect();
+      Serial.println((*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Name"].as<String>());
+      Serial.println((*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Password"].as<String>());
+      // WiFi.begin(
+      //   "IDWATER","56651588"
+      // );   
       WiFi.begin(
         (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Name"].as<String>().c_str(),
         (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Password"].as<String>().c_str()
       );
+      vTaskDelay(5000/portTICK_PERIOD_MS);
       lasUpdatetime = -9999;
     } else {
       // Serial.println("*****");

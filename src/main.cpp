@@ -47,7 +47,7 @@ void setup() {
   ESP_LOGD("", "停止所有馬達動作");
   Machine_Ctrl.StopDeviceAndINIT();
   ESP_LOGD("", "準備讀取log資訊");
-  Machine_Ctrl.SD__LoadOldLogs();
+  // Machine_Ctrl.SD__LoadOldLogs();
   ESP_LOGD("", "準備使用WIFI連線");
   Machine_Ctrl.BackendServer.ConnectToWifi();
   ESP_LOGD("", "準備啟動Server");
