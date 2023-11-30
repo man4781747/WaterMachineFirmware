@@ -387,39 +387,32 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
 
 void WiFiConnectChecker(void* parameter) {
   time_t lasUpdatetime = 0;
+  WiFi.begin(
+    (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Name"].as<String>().c_str(),
+    (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Password"].as<String>().c_str()
+  );
+  WiFi.setAutoConnect(false);
+  WiFi.setAutoReconnect(false);
   //? 每1秒檢查WiFi是否還連線
   for (;;) {
     if (!WiFi.isConnected()) {
-      // Machine_Ctrl.PrintOnScreen("Connect Wifi");
-      // Machine_Ctrl.SetLog(3, "偵測到WiFi斷線", "嘗試重新連接", NULL, NULL);
       ESP_LOGW(LOG_TAG_WIFI,"偵測到WiFi斷線，嘗試重新連接");
       WiFi.disconnect();
-      Serial.println((*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Name"].as<String>());
-      Serial.println((*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Password"].as<String>());
-      // WiFi.begin(
-      //   "IDWATER","56651588"
-      // );   
       WiFi.begin(
         (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Name"].as<String>().c_str(),
         (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Password"].as<String>().c_str()
       );
-      vTaskDelay(5000/portTICK_PERIOD_MS);
-      lasUpdatetime = -9999;
-    } else {
-      // Serial.println("*****");
-      // Serial.println(lasUpdatetime);
-      // Serial.println(now());
-      if (now() > lasUpdatetime + 3600) {
-        ESP_LOGD("", "準備更新儀器時間");
-        Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
-        lasUpdatetime = now();
-      }
-      // ESP_LOGD("", "準備更新儀器時間");
-      // Machine_Ctrl.PrintOnScreen("Update Time");
-      // Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
-      // Machine_Ctrl.ShowIPAndQRCodeOnOled();
+      // lasUpdatetime = -9999;
     }
-    vTaskDelay(1000/portTICK_PERIOD_MS);
+    vTaskDelay(10000/portTICK_PERIOD_MS);
+    // if (WiFi.isConnected()) {
+    //   if (now() > lasUpdatetime + 3600) {
+    //     ESP_LOGD("", "準備更新儀器時間");
+    //     Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
+    //     lasUpdatetime = now();
+    //   }
+    // }
+    vTaskDelay(50000/portTICK_PERIOD_MS);
   }
 }
 
@@ -580,7 +573,6 @@ void CWIFI_Ctrler::ServerStart()
 {
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "*");
-
   ws.onEvent(onWebSocketEvent);
   asyncServer.addHandler(&ws);
   asyncServer.begin();
@@ -726,6 +718,78 @@ void CWIFI_Ctrler::setAPIs()
     }
   );
 
+  //LOG系統
+
+  //? default的log api是抓取最新100筆log
+  asyncServer.on("/api/logs", HTTP_GET,
+    [&](AsyncWebServerRequest *request)
+    { 
+      Machine_Ctrl.SD__LoadOldLogs();
+      String RetuenString;
+      serializeJson(*Machine_Ctrl.JSON__DeviceLogSave, RetuenString);
+      AsyncWebServerResponse* response = request->beginResponse(200, "application/json", RetuenString);
+      SendHTTPesponse(request, response);
+    }
+  );
+
+  asyncServer.on("^\\/api\\/logs\\/([a-zA-Z0-9_.-]+)$", HTTP_GET,
+    [&](AsyncWebServerRequest *request)
+    { 
+      AsyncWebServerResponse* response;
+      String keyName = request->pathArg(0);
+      if ((*Machine_Ctrl.JSON__ScheduleConfig).containsKey(keyName)) {
+        response = request->beginResponse(200, "application/json", (*Machine_Ctrl.JSON__ScheduleConfig)[keyName]);
+      } 
+      else {
+        response = request->beginResponse(500, "application/json", "{\"Result\":\"Can't Find: "+keyName+"\"}");
+      }
+      SendHTTPesponse(request, response);
+    }
+  );
+
+  // 感測器資廖系統
+
+  //? default的log api是抓取最新100筆log
+  asyncServer.on("/api/sensor", HTTP_GET,
+    [&](AsyncWebServerRequest *request)
+    { 
+      DynamicJsonDocument ReturnData(100000);
+      if (request->hasParam("st") & request->hasParam("et")) {
+        String StartTime = request->getParam("st")->value();
+        String EndTime = request->getParam("et")->value();
+        // Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor WHERE time >= "+StartTime+" AND time <="+EndTime+" ORDER BY time DESC LIMIT 100", &ReturnData);
+        Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor WHERE time BETWEEN '"+StartTime+" 00:00:00' AND '"+EndTime+" 00:00:00' ORDER BY time DESC LIMIT 100", &ReturnData);
+      }
+      else {
+        Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor DESC LIMIT 100", &ReturnData);
+      }
+      String RetuenString;
+      serializeJson(ReturnData, RetuenString);
+      AsyncWebServerResponse* response = request->beginResponse(200, "application/json", RetuenString);
+      SendHTTPesponse(request, response);
+    }
+  );
+
+  asyncServer.on("/api/sensor", HTTP_DELETE,
+    [&](AsyncWebServerRequest *request)
+    { 
+
+      DynamicJsonDocument ReturnData(100000);
+      if (request->hasParam("st") & request->hasParam("et")) {
+        String StartTime = request->getParam("st")->value();
+        String EndTime = request->getParam("et")->value();
+        // Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor WHERE time >= "+StartTime+" AND time <="+EndTime+" ORDER BY time DESC LIMIT 100", &ReturnData);
+        Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor WHERE time BETWEEN '"+StartTime+" 00:00:00' AND '"+EndTime+" 00:00:00' ORDER BY time DESC LIMIT 100", &ReturnData);
+      }
+      else {
+        Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor ORDER BY id DESC LIMIT 1000", &ReturnData);
+      }
+      String RetuenString;
+      serializeJson(ReturnData, RetuenString);
+      AsyncWebServerResponse* response = request->beginResponse(200, "application/json", RetuenString);
+      SendHTTPesponse(request, response);
+    }
+  );
 
 
   asyncServer.on("/api/config", HTTP_POST, 
@@ -812,6 +876,43 @@ void CWIFI_Ctrler::setAPIs()
     String SensorHistoryFilesList;
     serializeJsonPretty(ExFile_listDir(SD,"/datas"), SensorHistoryFilesList);
     AsyncWebServerResponse* response = request->beginResponse(200, "application/json", SensorHistoryFilesList);
+    SendHTTPesponse(request, response);
+  });
+
+
+
+  asyncServer.on("/api/wifi", HTTP_GET, [&](AsyncWebServerRequest *request){
+    String ReturnData;
+    serializeJson((*Machine_Ctrl.JSON__WifiConfig)["Remote"], ReturnData);
+    AsyncWebServerResponse* response = request->beginResponse(200, "application/json", ReturnData);
+    SendHTTPesponse(request, response);
+  });
+
+  asyncServer.on("/api/wifi", HTTP_POST, [&](AsyncWebServerRequest *request){
+    String StringReturnMessage;
+    String NewRemoteName;
+    String NewRemotePassword;
+    DynamicJsonDocument ReturnMessage(1000);
+    AsyncWebServerResponse* response;
+    if (request->hasParam("remote_Name", true) & request->hasParam("remote_Password", true)) {
+      NewRemoteName = request->getParam("remote_Name", true)->value();
+      NewRemotePassword = request->getParam("remote_Password", true)->value();
+      (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Name"].set(NewRemoteName);
+      (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Password"].set(NewRemotePassword);
+      Machine_Ctrl.SPIFFS__ReWriteWiFiConfig();
+      WiFi.disconnect();
+      WiFi.begin(
+        (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Name"].as<String>().c_str(),
+        (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Password"].as<String>().c_str()
+      );
+      ReturnMessage["Message"] = "Success";
+      serializeJson(ReturnMessage, StringReturnMessage);
+      response = request->beginResponse(200, "application/json", StringReturnMessage);
+    } else {
+      ReturnMessage["Message"] = "需要參數: remote_Name, remote_Password";
+      serializeJson(ReturnMessage, StringReturnMessage);
+      response = request->beginResponse(500, "application/json", StringReturnMessage);
+    }
     SendHTTPesponse(request, response);
   });
 
@@ -942,13 +1043,18 @@ DynamicJsonDocument CWIFI_Ctrler::GetSSIDList()
 DynamicJsonDocument CWIFI_Ctrler::GetWifiInfo()
 {
   JsonObject WifiConfigJSON = (*Machine_Ctrl.JSON__WifiConfig).as<JsonObject>();
-  DynamicJsonDocument json_doc(3000);
-  JsonVariant json_obj = json_doc.to<JsonVariant>();
-  WiFi.softAPgetHostname();
-  json_doc["remote"]["ip"].set(IP);
-  json_doc["remote"]["rssi"].set(rssi);
-  json_doc["remote"]["mac_address"].set(mac_address);
-  return json_doc;
+  WifiConfigJSON["Remote"]["ip"].set(WiFi.softAPIP().toString());
+  WifiConfigJSON["Remote"]["rssi"].set(WiFi.RSSI());
+  WifiConfigJSON["Remote"]["mac_address"].set(WiFi.softAPmacAddress());
+
+
+  // DynamicJsonDocument json_doc(3000);
+  // JsonVariant json_obj = json_doc.to<JsonVariant>();
+  // WiFi.softAPgetHostname();
+  // json_doc["remote"]["ip"].set(IP);
+  // json_doc["remote"]["rssi"].set(rssi);
+  // json_doc["remote"]["mac_address"].set(mac_address);
+  return WifiConfigJSON;
 };
 
 String CWIFI_Ctrler::GetWifiInfoString()

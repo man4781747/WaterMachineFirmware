@@ -9,6 +9,7 @@
 #include <Wire.h>
 #include <esp_log.h>
 #include "Machine_Ctrl/src/Machine_Ctrl.h"
+// #include "lx_20s.h"
 
 //TODO oled暫時這樣寫死
 // #include <Wire.h> 
@@ -32,37 +33,87 @@ void setup() {
   // digitalWrite(16, HIGH);
   // digitalWrite(17, HIGH);
   // Machine_Ctrl.INIT_TaskMemeryPoolItemMap();
+  // Serial2.begin(115200,SERIAL_8N1, 9, 10);
   Machine_Ctrl.INIT_I2C_Wires();
+  // scanI2C();
+  Machine_Ctrl.PrintOnScreen("Load SD Card");
   ESP_LOGD("", "儀器啟動，韌體版本為: %s", FIRMWARE_VERSION);
   ESP_LOGD("", "準備讀取SD卡內資訊");
   Machine_Ctrl.INIT_SD_And_LoadConfigs();
+
+  Machine_Ctrl.PrintOnScreen("Load DB File");
+  Machine_Ctrl.openLogDB();
+  Machine_Ctrl.openSensorDB();
+  Machine_Ctrl.PrintOnScreen("Load SPIFFS File");
   ESP_LOGD("", "準備讀取SPIFFS內資訊");
   Machine_Ctrl.INIT_SPIFFS_And_LoadConfigs();
   ESP_LOGD("", "準備更新最新的各池感測器資料");
+  Machine_Ctrl.PrintOnScreen("Load Pool Data");
   Machine_Ctrl.INIT_PoolData();
   ESP_LOGD("", "準備初始化蠕動馬達控制模組");
+  Machine_Ctrl.PrintOnScreen("INIT Peristaltic Motors");
   Machine_Ctrl.peristalticMotorsCtrl.INIT_Motors(42,41,40,2);
   ESP_LOGD("", "準備初始化伺服馬達控制模組(PCA9685)");
+  Machine_Ctrl.PrintOnScreen("INIT Servo Motors");
   Machine_Ctrl.motorCtrl.INIT_Motors(Machine_Ctrl.WireOne);
   ESP_LOGD("", "停止所有馬達動作");
   Machine_Ctrl.StopDeviceAndINIT();
-  ESP_LOGD("", "準備讀取log資訊");
-  // Machine_Ctrl.SD__LoadOldLogs();
+  // ESP_LOGD("", "準備讀取log資訊");
+  Machine_Ctrl.PrintOnScreen("Load Logs");
+  Machine_Ctrl.SD__LoadOldLogs();
   ESP_LOGD("", "準備使用WIFI連線");
+  Machine_Ctrl.PrintOnScreen("INIT WiFi");
   Machine_Ctrl.BackendServer.ConnectToWifi();
   ESP_LOGD("", "準備啟動Server");
+  Machine_Ctrl.PrintOnScreen("INIT Web Server");
   Machine_Ctrl.BackendServer.ServerStart();
   ESP_LOGD("", "準備建立排程管理");
+  Machine_Ctrl.PrintOnScreen("INIT Task Manager");
   Machine_Ctrl.CreateScheduleManagerTask();
   // Machine_Ctrl.ShowIPAndQRCodeOnOled();
+  // Machine_Ctrl.PrintOnScreen("Wait For WiFi Connect");
+  Machine_Ctrl.BuildTimeCheckTask();
+  Machine_Ctrl.BuildOLEDCheckTask();
   Machine_Ctrl.SetLog(3, "儀器啟動完畢", "");
   ESP_LOGD("", "儀器啟動完畢!");
   // digitalWrite(16, LOW);
   // digitalWrite(17, LOW);
+  // Serial2.begin(115200,SERIAL_8N1, 9, 10);
   delay(1000);
+  // pinMode(4, OUTPUT);
+  // digitalWrite(4, HIGH);
 }
 
 void loop() {
+  // for (int MotorChose=1;MotorChose<=6;MotorChose++) {
+  //   LX_20S_SerialServoMove(Serial2, MotorChose,0,500);
+  // }
+  // delay(2000);
+  // Serial.println("=====================================");
+  // Serial.println("NO,\tPosition,\tTemp,\tV");
+  // for (int MotorChose=1;MotorChose<=6;MotorChose++) {
+  //   Serial.printf("%d,\t%d,\t%d,\t%d\n", 
+  //     MotorChose, 
+  //     LX_20S_SerialServoReadPosition(Serial2, MotorChose),
+  //     LX_20S_SerialServoReadTeampature(Serial2, MotorChose),
+  //     LX_20S_SerialServoReadVIN(Serial2, MotorChose)
+  //   );
+  // }
+
+  // for (int MotorChose=1;MotorChose<=6;MotorChose++) {
+  //   LX_20S_SerialServoMove(Serial2, MotorChose,1000,500);
+  // }
+  // delay(2000);
+  // Serial.println("=====================================");
+  // Serial.println("NO,\tPosition,\tTemp,\tV");
+  // for (int MotorChose=1;MotorChose<=6;MotorChose++) {
+  //   Serial.printf("%d,\t%d,\t%d,\t%d\n", 
+  //     MotorChose, 
+  //     LX_20S_SerialServoReadPosition(Serial2, MotorChose),
+  //     LX_20S_SerialServoReadTeampature(Serial2, MotorChose),
+  //     LX_20S_SerialServoReadVIN(Serial2, MotorChose)
+  //   );
+  // }
   vTaskDelay(9999999/portTICK_PERIOD_MS);
 }
 

@@ -13,6 +13,7 @@
 #include <LTR_329ALS_01.h>
 
 #include <TimeLib.h>   
+#include <sqlite3.h>
 
 #include <U8g2lib.h>
 #include <Adafruit_GFX.h>
@@ -29,6 +30,9 @@ class SMachine_Ctrl
   public:
     SMachine_Ctrl(void){
       vSemaphoreCreateBinary(LOAD__ACTION_V2_xMutex);
+      vSemaphoreCreateBinary(SQL_xMutex);
+      vSemaphoreCreateBinary(LX_20S_xMutex);
+      // sqlite3_initialize();
     };
 
     void INIT_I2C_Wires();
@@ -37,12 +41,23 @@ class SMachine_Ctrl
     //? 緊急終止所有動作，並且回歸初始狀態
     void StopDeviceAndINIT();
 
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //! SQL相關
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
+    int db_exec(sqlite3 *db, String sql, JsonDocument *jsonData);
+    sqlite3 *DB_Log;
+    String FilePath__SD__LogDB = "/sd/logDB.db";
+    int openLogDB();
+    sqlite3 *DB_Sensor;
+    String FilePath__SD__SensorDB = "/sd/sensorDB.db";
+    int openSensorDB();
+    void InsertNewDataToDB(String time,String title, String pool, String VlaueName, double result, String HASH);
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //! 流程設定相關
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+    String TaskUUID;
     //? JSON__pipelineStack: 待執行的Step列表
     DynamicJsonDocument *JSON__pipelineStack = new DynamicJsonDocument(60000);
     //? JSON__pipelineConfig: 當前運行的Pipeline詳細設定
@@ -90,6 +105,19 @@ class SMachine_Ctrl
     double lastLightValue;
     double lastLightValue_CH0 = 0;
     double lastLightValue_CH1 = 0;
+    SemaphoreHandle_t LX_20S_xMutex = NULL;
+
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //! OLED螢幕排程
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    void BuildOLEDCheckTask();
+
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //! 儀器時鐘確認Task
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    void BuildTimeCheckTask();
 
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //! 排程功能相關
@@ -145,6 +173,7 @@ class SMachine_Ctrl
     String SD__configsFolder = "/config/";
     //? LOG 資料夾位置
     String LogFolder = "/logs/";
+
     //? 感測器資料儲存資料夾
     String SensorDataFolder = "/datas/";
     //? 最新資料儲存檔案位置
@@ -168,6 +197,10 @@ class SMachine_Ctrl
     ////////////////////////////////////////////////////
     //* For 基礎行為
     ////////////////////////////////////////////////////
+    SemaphoreHandle_t SQL_xMutex = NULL;
+
+
+
 
     String GetNowTimeString();
     String GetTimeString(String interval=":");

@@ -12,7 +12,7 @@
 #include <ESP32Servo.h>
 #include <U8g2lib.h>
 #include <INA226.h>
-
+#include "lx_20s.h"
 // #ifdef U8X8_HAVE_HW_I2C
 // #ifdef WIRE_INTERFACES_COUNT
 // #if WIRE_INTERFACES_COUNT > 1
@@ -39,6 +39,9 @@
 #include <map>
 #include <ctime>
 
+#include "UUID.h"
+UUID uuid;
+
 TaskHandle_t TASK_SwitchMotorScan = NULL;
 TaskHandle_t TASK_PeristalticMotorScan = NULL;
 
@@ -48,9 +51,62 @@ SemaphoreHandle_t MUTEX_Peristaltic_MOTOR = xSemaphoreCreateBinary();
 // U8G2_SSD1306_128X64_NONAME_1_2ND_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 // extern AsyncWebSocket ws;
 
+String CreateUUID()
+{
+  char uuidStr[37];
+  esp_fill_random(uuidStr, sizeof(uuidStr) - 1);
+  uuidStr[8] = '-';
+  uuidStr[13] = '-';
+  uuidStr[18] = '-';
+  uuidStr[23] = '-';
+  uuidStr[36] = '\0';
+  Serial.println(uuidStr);
+  String reaultString = String(uuidStr);
+  return reaultString;
+}
+
 ////////////////////////////////////////////////////
 // For 初始化
 ////////////////////////////////////////////////////
+static int callback(void *data, int argc, char **argv, char **azColName){
+  int i;
+  JsonDocument *targetJsonObj = (JsonDocument*)data;
+  if (targetJsonObj==NULL) {
+    return 0;
+  }
+  DynamicJsonDocument oneLogData(2000);
+  for (i = 0; i<argc; i++){
+    String KeyName = String(azColName[i]);
+    String Value = String(argv[i] ? argv[i] : "NULL");
+    oneLogData[KeyName].set(Value);
+  }
+  (*targetJsonObj).add(oneLogData);
+  return 0;
+}
+
+char *zErrMsg = 0;
+int SMachine_Ctrl::db_exec(sqlite3 *db, String sql, JsonDocument *jsonData=NULL) {
+  xSemaphoreTake(SQL_xMutex, portMAX_DELAY);
+  if (jsonData!=NULL) {
+    (*jsonData).clear();
+  }
+  Serial.println(sql);
+  long start = micros();
+  int rc = sqlite3_exec(db, sql.c_str(), callback, (void*)jsonData, &zErrMsg);
+  if (rc != SQLITE_OK) {
+    Serial.printf("SQL error: %s\n", zErrMsg);
+    sqlite3_free(zErrMsg);
+  } else {
+    Serial.printf("Operation done successfully\n");
+  }
+  Serial.print(F("Time taken:"));
+  Serial.println(micros()-start);
+  // if (jsonData!=NULL) {
+  //   serializeJsonPretty(*jsonData, Serial);
+  // }
+  xSemaphoreGive(SQL_xMutex);
+  return rc;
+}
 
 double getRandomNumber(double mean, double stddev) {
 
@@ -130,6 +186,74 @@ bool SMachine_Ctrl::SPIFFS__ReWriteWiFiConfig()
   return ExFile_WriteJsonFile(SPIFFS, FilePath__SPIFFS__WiFiConfig, *JSON__WifiConfig);
 }
 
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! SQL相關
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+int SMachine_Ctrl::openLogDB()
+{
+  // SD.remove("/logDB.db");
+
+  sqlite3_initialize();
+  // sqlite3_open_v2();
+  int rc = sqlite3_open(FilePath__SD__LogDB.c_str(), &DB_Log);
+   if (rc) {
+      Serial.printf("Can't open database: %s\n", sqlite3_errmsg(DB_Log));
+      return rc;
+   } else {
+      Serial.printf("Opened database successfully\n");
+      db_exec(DB_Log, "CREATE TABLE logs ( id INTEGER PRIMARY KEY AUTOINCREMENT, level INTEGER, time INTEGER, title TEXT, desp TEXT );");
+   }
+   return rc;
+}
+
+int SMachine_Ctrl::openSensorDB()
+{
+  SD.remove("/sensorDB.db");
+  sqlite3_initialize();
+  int rc = sqlite3_open(FilePath__SD__SensorDB.c_str(), &DB_Sensor);
+  if (rc) {
+    Serial.printf("Can't open database: %s\n", sqlite3_errmsg(DB_Sensor));
+    return rc;
+  } else {
+    Serial.printf("Opened database successfully\n");
+    db_exec(DB_Sensor, "CREATE TABLE sensor ( time TEXT, title TEXT, pool TEXT , value_name TEXT , result REAL );");
+    // db_exec(DB_Sensor, "CREATE TABLE sensor ( time TEXT, title TEXT, pool TEXT , value_name TEXT , result REAL, uuid TEXT );");
+  }
+  return rc;
+}
+
+void SMachine_Ctrl::InsertNewDataToDB(String time,String title, String pool, String ValueName, double result, String uuid)
+{
+  // String SqlString = "INSERT INTO sensor ( time, title, pool, value_name, result, uuid ) VALUES ( '";
+  // SqlString += time;
+  // SqlString += "' ,'";
+  // SqlString += title;
+  // SqlString += "' ,'";
+  // SqlString += pool;
+  // SqlString += "' ,'";
+  // SqlString += ValueName;
+  // SqlString += "' ,";
+  // SqlString += String(result,2).toDouble();
+  // SqlString += " ,'";
+  // SqlString += Machine_Ctrl.TaskUUID;
+  // SqlString += "' );";
+  // db_exec(DB_Sensor, SqlString);
+
+  String SqlString = "INSERT INTO sensor ( time, title, pool, value_name, result ) VALUES ( '";
+  SqlString += time;
+  SqlString += "' ,'";
+  SqlString += title;
+  SqlString += "' ,'";
+  SqlString += pool;
+  SqlString += "' ,'";
+  SqlString += ValueName;
+  SqlString += "' ,";
+  SqlString += String(result,2).toDouble();
+  SqlString += " );";
+  db_exec(DB_Sensor, SqlString);
+
+}
 
 //! SD卡 相關
 
@@ -231,79 +355,81 @@ void SMachine_Ctrl::SD__UpdatePipelineConfigList()
 
 void SMachine_Ctrl::SD__LoadOldLogs()
 {
-  std::vector<String> logFileNameList;
-  File logsFolder = SD.open("/logs");
-  while (true) {
-    File entry =  logsFolder.openNextFile();
-    if (! entry) {
-      break;
-    }
-    logFileNameList.push_back(String(entry.name()));
-    entry.close();
-    if (logFileNameList.size() > 100) {
-      logFileNameList.erase(logFileNameList.begin());
-    }
-  }
+  db_exec(DB_Log, "SELECT * FROM logs ORDER BY id DESC LIMIT 100", JSON__DeviceLogSave);
+  // std::vector<String> logFileNameList;
+  // File logsFolder = SD.open("/logs");
+  // while (true) {
+  //   File entry =  logsFolder.openNextFile();
+  //   if (! entry) {
+  //     break;
+  //   }
+  //   logFileNameList.push_back(String(entry.name()));
+  //   entry.close();
+  //   if (logFileNameList.size() > 100) {
+  //     logFileNameList.erase(logFileNameList.begin());
+  //   }
+  // }
 
-  std::vector<String> logContentList;
-  for (int i=logFileNameList.size()-1;i>-1;i--) {
-    if (logContentList.size() > 100) {
-      break;
-    }
-    File logFileChose = SD.open("/logs/"+logFileNameList[i]);
-    std::vector<String> singleLogContentList;
-    String line = logFileChose.readStringUntil('\n');
-    while (line.length() > 0) {
-      singleLogContentList.push_back(line);
-      line = logFileChose.readStringUntil('\n');
-    }
-    logFileChose.close();
+  // std::vector<String> logContentList;
+  // for (int i=logFileNameList.size()-1;i>-1;i--) {
+  //   if (logContentList.size() > 100) {
+  //     break;
+  //   }
+  //   File logFileChose = SD.open("/logs/"+logFileNameList[i]);
+  //   std::vector<String> singleLogContentList;
+  //   String line = logFileChose.readStringUntil('\n');
+  //   while (line.length() > 0) {
+  //     singleLogContentList.push_back(line);
+  //     line = logFileChose.readStringUntil('\n');
+  //   }
+  //   logFileChose.close();
     
-    for (int singleLineIndex=singleLogContentList.size()-1;singleLineIndex>0;singleLineIndex--) {
-      logContentList.push_back(singleLogContentList[singleLineIndex]);
-      if (logContentList.size() > 100) {
-        break;
-      }
-    }
-  }
-  for (int lineIndex=logContentList.size()-1;lineIndex>0;lineIndex--) {
-    int delimiterIndex = 0;
-    String lineChose = logContentList[lineIndex];
-    int itemIndex = 0;
-    int level;
-    String title,time, desp="";
-    while (lineChose.length() > 0) {
-      delimiterIndex = lineChose.indexOf(",");
-      if (itemIndex == 0) {
-        level = lineChose.substring(0, delimiterIndex).toInt();
-      }
-      else if (itemIndex == 1) {
-        time = lineChose.substring(0, delimiterIndex);
-      }
-      else if (itemIndex == 2) {
-        title = lineChose.substring(0, delimiterIndex);
-      }
-      else if (itemIndex == 3) {
-        desp = lineChose.substring(0, delimiterIndex);
-      }
-      if (delimiterIndex == -1) {
-        break;
-      }
-      lineChose = lineChose.substring(delimiterIndex + 1);
-      itemIndex++;
-    }
-    DynamicJsonDocument logItem(3000);
-    logItem["level"].set(level);
-    logItem["time"].set(time);
-    logItem["title"].set(title);
-    logItem["desp"].set(desp);
-    // serializeJson(logItem, Serial);
-    (*JSON__DeviceLogSave).add(logItem);
-    if ((*JSON__DeviceLogSave).size() > 100) {
-      break;
-    }
-  }
+  //   for (int singleLineIndex=singleLogContentList.size()-1;singleLineIndex>0;singleLineIndex--) {
+  //     logContentList.push_back(singleLogContentList[singleLineIndex]);
+  //     if (logContentList.size() > 100) {
+  //       break;
+  //     }
+  //   }
+  // }
+  // for (int lineIndex=logContentList.size()-1;lineIndex>0;lineIndex--) {
+  //   int delimiterIndex = 0;
+  //   String lineChose = logContentList[lineIndex];
+  //   int itemIndex = 0;
+  //   int level;
+  //   String title,time, desp="";
+  //   while (lineChose.length() > 0) {
+  //     delimiterIndex = lineChose.indexOf(",");
+  //     if (itemIndex == 0) {
+  //       level = lineChose.substring(0, delimiterIndex).toInt();
+  //     }
+  //     else if (itemIndex == 1) {
+  //       time = lineChose.substring(0, delimiterIndex);
+  //     }
+  //     else if (itemIndex == 2) {
+  //       title = lineChose.substring(0, delimiterIndex);
+  //     }
+  //     else if (itemIndex == 3) {
+  //       desp = lineChose.substring(0, delimiterIndex);
+  //     }
+  //     if (delimiterIndex == -1) {
+  //       break;
+  //     }
+  //     lineChose = lineChose.substring(delimiterIndex + 1);
+  //     itemIndex++;
+  //   }
+  //   DynamicJsonDocument logItem(3000);
+  //   logItem["level"].set(level);
+  //   logItem["time"].set(time);
+  //   logItem["title"].set(title);
+  //   logItem["desp"].set(desp);
+  //   // serializeJson(logItem, Serial);
+  //   (*JSON__DeviceLogSave).add(logItem);
+  //   if ((*JSON__DeviceLogSave).size() > 100) {
+  //     break;
+  //   }
+  // }
 }
+
 
 
 void SMachine_Ctrl::INIT_I2C_Wires()
@@ -406,6 +532,124 @@ void SMachine_Ctrl::StopDeviceAndINIT()
   MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
   digitalWrite(48, LOW);
   xSemaphoreGive(LOAD__ACTION_V2_xMutex);
+}
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! OLED螢幕排程
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+void OLEDCheckTask(void* parameter)
+{ 
+  String IPStringSave="";
+  int ipList[4];
+  for (;;) {
+    if (WiFi.isConnected()) {
+      String IpString = WiFi.localIP().toString();
+      // Serial.println(IpString);
+      if (IpString == IPStringSave) {
+        vTaskDelay(1000/portTICK_PERIOD_MS);
+        continue;
+      } else {
+        IPStringSave = IpString;
+      }
+      String delimiter = ".";
+      byte x0 = 3 + 64;
+      byte y0 = 3;
+      QRCode qrcode;
+      uint8_t qrcodeData[qrcode_getBufferSize(3)];
+      qrcode_initText(&qrcode, qrcodeData, 3, 0, ("http://" + IpString).c_str());
+      int delimiterIndex = IpString.indexOf(delimiter);
+      int rowChose = 0;
+      while (delimiterIndex != -1) {
+        ipList[rowChose] =  IpString.substring(0, delimiterIndex).toInt();
+        IpString = IpString.substring(delimiterIndex+1);
+        delimiterIndex = IpString.indexOf(delimiter);
+        rowChose++;
+      }
+      ipList[3] = IpString.toInt();
+      Machine_Ctrl.WireOne.end();
+      U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, Machine_Ctrl.WireOne_SCL, Machine_Ctrl.WireOne_SDA);
+      u8g2.begin();
+      u8g2.setFont(u8g2_font_HelvetiPixelOutline_te);
+      u8g2.firstPage();
+      do {
+        u8g2.setFont(u8g2_font_VCR_OSD_tn);
+        u8g2.setColorIndex(1); // 設成白色
+        for (int i = 0; i < 3; i++) {
+          u8g2.drawUTF8(0, 16 * (i + 1), (String(ipList[i]) + ".").c_str());
+        }
+        u8g2.drawUTF8(0, 16 * (3 + 1), (String(ipList[3])).c_str());
+
+        u8g2.drawBox(65, 0, 66, 64);
+        for (uint8_t y = 0; y < qrcode.size; y++)
+        {
+          for (uint8_t x = 0; x < qrcode.size; x++)
+          {
+            if (qrcode_getModule(&qrcode, x, y))
+            {
+              u8g2.setColorIndex(0);
+            }
+            else
+            {
+              u8g2.setColorIndex(1);
+            }
+            u8g2.drawBox(x0 + x * 2, y0 + y * 2, 2, 2);
+          }
+        }
+      } while ( u8g2.nextPage() );
+      Wire.end();
+      Machine_Ctrl.INIT_I2C_Wires();
+    }
+    else {
+      if (IPStringSave == "") {
+        vTaskDelay(1000/portTICK_PERIOD_MS);
+        continue;
+      }
+      IPStringSave="";
+      Machine_Ctrl.PrintOnScreen("The WiFi has not been connected yet, please wait for a while.\nIf you cannot connect for a long time, please check whether the settings are correct.");
+    }
+    vTaskDelay(1000/portTICK_PERIOD_MS);
+  }
+}
+
+
+void SMachine_Ctrl::BuildOLEDCheckTask() 
+{
+  xTaskCreate(
+    OLEDCheckTask, "OLEDCheckTask",
+    10000, NULL, 1, NULL
+  );
+}
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! 儀器時鐘確認Task
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+void TimeCheckTask(void* parameter)
+{ 
+  time_t lasUpdatetime = 0;
+  for (;;) {
+    if (now() < 100000) {
+      if (WiFi.isConnected()) {
+        Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
+        lasUpdatetime = now();
+      }
+    }
+    else if (now() > lasUpdatetime + 3600) {
+      Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
+      lasUpdatetime = now();
+    }
+    vTaskDelay(5000/portTICK_PERIOD_MS);
+  }
+}
+
+
+void SMachine_Ctrl::BuildTimeCheckTask() 
+{
+  xTaskCreate(
+    TimeCheckTask, "TimeCheckTask",
+    10000, NULL, 1, NULL
+  );
 }
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -546,19 +790,50 @@ void PiplelineFlowTask(void* parameter)
         // digitalWrite(17, HIGH);
         pinMode(4, OUTPUT);
         digitalWrite(4, HIGH);
-        vTaskDelay(50/portTICK_PERIOD_MS);
-        Machine_Ctrl.motorCtrl.ResetPCA9685();
-        for (JsonObject pwmMotorItem : eventItem["pwm_motor_list"].as<JsonArray>()) {
-          // ESP_LOGI("LOADED_ACTION","       - %d 轉至 %d 度", 
-          //   pwmMotorItem["index"].as<int>(), 
-          //   pwmMotorItem["status"].as<int>()
-          // );
-          Machine_Ctrl.motorCtrl.SetMotorTo(pwmMotorItem["index"].as<int>(), pwmMotorItem["status"].as<int>());
+        // int ServoMotorType = (*Machine_Ctrl.JSON__DeviceConfig)["ServoMotorType"].as<int>();
+        int ServoMotorType = 2;
+        if (ServoMotorType==2) {
+          xSemaphoreTake(Machine_Ctrl.LX_20S_xMutex, portMAX_DELAY);
+          Serial2.begin(115200,SERIAL_8N1, 9, 10);
+          vTaskDelay(500/portTICK_PERIOD_MS);
+          for (JsonObject pwmMotorItem : eventItem["pwm_motor_list"].as<JsonArray>()) {
+            int targetAngValue = map(pwmMotorItem["status"].as<int>(), 0, 180, 0, 1000);
+            ESP_LOGI("LOADED_ACTION","       - (LX-20S) %d 轉至 %d 度(%d)", 
+              pwmMotorItem["index"].as<int>(), 
+              pwmMotorItem["status"].as<int>(), targetAngValue
+            );
+            LX_20S_SerialServoMove(Serial2, pwmMotorItem["index"].as<int>(),targetAngValue,500);
+          }
+          vTaskDelay(2000/portTICK_PERIOD_MS);
+          for (JsonObject pwmMotorItem : eventItem["pwm_motor_list"].as<JsonArray>()) {
+            int targetAngValue = map(pwmMotorItem["status"].as<int>(), 0, 180, 0, 1000);
+            int readAng = LX_20S_SerialServoReadPosition(Serial2, pwmMotorItem["index"].as<int>());
+            int d_ang = targetAngValue - readAng;
+            if (abs(d_ang)>15) {
+              ESP_LOGE("LX-20S", "       - 伺服馬達(LX-20S) 編號 %d 並無轉到指定角度: %d，讀取到的角度為: %d",
+                pwmMotorItem["index"].as<int>(), pwmMotorItem["status"].as<int>(),
+                map(readAng, 0, 1000, 0, 180)
+              );
+            }
+          }
+          Serial2.end();
+          xSemaphoreGive(Machine_Ctrl.LX_20S_xMutex);
+        } else {
           vTaskDelay(50/portTICK_PERIOD_MS);
+          Machine_Ctrl.motorCtrl.ResetPCA9685();
+          for (JsonObject pwmMotorItem : eventItem["pwm_motor_list"].as<JsonArray>()) {
+            // ESP_LOGI("LOADED_ACTION","       - %d 轉至 %d 度", 
+            //   pwmMotorItem["index"].as<int>(), 
+            //   pwmMotorItem["status"].as<int>()
+            // );
+            Machine_Ctrl.motorCtrl.SetMotorTo(pwmMotorItem["index"].as<int>(), pwmMotorItem["status"].as<int>());
+            vTaskDelay(50/portTICK_PERIOD_MS);
+          }
+          vTaskDelay(2000/portTICK_PERIOD_MS);
+          Machine_Ctrl.motorCtrl.ResetPCA9685();
         }
-        vTaskDelay(2000/portTICK_PERIOD_MS);
-        Machine_Ctrl.motorCtrl.ResetPCA9685();
         digitalWrite(4, LOW);
+        
         // digitalWrite(16, LOW);
         // digitalWrite(17, LOW);
       }
@@ -945,12 +1220,24 @@ void PiplelineFlowTask(void* parameter)
                 finalValue = Machine_Ctrl.lastLightValue_CH1;
               }
               String DataFileFullPath = Machine_Ctrl.SensorDataFolder + Machine_Ctrl.GetDateString("") + "_data.csv";
+              Machine_Ctrl.InsertNewDataToDB(
+                Machine_Ctrl.GetDatetimeString(),
+                spectrophotometerTitle, 
+                poolChose,
+                value_name,
+                finalValue,
+                Machine_Ctrl.TaskUUID
+              );
               Machine_Ctrl.SaveSensorData_photometer(
                 DataFileFullPath,Machine_Ctrl.GetDatetimeString() ,spectrophotometerTitle, poolChose, GainStr, targetChannel,
                 value_name, -1, finalValue, -1
               );
               //? websocket相關的數值要限縮在小數點下第2位
               (*Machine_Ctrl.JSON__sensorDataSave)[poolChose][value_name].set(String(finalValue,2).toDouble());
+
+              (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"][value_name]["Value"].set(String(finalValue,2).toDouble());
+              (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"][value_name]["data_time"].set(Machine_Ctrl.GetDatetimeString());
+
               Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.FilePath__SD__LastSensorDataSave, (*Machine_Ctrl.JSON__sensorDataSave).as<JsonObject>());
               sprintf(logBuffer, "最終取調整值:%d, CH0 強度: %s, CH1 強度: %s", 
                 spectrophotometerConfigChose["level"].as<int>(), String(Machine_Ctrl.lastLightValue_CH0, 2).c_str(),
@@ -1033,6 +1320,9 @@ void PiplelineFlowTask(void* parameter)
                 failCheckValue = CH1_result;
                 failCheckPPM = CH1_after;
               }
+              if (failCheckPPM < 0) {
+                failCheckPPM = 0;
+              }
               //? websocket相關的數值要限縮在小數點下第2位
               (*Machine_Ctrl.JSON__sensorDataSave)[poolChose][value_name].set(String(failCheckValue,2).toDouble());
               (*Machine_Ctrl.JSON__sensorDataSave)[poolChose][TargetType].set(String(failCheckPPM,2).toDouble());
@@ -1050,6 +1340,29 @@ void PiplelineFlowTask(void* parameter)
                 DataFileFullPath,Machine_Ctrl.GetDatetimeString() ,spectrophotometerTitle, poolChose, GainStr, targetChannel,
                 value_name, dilution, failCheckValue, failCheckPPM
               );
+              
+              Machine_Ctrl.InsertNewDataToDB(
+                Machine_Ctrl.GetDatetimeString(),
+                spectrophotometerTitle, 
+                poolChose,
+                value_name,
+                failCheckValue,
+                Machine_Ctrl.TaskUUID
+              );
+              Machine_Ctrl.InsertNewDataToDB(
+                Machine_Ctrl.GetDatetimeString(),
+                spectrophotometerTitle, 
+                poolChose,
+                TargetType,
+                failCheckPPM,
+                Machine_Ctrl.TaskUUID
+              );
+
+
+              (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"][value_name]["Value"].set(String(failCheckValue,2).toDouble());
+              (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"][value_name]["data_time"].set(Machine_Ctrl.GetDatetimeString());
+              (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"][TargetType]["Value"].set(String(failCheckPPM,2).toDouble());
+              (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"][TargetType]["data_time"].set(Machine_Ctrl.GetDatetimeString());
               Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.FilePath__SD__LastSensorDataSave, (*Machine_Ctrl.JSON__sensorDataSave).as<JsonObject>());
 
               if (failCheckValue < min or failCheckValue > max) {
@@ -1154,6 +1467,15 @@ void PiplelineFlowTask(void* parameter)
               (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"][value_name]["data_time"].set(Machine_Ctrl.GetDatetimeString());
               Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.FilePath__SD__LastSensorDataSave, (*Machine_Ctrl.JSON__sensorDataSave).as<JsonObject>());
 
+              Machine_Ctrl.InsertNewDataToDB(
+                Machine_Ctrl.GetDatetimeString(),
+                spectrophotometerTitle, 
+                poolChose,
+                value_name,
+                finalValue,
+                Machine_Ctrl.TaskUUID
+              );
+
               sprintf(
                 logBuffer, 
                 "測量結果: %s 初始強度: %s mV",
@@ -1211,6 +1533,9 @@ void PiplelineFlowTask(void* parameter)
               digitalWrite(activePin, LOW);
 
               double finalValue_after = (-log10(finalValue/Machine_Ctrl.lastLightValue)-bValue)/mValue * dilution;
+              if (finalValue_after < 0) {
+                finalValue_after = 0;
+              }
 
               //? websocket相關的數值要限縮在小數點下第2位
               // (*Machine_Ctrl.JSON__sensorDataSave)[poolChose][value_name].set(String(finalValue,2).toDouble());
@@ -1234,6 +1559,24 @@ void PiplelineFlowTask(void* parameter)
                 value_name, dilution, finalValue, finalValue_after
               );
               Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.FilePath__SD__LastSensorDataSave, (*Machine_Ctrl.JSON__sensorDataSave).as<JsonObject>());
+
+              Machine_Ctrl.InsertNewDataToDB(
+                Machine_Ctrl.GetDatetimeString(),
+                spectrophotometerTitle, 
+                poolChose,
+                value_name,
+                finalValue,
+                Machine_Ctrl.TaskUUID
+              );
+              Machine_Ctrl.InsertNewDataToDB(
+                Machine_Ctrl.GetDatetimeString(),
+                spectrophotometerTitle, 
+                poolChose,
+                TargetType,
+                finalValue_after,
+                Machine_Ctrl.TaskUUID
+              );
+
 
               if (finalValue < min or finalValue > max) {
                 sprintf(
@@ -1288,7 +1631,6 @@ void PiplelineFlowTask(void* parameter)
             pHValue = 14.;
           }
           //? websocket相關的數值要限縮在小數點下第2位
-
           (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"]["pH_volt"]["Value"].set(String(PH_RowValue,2).toDouble());
           (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"]["pH_volt"]["data_time"].set(Machine_Ctrl.GetDatetimeString());
           (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"]["pH"]["Value"].set(String(pHValue,2).toDouble());
@@ -1302,9 +1644,25 @@ void PiplelineFlowTask(void* parameter)
             DataFileFullPath,Machine_Ctrl.GetDatetimeString() ,"PH測量", poolChose, "", "",
             "phValue", -1, PH_RowValue, pHValue
           );
+          Machine_Ctrl.InsertNewDataToDB(
+            Machine_Ctrl.GetDatetimeString(),
+            "PH測量", 
+            poolChose,
+            "pH_volt",
+            PH_RowValue,
+            Machine_Ctrl.TaskUUID
+          );
+          Serial.println(3);
+          Machine_Ctrl.InsertNewDataToDB(
+            Machine_Ctrl.GetDatetimeString(),
+            "PH測量", 
+            poolChose,
+            "pH",
+            pHValue,
+            Machine_Ctrl.TaskUUID
+          );
 
-
-
+          Serial.println(14);
           char logBuffer[1000];
           sprintf(
             logBuffer, 
@@ -1629,6 +1987,8 @@ void PipelineFlowScan(void* parameter)
     
     //STEP 5 開始執行流程判斷功能
     ESP_LOGI("", "STEP 5 開始執行流程判斷功能");
+    uuid.generate();
+    Machine_Ctrl.TaskUUID = String(uuid.toCharArray());
     JsonObject stepsGroup = (*Machine_Ctrl.JSON__pipelineConfig)["steps_group"].as<JsonObject>();
     JsonObject pipelineSet = (*Machine_Ctrl.JSON__pipelineConfig)["pipline"].as<JsonObject>();
     //? isAllDone: 用來判斷是否所有流程都運行完畢，如果都完畢，則此TASK也可以關閉
@@ -1866,13 +2226,24 @@ SemaphoreHandle_t SetLog_xMutex = xSemaphoreCreateMutex();
  */
 DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String description, AsyncWebSocket *server, AsyncWebSocketClient *client, bool Save)
 {
-  
   DynamicJsonDocument logItem(500);
   String timeString = GetDatetimeString();
   logItem["level"].set(Level);
   logItem["time"].set(timeString);
   logItem["title"].set(Title);
   logItem["desp"].set(description);
+  // db_exec(DB_Log, "Select * from domain_rank where domain = 'zoho.com'");
+  String SqlString = "INSERT INTO logs ( level, time, title, desp ) VALUES ( ";
+  SqlString += String(Level);
+  SqlString += " ,";
+  SqlString += String(now());
+  SqlString += " ,'";
+  SqlString += Title;
+  SqlString += "','";
+  SqlString += description;
+  SqlString += "' );";
+  db_exec(DB_Log, SqlString);
+
   // serializeJsonPretty(logItem, Serial);
   if (Save==true) {
     // vTaskDelay(10);
@@ -1897,7 +2268,6 @@ DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String descri
       if ((*Machine_Ctrl.JSON__DeviceLogSave)["Log"].size() > 100) {
         (*Machine_Ctrl.JSON__DeviceLogSave)["Log"].remove(0);
       }
-
     }
   }
 
@@ -2014,16 +2384,31 @@ String SMachine_Ctrl::GetDatetimeString(String interval_date, String interval_mi
 
 void SMachine_Ctrl::PrintOnScreen(String content)
 {
-  Wire.end();
+  WireOne.end();
+  // Wire.end();
   U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, WireOne_SCL, WireOne_SDA);
   
   u8g2.begin();
   u8g2.clearDisplay();
   u8g2.firstPage();
+  u8g2.setFont(u8g2_font_t0_11_tf);
+  u8g2.setColorIndex(1);
+  String line;
   do {
-    u8g2.setFont(u8g2_font_t0_11_tf);
-    u8g2.setColorIndex(1);
-    u8g2.drawUTF8(0,8,content.c_str());
+    int lineIndex = 0;
+    int newlineIndex = content.indexOf('\n', lineIndex);
+    int lineCount = 1;
+    while (newlineIndex != -1) {
+      line = content.substring(lineIndex, newlineIndex);
+      lineIndex = newlineIndex + 1;
+      u8g2.drawUTF8(0,8*lineCount,line.c_str());
+      newlineIndex = content.indexOf('\n', lineIndex);
+      lineCount++;
+    }
+    line = content.substring(lineIndex);
+    lineIndex = newlineIndex + 1;
+    u8g2.drawUTF8(0,8*lineCount,line.c_str());
+    // u8g2.print(content.c_str());
   } while ( u8g2.nextPage() );
   Wire.end();
   INIT_I2C_Wires();
