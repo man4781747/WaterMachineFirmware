@@ -368,7 +368,7 @@ int LX_20S_SerialServoReadReadVINLimit(HardwareSerial& SerialX, uint8_t id)
 
 void LX_20S_SerialServoMove(HardwareSerial& SerialX, uint8_t id, int16_t position, uint16_t time)
 {
-  ESP_LOGW("LX-20S", "準備控制馬達: %d 在 %d 毫秒內轉動至 %d 度", id, time, position);
+  ESP_LOGW("LX-20S", "準備控制馬達: %d 在 %d 毫秒內轉動至位置 %d ", id, time, position);
   byte buf[10];
   if(position < 0)
     position = 0;

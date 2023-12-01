@@ -386,15 +386,8 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
 ////////////////////////////////////////////////////
 
 void WiFiConnectChecker(void* parameter) {
-  time_t lasUpdatetime = 0;
-  WiFi.begin(
-    (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Name"].as<String>().c_str(),
-    (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Password"].as<String>().c_str()
-  );
-  WiFi.setAutoConnect(false);
-  WiFi.setAutoReconnect(false);
-  //? 每1秒檢查WiFi是否還連線
   for (;;) {
+    vTaskDelay(60000/portTICK_PERIOD_MS);
     if (!WiFi.isConnected()) {
       ESP_LOGW(LOG_TAG_WIFI,"偵測到WiFi斷線，嘗試重新連接");
       WiFi.disconnect();
@@ -404,15 +397,7 @@ void WiFiConnectChecker(void* parameter) {
       );
       // lasUpdatetime = -9999;
     }
-    vTaskDelay(10000/portTICK_PERIOD_MS);
-    // if (WiFi.isConnected()) {
-    //   if (now() > lasUpdatetime + 3600) {
-    //     ESP_LOGD("", "準備更新儀器時間");
-    //     Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
-    //     lasUpdatetime = now();
-    //   }
-    // }
-    vTaskDelay(50000/portTICK_PERIOD_MS);
+    // vTaskDelay(50000/portTICK_PERIOD_MS);
   }
 }
 
@@ -490,10 +475,15 @@ void CWIFI_Ctrler::ConnectToWifi()
   //   vTaskDelay(1000/portTICK_PERIOD_MS);
   //   failCount++;
   // }
-  xTaskCreate(
-    WiFiConnectChecker, "WiFiConnect",
-    10000, NULL, 2, NULL
+  WiFi.begin(
+    (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Name"].as<String>().c_str(),
+    (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Password"].as<String>().c_str()
   );
+  WiFi.setAutoReconnect(false);
+  // xTaskCreate(
+  //   WiFiConnectChecker, "WiFiConnect",
+  //   50000, NULL, 1, NULL
+  // );
   xTaskCreate(
     OTAServiceTask, "TASK__OTAService",
     10000, NULL, 1, NULL
@@ -724,9 +714,42 @@ void CWIFI_Ctrler::setAPIs()
   asyncServer.on("/api/logs", HTTP_GET,
     [&](AsyncWebServerRequest *request)
     { 
-      Machine_Ctrl.SD__LoadOldLogs();
+      DynamicJsonDocument ReturnData(100000);
+      String StartTime = "1900-01-01 00:00:00";
+      String EndTime = "2900-01-01 00:00:00";
+      String LevelList = "1,2,3,4,5,6";
+      if (request->hasParam("st")) {
+        StartTime = request->getParam("st")->value();
+      }
+      if (request->hasParam("et")) {
+        EndTime = request->getParam("et")->value();
+      }
+      if (request->hasParam("lv")) {
+        LevelList = request->getParam("lv")->value();
+      }
+
+      // String SQL_String = "SELECT * FROM logs DESC LIMIT 1000";
+
+      String SQL_String = "SELECT time, title, desp, level FROM logs WHERE level in (";
+      SQL_String += LevelList;
+      SQL_String += ") AND time BETWEEN '";
+      SQL_String += StartTime;
+      SQL_String += "' AND '";
+      SQL_String += EndTime;
+      SQL_String += "' LIMIT 1000";
+      // String SQL_String = "SELECT * FROM logs WHERE time BETWEEN '";
+      // SQL_String += StartTime;
+      // SQL_String += "' AND '";
+      // SQL_String += EndTime;
+      // SQL_String += "' LIMIT 1000";
+
+      // String SQL_String = "SELECT * FROM logs WHERE level in (";
+      // SQL_String += LevelList;
+      // SQL_String += ") ORDER BY time DESC LIMIT 1000";
+
+      Machine_Ctrl.db_exec( Machine_Ctrl.DB_Log, SQL_String, &ReturnData);
       String RetuenString;
-      serializeJson(*Machine_Ctrl.JSON__DeviceLogSave, RetuenString);
+      serializeJson(ReturnData, RetuenString);
       AsyncWebServerResponse* response = request->beginResponse(200, "application/json", RetuenString);
       SendHTTPesponse(request, response);
     }
@@ -754,15 +777,44 @@ void CWIFI_Ctrler::setAPIs()
     [&](AsyncWebServerRequest *request)
     { 
       DynamicJsonDocument ReturnData(100000);
-      if (request->hasParam("st") & request->hasParam("et")) {
-        String StartTime = request->getParam("st")->value();
-        String EndTime = request->getParam("et")->value();
-        // Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor WHERE time >= "+StartTime+" AND time <="+EndTime+" ORDER BY time DESC LIMIT 100", &ReturnData);
-        Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor WHERE time BETWEEN '"+StartTime+" 00:00:00' AND '"+EndTime+" 00:00:00' ORDER BY time DESC LIMIT 100", &ReturnData);
+      String StartTime = "1900-01-01 00:00:00";
+      String EndTime = "2900-01-01 00:00:00";
+      String PoolList = "'pool-1','pool-2','pool-3','pool-4'";
+      String ValueNameList = "'pH','NO2','NH4'";
+      if (request->hasParam("st")) {
+        StartTime = request->getParam("st")->value();
       }
-      else {
-        Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor DESC LIMIT 100", &ReturnData);
+      if (request->hasParam("et")) {
+        EndTime = request->getParam("et")->value();
       }
+      if (request->hasParam("pl")) {
+        PoolList = request->getParam("pl")->value();
+      }
+      if (request->hasParam("name")) {
+        ValueNameList = request->getParam("name")->value();
+      }
+
+      String SQL_String = "SELECT * FROM sensor WHERE pool in (";
+      SQL_String += PoolList;
+      SQL_String += ") AND value_name in (";
+      SQL_String += ValueNameList;
+      SQL_String += ") AND time BETWEEN '";
+      SQL_String += StartTime;
+      SQL_String += "' AND '";
+      SQL_String += EndTime;
+      SQL_String += "' ORDER BY time DESC LIMIT 1000";
+      Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor,SQL_String, &ReturnData);
+
+
+      // if (request->hasParam("st") & request->hasParam("et")) {
+      //   String StartTime = request->getParam("st")->value();
+      //   String EndTime = request->getParam("et")->value();
+      //   // Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor WHERE time >= "+StartTime+" AND time <="+EndTime+" ORDER BY time DESC LIMIT 100", &ReturnData);
+      //   Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor WHERE time BETWEEN '"+StartTime+" 00:00:00' AND '"+EndTime+" 00:00:00' ORDER BY time DESC LIMIT 100", &ReturnData);
+      // }
+      // else {
+      //   Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor DESC LIMIT 100", &ReturnData);
+      // }
       String RetuenString;
       serializeJson(ReturnData, RetuenString);
       AsyncWebServerResponse* response = request->beginResponse(200, "application/json", RetuenString);
@@ -791,6 +843,55 @@ void CWIFI_Ctrler::setAPIs()
     }
   );
 
+  asyncServer.on("/api/config/device_config", HTTP_GET,
+    [&](AsyncWebServerRequest *request)
+    { 
+      String RetuenString;
+      serializeJson((*Machine_Ctrl.JSON__DeviceConfig), RetuenString);
+      AsyncWebServerResponse* response = request->beginResponse(200, "application/json", RetuenString);
+      SendHTTPesponse(request, response);
+    }
+  );
+
+  asyncServer.on("/api/config/spectrophotometer_config", HTTP_GET,
+    [&](AsyncWebServerRequest *request)
+    { 
+      String RetuenString;
+      serializeJson((*Machine_Ctrl.JSON__SpectrophotometerConfig), RetuenString);
+      AsyncWebServerResponse* response = request->beginResponse(200, "application/json", RetuenString);
+      SendHTTPesponse(request, response);
+    }
+  );
+
+  asyncServer.on("/api/config/PHmeter_config", HTTP_GET,
+    [&](AsyncWebServerRequest *request)
+    { 
+      String RetuenString;
+      serializeJson((*Machine_Ctrl.JSON__PHmeterConfig), RetuenString);
+      AsyncWebServerResponse* response = request->beginResponse(200, "application/json", RetuenString);
+      SendHTTPesponse(request, response);
+    }
+  );
+
+  asyncServer.on("/api/config/peristaltic_motor_config", HTTP_GET,
+    [&](AsyncWebServerRequest *request)
+    { 
+      String RetuenString;
+      serializeJson((*Machine_Ctrl.JSON__PeristalticMotorConfig), RetuenString);
+      AsyncWebServerResponse* response = request->beginResponse(200, "application/json", RetuenString);
+      SendHTTPesponse(request, response);
+    }
+  );
+
+  asyncServer.on("/api/config/pwm_motor_config", HTTP_GET,
+    [&](AsyncWebServerRequest *request)
+    { 
+      String RetuenString;
+      serializeJson((*Machine_Ctrl.JSON__PWNMotorConfig), RetuenString);
+      AsyncWebServerResponse* response = request->beginResponse(200, "application/json", RetuenString);
+      SendHTTPesponse(request, response);
+    }
+  );
 
   asyncServer.on("/api/config", HTTP_POST, 
     [&](AsyncWebServerRequest *request)

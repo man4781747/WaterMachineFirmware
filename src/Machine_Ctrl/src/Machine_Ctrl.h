@@ -157,10 +157,19 @@ class SMachine_Ctrl
     DynamicJsonDocument *JSON__PoolConfig = new DynamicJsonDocument(2000);
     String FilePath__SD__ScheduleConfig = "/config/schedule_config.json";
     DynamicJsonDocument *JSON__ScheduleConfig = new DynamicJsonDocument(10000);
+
+    String FilePath__SD__PWNMotorConfig = "/config/pwm_motor_config.json";
+    DynamicJsonDocument *JSON__PWNMotorConfig = new DynamicJsonDocument(10000);
+
+    String FilePath__SD__PeristalticMotorConfig = "/config/peristaltic_motor_config.json";
+    DynamicJsonDocument *JSON__PeristalticMotorConfig = new DynamicJsonDocument(10000);
+
     void SD__DeviceConfig();
     void SD__LoadspectrophotometerConfig();
     void SD__LoadPHmeterConfig();
     void SD__LoadPoolConfig();
+    void SD__LoadPeristalticMotorConfig();
+    void SD__LoadPWNMotorConfig();
     void SD__LoadScheduleConfig();
     void SD__ReWriteScheduleConfig();
     DynamicJsonDocument *JSON__PipelineConfigList = new DynamicJsonDocument(10000);

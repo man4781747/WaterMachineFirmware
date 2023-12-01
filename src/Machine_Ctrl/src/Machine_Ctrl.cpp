@@ -68,6 +68,7 @@ String CreateUUID()
 ////////////////////////////////////////////////////
 // For 初始化
 ////////////////////////////////////////////////////
+
 static int callback(void *data, int argc, char **argv, char **azColName){
   int i;
   JsonDocument *targetJsonObj = (JsonDocument*)data;
@@ -195,22 +196,21 @@ int SMachine_Ctrl::openLogDB()
   // SD.remove("/logDB.db");
 
   sqlite3_initialize();
-  // sqlite3_open_v2();
   int rc = sqlite3_open(FilePath__SD__LogDB.c_str(), &DB_Log);
    if (rc) {
       Serial.printf("Can't open database: %s\n", sqlite3_errmsg(DB_Log));
       return rc;
    } else {
       Serial.printf("Opened database successfully\n");
-      db_exec(DB_Log, "CREATE TABLE logs ( id INTEGER PRIMARY KEY AUTOINCREMENT, level INTEGER, time INTEGER, title TEXT, desp TEXT );");
+      db_exec(DB_Log, "CREATE TABLE logs ( time TEXT, title TEXT, desp TEXT, level INTEGER );");
    }
    return rc;
 }
 
 int SMachine_Ctrl::openSensorDB()
 {
-  SD.remove("/sensorDB.db");
-  sqlite3_initialize();
+  // SD.remove("/sensorDB.db");
+  // sqlite3_initialize();
   int rc = sqlite3_open(FilePath__SD__SensorDB.c_str(), &DB_Sensor);
   if (rc) {
     Serial.printf("Can't open database: %s\n", sqlite3_errmsg(DB_Sensor));
@@ -272,6 +272,11 @@ void SMachine_Ctrl::INIT_SD_And_LoadConfigs()
   SD__UpdatePipelineConfigList();
   ESP_LOGD("", "準備讀取排程的設定檔");
   SD__LoadScheduleConfig();
+  ESP_LOGD("", "準備讀取伺服馬達的設定檔");
+  SD__LoadPWNMotorConfig();
+  ESP_LOGD("", "準備讀取蠕動馬達的設定檔");
+  SD__LoadPeristalticMotorConfig();
+
 }
 
 bool SMachine_Ctrl::INIT_SD_Card()
@@ -306,6 +311,18 @@ void SMachine_Ctrl::SD__LoadPoolConfig()
 {
   ExFile_LoadJsonFile(SD, FilePath__SD__PoolConfig, *JSON__PoolConfig);
 }
+
+void SMachine_Ctrl::SD__LoadPWNMotorConfig()
+{
+  ExFile_LoadJsonFile(SD, FilePath__SD__PWNMotorConfig, *JSON__PWNMotorConfig);
+}
+
+void SMachine_Ctrl::SD__LoadPeristalticMotorConfig()
+{
+  ExFile_LoadJsonFile(SD, FilePath__SD__PeristalticMotorConfig, *JSON__PeristalticMotorConfig);
+}
+
+
 
 void SMachine_Ctrl::SD__LoadScheduleConfig()
 {
@@ -355,7 +372,7 @@ void SMachine_Ctrl::SD__UpdatePipelineConfigList()
 
 void SMachine_Ctrl::SD__LoadOldLogs()
 {
-  db_exec(DB_Log, "SELECT * FROM logs ORDER BY id DESC LIMIT 100", JSON__DeviceLogSave);
+  db_exec(DB_Log, "SELECT * FROM logs DESC LIMIT 100", JSON__DeviceLogSave);
   // std::vector<String> logFileNameList;
   // File logsFolder = SD.open("/logs");
   // while (true) {
@@ -663,6 +680,10 @@ void ScheduleManager(void* parameter)
     time_t nowTime = now();
     if ( nowTime < 946656000 ) {
       ESP_LOGW("", "儀器時間有誤，暫時跳過排程設定檢查");
+      if (WiFi.isConnected()) {
+        // Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
+        vTaskDelay(5000/portTICK_PERIOD_MS);
+      }
       vTaskDelay(1000/portTICK_PERIOD_MS);
       continue;
     }
@@ -797,7 +818,7 @@ void PiplelineFlowTask(void* parameter)
           Serial2.begin(115200,SERIAL_8N1, 9, 10);
           vTaskDelay(500/portTICK_PERIOD_MS);
           for (JsonObject pwmMotorItem : eventItem["pwm_motor_list"].as<JsonArray>()) {
-            int targetAngValue = map(pwmMotorItem["status"].as<int>(), 0, 180, 0, 1000);
+            int targetAngValue = map(pwmMotorItem["status"].as<int>(), -30, 210, 0, 1000);
             ESP_LOGI("LOADED_ACTION","       - (LX-20S) %d 轉至 %d 度(%d)", 
               pwmMotorItem["index"].as<int>(), 
               pwmMotorItem["status"].as<int>(), targetAngValue
@@ -806,13 +827,13 @@ void PiplelineFlowTask(void* parameter)
           }
           vTaskDelay(2000/portTICK_PERIOD_MS);
           for (JsonObject pwmMotorItem : eventItem["pwm_motor_list"].as<JsonArray>()) {
-            int targetAngValue = map(pwmMotorItem["status"].as<int>(), 0, 180, 0, 1000);
+            int targetAngValue = map(pwmMotorItem["status"].as<int>(), -30, 210, 0, 1000);
             int readAng = LX_20S_SerialServoReadPosition(Serial2, pwmMotorItem["index"].as<int>());
             int d_ang = targetAngValue - readAng;
             if (abs(d_ang)>15) {
               ESP_LOGE("LX-20S", "       - 伺服馬達(LX-20S) 編號 %d 並無轉到指定角度: %d，讀取到的角度為: %d",
                 pwmMotorItem["index"].as<int>(), pwmMotorItem["status"].as<int>(),
-                map(readAng, 0, 1000, 0, 180)
+                map(readAng, 0, 1000, -30, 210)
               );
             }
           }
@@ -2235,9 +2256,9 @@ DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String descri
   // db_exec(DB_Log, "Select * from domain_rank where domain = 'zoho.com'");
   String SqlString = "INSERT INTO logs ( level, time, title, desp ) VALUES ( ";
   SqlString += String(Level);
-  SqlString += " ,";
-  SqlString += String(now());
   SqlString += " ,'";
+  SqlString += GetDatetimeString();
+  SqlString += "' ,'";
   SqlString += Title;
   SqlString += "','";
   SqlString += description;
