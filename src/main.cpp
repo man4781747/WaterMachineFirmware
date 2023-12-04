@@ -20,7 +20,7 @@
 #include "../lib/QRCode/src/qrcode.h"
 //TODO oled暫時這樣寫死
 
-const char* FIRMWARE_VERSION = "V3.23.1005.0";
+const char* FIRMWARE_VERSION = "V3.23.1201.0";
 
 void scanI2C();
 

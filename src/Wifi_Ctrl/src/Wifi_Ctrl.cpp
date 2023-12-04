@@ -968,7 +968,39 @@ void CWIFI_Ctrler::setAPIs()
     }
   );
 
-
+  asyncServer.on("/api/config/device_config", HTTP_GET,
+    [&](AsyncWebServerRequest *request)
+    { 
+      String RetuenString;
+      serializeJson((*Machine_Ctrl.JSON__DeviceConfig), RetuenString);
+      AsyncWebServerResponse* response = request->beginResponse(200, "application/json", RetuenString);
+      SendHTTPesponse(request, response);
+    }
+  );
+  asyncServer.on("/api/config/device_config", HTTP_PATCH,
+    [&](AsyncWebServerRequest *request)
+    { 
+      AsyncWebServerResponse* response;
+      if (!request->hasArg("content")) {
+        response = request->beginResponse(500, "application/json", "{\"Result\":\"缺少para: 'content',型態: String, 格式: JSON\"}");
+        SendHTTPesponse(request, response);
+      }
+      String content = request->getParam("content", true)->value();
+      DynamicJsonDocument JSON__content(1000);
+      DeserializationError error = deserializeJson(JSON__content, content);
+      if (error) {
+        ESP_LOGE("schedule更新", "JOSN解析失敗,停止更新排程設定檔內容", error.c_str());
+        response = request->beginResponse(500, "application/json", "{\"Result\":\"更新失敗,content所需型態: String, 格式: JSON\"}");
+        SendHTTPesponse(request, response);
+      }
+      (*Machine_Ctrl.JSON__DeviceConfig) = JSON__content;
+      ExFile_WriteJsonFile(SD, Machine_Ctrl.FilePath__SD__DeviceConfig, *Machine_Ctrl.JSON__DeviceConfig);
+      String ReturnString;
+      serializeJson((*Machine_Ctrl.JSON__DeviceConfig), ReturnString);
+      response = request->beginResponse(200, "application/json", ReturnString);
+      SendHTTPesponse(request, response);
+    }
+  );
 
   asyncServer.on("/api/config/peristaltic_motor_config", HTTP_GET,
     [&](AsyncWebServerRequest *request)

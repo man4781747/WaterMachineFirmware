@@ -811,8 +811,8 @@ void PiplelineFlowTask(void* parameter)
         // digitalWrite(17, HIGH);
         pinMode(4, OUTPUT);
         digitalWrite(4, HIGH);
-        // int ServoMotorType = (*Machine_Ctrl.JSON__DeviceConfig)["ServoMotorType"].as<int>();
-        int ServoMotorType = 2;
+        int ServoMotorType = (*Machine_Ctrl.JSON__DeviceConfig)["ServoMotorType"].as<int>();
+        // int ServoMotorType = 2;
         if (ServoMotorType==2) {
           xSemaphoreTake(Machine_Ctrl.LX_20S_xMutex, portMAX_DELAY);
           Serial2.begin(115200,SERIAL_8N1, 9, 10);
