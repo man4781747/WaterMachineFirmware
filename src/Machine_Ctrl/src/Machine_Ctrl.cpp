@@ -929,6 +929,7 @@ void PiplelineFlowTask(void* parameter)
           for (const auto& endTimeCheck : endTimeCheckList.as<JsonObject>()) {
             JsonObject endTimeCheckJSON = endTimeCheck.value().as<JsonObject>();
             if (endTimeCheckJSON["finish"] == true) {
+              vTaskDelay(100/portTICK_PERIOD_MS);
               continue;
             }
             allFinish = false;
@@ -1014,8 +1015,9 @@ void PiplelineFlowTask(void* parameter)
                 endTimeCheckJSON["finish"].set(true);
               }
             }
-            vTaskDelay(100);
+            vTaskDelay(100/portTICK_PERIOD_MS);
           }
+          vTaskDelay(100/portTICK_PERIOD_MS);
         }
         if (Machine_Ctrl.peristalticMotorsCtrl.IsAllStop()) {
           digitalWrite(48, LOW);
