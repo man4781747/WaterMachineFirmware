@@ -873,6 +873,103 @@ void CWIFI_Ctrler::setAPIs()
     }
   );
 
+  asyncServer.on("^\\/api\\/pool_config\\/([a-zA-Z0-9_.-]+)$", HTTP_GET,
+    [&](AsyncWebServerRequest *request)
+    { 
+      AsyncWebServerResponse* response;
+      String keyName = request->pathArg(0);
+
+      for (JsonVariant poolConfig : (*Machine_Ctrl.JSON__PoolConfig).as<JsonArray>()) {
+        JsonObject poolConfig_Obj = poolConfig.as<JsonObject>();
+        if (poolConfig_Obj["id"].as<String>() == keyName) {
+          String ReturnString;
+          serializeJson(poolConfig_Obj, ReturnString);
+          response = request->beginResponse(200, "application/json", ReturnString);
+          SendHTTPesponse(request, response);
+        }
+      }
+      response = request->beginResponse(500, "application/json", "{\"Result\":\"Can't Find: "+keyName+"\"}");
+      SendHTTPesponse(request, response);
+    }
+  );
+  asyncServer.on("^\\/api\\/pool_config\\/([a-zA-Z0-9_.-]+)$", HTTP_PATCH,
+    [&](AsyncWebServerRequest *request)
+    { 
+      AsyncWebServerResponse* response;
+      if (!request->hasArg("content")) {
+        response = request->beginResponse(500, "application/json", "{\"Result\":\"缺少para: 'content',型態: String, 格式: JSON\"}");
+        SendHTTPesponse(request, response);
+      }
+      String keyName = request->pathArg(0);
+      for (JsonVariant poolConfig : (*Machine_Ctrl.JSON__PoolConfig).as<JsonArray>()) {
+        JsonObject poolConfig_Obj = poolConfig.as<JsonObject>();
+        if (poolConfig_Obj["id"].as<String>() == keyName) {
+          String content = request->getParam("content", true)->value();
+          DynamicJsonDocument JSON__content(1000);
+          DeserializationError error = deserializeJson(JSON__content, content);
+          if (error) {
+            ESP_LOGE("schedule更新", "JOSN解析失敗,停止更新排程設定檔內容", error.c_str());
+            response = request->beginResponse(500, "application/json", "{\"Result\":\"更新失敗,content所需型態: String, 格式: JSON\"}");
+            SendHTTPesponse(request, response);
+          }
+          if (JSON__content.containsKey("external_mapping")) {
+            poolConfig_Obj["external_mapping"] = JSON__content["external_mapping"].as<String>();
+          }
+          if (JSON__content.containsKey("title")) {
+            poolConfig_Obj["title"] = JSON__content["title"].as<String>();
+          }
+          if (JSON__content.containsKey("desp")) {
+            poolConfig_Obj["desp"] = JSON__content["desp"].as<String>();
+          }
+          ExFile_WriteJsonFile(SD, Machine_Ctrl.FilePath__SD__PoolConfig, *Machine_Ctrl.JSON__PoolConfig);
+          String ReturnString;
+          serializeJson(poolConfig_Obj, ReturnString);
+          response = request->beginResponse(200, "application/json", ReturnString);
+          SendHTTPesponse(request, response);
+        }
+      }
+      response = request->beginResponse(500, "application/json", "{\"Result\":\"Can't Find: "+keyName+"\"}");
+      SendHTTPesponse(request, response);
+    }
+  );
+
+
+  asyncServer.on("/api/pool_config", HTTP_GET,
+    [&](AsyncWebServerRequest *request)
+    { 
+      String RetuenString;
+      serializeJson((*Machine_Ctrl.JSON__PoolConfig), RetuenString);
+      AsyncWebServerResponse* response = request->beginResponse(200, "application/json", RetuenString);
+      SendHTTPesponse(request, response);
+    }
+  );
+  asyncServer.on("/api/pool_config", HTTP_PATCH,
+    [&](AsyncWebServerRequest *request)
+    { 
+      AsyncWebServerResponse* response;
+      if (!request->hasArg("content")) {
+        response = request->beginResponse(500, "application/json", "{\"Result\":\"缺少para: 'content',型態: String, 格式: JSON\"}");
+        SendHTTPesponse(request, response);
+      }
+      String content = request->getParam("content", true)->value();
+      DynamicJsonDocument JSON__content(1000);
+      DeserializationError error = deserializeJson(JSON__content, content);
+      if (error) {
+        ESP_LOGE("schedule更新", "JOSN解析失敗,停止更新排程設定檔內容", error.c_str());
+        response = request->beginResponse(500, "application/json", "{\"Result\":\"更新失敗,content所需型態: String, 格式: JSON\"}");
+        SendHTTPesponse(request, response);
+      }
+      (*Machine_Ctrl.JSON__PoolConfig) = JSON__content;
+      ExFile_WriteJsonFile(SD, Machine_Ctrl.FilePath__SD__PoolConfig, *Machine_Ctrl.JSON__PoolConfig);
+      String ReturnString;
+      serializeJson((*Machine_Ctrl.JSON__PoolConfig), ReturnString);
+      response = request->beginResponse(200, "application/json", ReturnString);
+      SendHTTPesponse(request, response);
+    }
+  );
+
+
+
   asyncServer.on("/api/config/peristaltic_motor_config", HTTP_GET,
     [&](AsyncWebServerRequest *request)
     { 
