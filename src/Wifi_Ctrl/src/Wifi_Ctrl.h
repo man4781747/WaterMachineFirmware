@@ -96,10 +96,7 @@ class CWIFI_Ctrler
     // For WIFI Manager相關
     ////////////////////////////////////////////////////
 
-    TaskHandle_t TASK__SSIDScan;
-    DynamicJsonDocument* SSIDList = new DynamicJsonDocument(3000);
-    DynamicJsonDocument* SSIDList_Temp = new DynamicJsonDocument(3000);
-    bool WifiModeOpen = true;
+    TaskHandle_t TASK__STAConnectCheck = NULL;
     void StartSTAConnectCheck();
 
     ////////////////////////////////////////////////////
@@ -107,7 +104,6 @@ class CWIFI_Ctrler
     ////////////////////////////////////////////////////
 
     DynamicJsonDocument GetSSIDList();
-    void StartWiFiConnecter();
 
     DynamicJsonDocument GetWifiInfo();
     String GetWifiInfoString();

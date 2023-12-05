@@ -386,10 +386,12 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
 ////////////////////////////////////////////////////
 
 void WiFiConnectChecker(void* parameter) {
+  ESP_LOGW("WiFiConnectChecker","開始偵測WiFi是否斷線");
   for (;;) {
     vTaskDelay(60000/portTICK_PERIOD_MS);
+    ESP_LOGW("WiFiConnectChecker","開始檢查網路是否斷線");
     if (!WiFi.isConnected()) {
-      ESP_LOGW(LOG_TAG_WIFI,"偵測到WiFi斷線，嘗試重新連接");
+      ESP_LOGW("WiFiConnectChecker","偵測到WiFi斷線，嘗試重新連接");
       WiFi.disconnect();
       WiFi.begin(
         (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Name"].as<String>().c_str(),
@@ -479,11 +481,7 @@ void CWIFI_Ctrler::ConnectToWifi()
     (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Name"].as<String>().c_str(),
     (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Password"].as<String>().c_str()
   );
-  WiFi.setAutoReconnect(false);
-  // xTaskCreate(
-  //   WiFiConnectChecker, "WiFiConnect",
-  //   50000, NULL, 1, NULL
-  // );
+  WiFi.setAutoReconnect(true);
   xTaskCreate(
     OTAServiceTask, "TASK__OTAService",
     10000, NULL, 1, NULL
@@ -567,6 +565,14 @@ void CWIFI_Ctrler::ServerStart()
   asyncServer.addHandler(&ws);
   asyncServer.begin();
   createWebServer();
+}
+
+void CWIFI_Ctrler::StartSTAConnectCheck()
+{
+  xTaskCreate(
+    WiFiConnectChecker, "WiFiChecker",
+    10000, NULL, 2, &TASK__STAConnectCheck
+  );
 }
 
 void CWIFI_Ctrler::createWebServer()
@@ -1151,13 +1157,6 @@ void CWIFI_Ctrler::setAPIs()
     AsyncWebServerResponse* response = request->beginResponse(200, "application/json", "OK");
     SendHTTPesponse(request, response);
   });
-  asyncServer.on("/api/wifi/GetSSIDList", HTTP_GET, [&](AsyncWebServerRequest *request){
-    String returnString;
-    serializeJsonPretty(*(Machine_Ctrl.BackendServer.SSIDList), returnString);
-    AsyncWebServerResponse* response = request->beginResponse(200, "application/json", returnString);
-    SendHTTPesponse(request, response);
-  });
-  
   asyncServer.on("/api/System/OTA", HTTP_POST, 
     [&](AsyncWebServerRequest *request)
     {
@@ -1212,63 +1211,9 @@ void CWIFI_Ctrler::setAPIs()
 
 
 ////////////////////////////////////////////////////
-// For WIFI Manager相關
-////////////////////////////////////////////////////
-
-void WiFiConnecter(void* parameter)
-{
-  JsonObject SSIDListChild =  Machine_Ctrl.BackendServer.SSIDList->createNestedObject();
-  JsonObject WiFiConfig = (*Machine_Ctrl.JSON__WifiConfig).as<JsonObject>();
-  for (;;) {
-    if (!WiFi.isConnected()) {
-      int wifiScanStatus = WiFi.scanComplete();
-      ESP_LOGD("WiFi Manager", "TEST: %d", wifiScanStatus);
-      switch (wifiScanStatus) {
-        case -1:
-          break;
-        case -2:
-          WiFi.scanNetworks(true);
-          break;
-        default:
-          for (size_t i = 0; i < wifiScanStatus; i++)
-          {
-            SSIDListChild[WiFi.SSID(i)]["RSSI"].set(WiFi.RSSI(i));
-            SSIDListChild[WiFi.SSID(i)]["encryptionType"].set((int)WiFi.encryptionType(i));
-          }
-          break;
-      } 
-    }      
-    else {
-      SSIDListChild.clear();
-    }
-    WiFi.scanDelete();
-    vTaskDelay(1000);
-  }
-}
-
-void CWIFI_Ctrler::StartWiFiConnecter()
-{
-  xTaskCreate(
-    WiFiConnecter, "TASK__SSIDScan",
-    10000, NULL, 1, &TASK__SSIDScan
-  );
-}
-
-
-
-////////////////////////////////////////////////////
 // For 互動相關
 ////////////////////////////////////////////////////
 
-DynamicJsonDocument CWIFI_Ctrler::GetSSIDList()
-{
-  DynamicJsonDocument SSIDList(1000);
-  int16_t n = WiFi.scanNetworks();
-  for (int i = 0; i < n; ++i){
-    SSIDList[WiFi.SSID(i)] = WiFi.RSSI(i);
-  }
-  return SSIDList;
-}
 
 DynamicJsonDocument CWIFI_Ctrler::GetWifiInfo()
 {
