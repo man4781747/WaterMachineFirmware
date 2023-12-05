@@ -193,6 +193,7 @@ bool SMachine_Ctrl::SPIFFS__ReWriteWiFiConfig()
 
 int SMachine_Ctrl::openLogDB()
 {
+  // https://ost.51cto.com/posts/348
   // SD.remove("/logDB.db");
 
   sqlite3_initialize();
@@ -211,13 +212,14 @@ int SMachine_Ctrl::openSensorDB()
 {
   // SD.remove("/sensorDB.db");
   // sqlite3_initialize();
+  
   int rc = sqlite3_open(FilePath__SD__SensorDB.c_str(), &DB_Sensor);
   if (rc) {
     Serial.printf("Can't open database: %s\n", sqlite3_errmsg(DB_Sensor));
     return rc;
   } else {
     Serial.printf("Opened database successfully\n");
-    db_exec(DB_Sensor, "CREATE TABLE sensor ( time TEXT, title TEXT, pool TEXT , value_name TEXT , result REAL );");
+    db_exec(DB_Sensor, "CREATE TABLE sensor ( time TEXT, pool TEXT , value_name TEXT , result REAL );");
     // db_exec(DB_Sensor, "CREATE TABLE sensor ( time TEXT, title TEXT, pool TEXT , value_name TEXT , result REAL, uuid TEXT );");
   }
   return rc;
@@ -240,10 +242,8 @@ void SMachine_Ctrl::InsertNewDataToDB(String time,String title, String pool, Str
   // SqlString += "' );";
   // db_exec(DB_Sensor, SqlString);
 
-  String SqlString = "INSERT INTO sensor ( time, title, pool, value_name, result ) VALUES ( '";
+  String SqlString = "INSERT INTO sensor ( time, pool, value_name, result ) VALUES ( '";
   SqlString += time;
-  SqlString += "' ,'";
-  SqlString += title;
   SqlString += "' ,'";
   SqlString += pool;
   SqlString += "' ,'";

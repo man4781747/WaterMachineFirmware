@@ -286,7 +286,7 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
 
     size_t length = 0;
     for (const uint8_t* p = data; *p; ++p) {
-        ++length;
+      ++length;
     }
 
     // ESP_LOGV("ws", "total len: %d, data* len: %d, String len: %d", len, length, totalLen);
@@ -821,6 +821,10 @@ void CWIFI_Ctrler::setAPIs()
       // else {
       //   Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor DESC LIMIT 100", &ReturnData);
       // }
+      
+      // request->beginResponseStream("application/json");
+
+      // request->send(response);
       String RetuenString;
       serializeJson(ReturnData, RetuenString);
       AsyncWebServerResponse* response = request->beginResponse(200, "application/json", RetuenString);
