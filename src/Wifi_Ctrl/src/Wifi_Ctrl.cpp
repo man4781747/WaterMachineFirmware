@@ -16,6 +16,7 @@
 // #include <AsyncWebServer_ESP32_W5500.h>
 // #include <AsyncWebServer_Ethernet.h>
 #include <ESPAsyncWebServer.h>
+#include "AsyncJson.h"
 #include <Update.h>
 #include <HTTPClient.h>
 
@@ -720,7 +721,7 @@ void CWIFI_Ctrler::setAPIs()
   asyncServer.on("/api/logs", HTTP_GET,
     [&](AsyncWebServerRequest *request)
     { 
-      DynamicJsonDocument ReturnData(100000);
+      // DynamicJsonDocument ReturnData(100000);
       String StartTime = "1900-01-01 00:00:00";
       String EndTime = "2900-01-01 00:00:00";
       String LevelList = "1,2,3,4,5,6";
@@ -736,7 +737,7 @@ void CWIFI_Ctrler::setAPIs()
 
       // String SQL_String = "SELECT * FROM logs DESC LIMIT 1000";
 
-      String SQL_String = "SELECT time, title, desp, level FROM logs WHERE level in (";
+      String SQL_String = "SELECT * FROM logs WHERE level in (";
       SQL_String += LevelList;
       SQL_String += ") AND time BETWEEN '";
       SQL_String += StartTime;
@@ -752,12 +753,12 @@ void CWIFI_Ctrler::setAPIs()
       // String SQL_String = "SELECT * FROM logs WHERE level in (";
       // SQL_String += LevelList;
       // SQL_String += ") ORDER BY time DESC LIMIT 1000";
-
-      Machine_Ctrl.db_exec( Machine_Ctrl.DB_Log, SQL_String, &ReturnData);
-      String RetuenString;
-      serializeJson(ReturnData, RetuenString);
-      AsyncWebServerResponse* response = request->beginResponse(200, "application/json", RetuenString);
-      SendHTTPesponse(request, response);
+      AsyncJsonResponse *response = new AsyncJsonResponse(true, 100000);
+      // JsonArray root = response->getRoot().createNestedArray("data");
+      JsonArray root = response->getRoot();
+      Machine_Ctrl.db_exec_http(Machine_Ctrl.DB_Log,SQL_String, &root);
+      response->setLength()
+      request->send(response);
     }
   );
 
@@ -809,7 +810,7 @@ void CWIFI_Ctrler::setAPIs()
       SQL_String += "' AND '";
       SQL_String += EndTime;
       SQL_String += "' ORDER BY time DESC LIMIT 1000";
-      Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor,SQL_String, &ReturnData);
+      // Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor,SQL_String, &ReturnData);
 
 
       // if (request->hasParam("st") & request->hasParam("et")) {
@@ -825,31 +826,56 @@ void CWIFI_Ctrler::setAPIs()
       // request->beginResponseStream("application/json");
 
       // request->send(response);
-      String RetuenString;
-      serializeJson(ReturnData, RetuenString);
-      AsyncWebServerResponse* response = request->beginResponse(200, "application/json", RetuenString);
-      SendHTTPesponse(request, response);
+      AsyncJsonResponse *response = new AsyncJsonResponse(true, 100000);
+      JsonArray root = response->getRoot();
+      Machine_Ctrl.db_exec_http(Machine_Ctrl.DB_Sensor,SQL_String, &root);
+      response->setLength();
+      request->send(response);
+
+      // String RetuenString;
+      // serializeJson(ReturnData, RetuenString);
+      // AsyncWebServerResponse* response = request->beginResponse(200, "application/json", RetuenString);
+      // SendHTTPesponse(request, response);
     }
   );
 
   asyncServer.on("/api/sensor", HTTP_DELETE,
     [&](AsyncWebServerRequest *request)
     { 
+      // AsyncResponseStream *response = request->beginResponseStream("application/json");
+      AsyncJsonResponse *response = new AsyncJsonResponse();
+      // JsonObject root = response->getRoot();
+      JsonArray root = response->getRoot();
 
-      DynamicJsonDocument ReturnData(100000);
       if (request->hasParam("st") & request->hasParam("et")) {
         String StartTime = request->getParam("st")->value();
         String EndTime = request->getParam("et")->value();
         // Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor WHERE time >= "+StartTime+" AND time <="+EndTime+" ORDER BY time DESC LIMIT 100", &ReturnData);
-        Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor WHERE time BETWEEN '"+StartTime+" 00:00:00' AND '"+EndTime+" 00:00:00' ORDER BY time DESC LIMIT 100", &ReturnData);
+        Machine_Ctrl.db_exec_http(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor WHERE time BETWEEN '"+StartTime+" 00:00:00' AND '"+EndTime+" 00:00:00' ORDER BY time DESC LIMIT 100", &root);
       }
       else {
-        Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor ORDER BY id DESC LIMIT 1000", &ReturnData);
+        Machine_Ctrl.db_exec_http(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor ORDER BY id DESC LIMIT 1000", &root);
       }
-      String RetuenString;
-      serializeJson(ReturnData, RetuenString);
-      AsyncWebServerResponse* response = request->beginResponse(200, "application/json", RetuenString);
-      SendHTTPesponse(request, response);
+
+
+      response->setLength();
+      request->send(response);
+
+
+      // if (request->hasParam("st") & request->hasParam("et")) {
+      //   String StartTime = request->getParam("st")->value();
+      //   String EndTime = request->getParam("et")->value();
+      //   // Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor WHERE time >= "+StartTime+" AND time <="+EndTime+" ORDER BY time DESC LIMIT 100", &ReturnData);
+      //   Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor WHERE time BETWEEN '"+StartTime+" 00:00:00' AND '"+EndTime+" 00:00:00' ORDER BY time DESC LIMIT 100", &ReturnData);
+      // }
+      // else {
+      //   Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor ORDER BY id DESC LIMIT 1000", &ReturnData);
+      // }
+      
+      // String RetuenString;
+      // serializeJson(ReturnData, RetuenString);
+      // AsyncWebServerResponse* response = request->beginResponse(200, "application/json", RetuenString);
+      // SendHTTPesponse(request, response);
     }
   );
 

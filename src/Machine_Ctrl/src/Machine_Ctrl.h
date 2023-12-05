@@ -46,6 +46,7 @@ class SMachine_Ctrl
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     int db_exec(sqlite3 *db, String sql, JsonDocument *jsonData);
+    int db_exec_http(sqlite3 *db, String sql, JsonArray *jsonData);
     sqlite3 *DB_Log;
     String FilePath__SD__LogDB = "/sd/logDB.db";
     int openLogDB();
