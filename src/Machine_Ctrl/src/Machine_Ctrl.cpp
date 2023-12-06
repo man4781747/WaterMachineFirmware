@@ -865,6 +865,9 @@ void PiplelineFlowTask(void* parameter)
               pwmMotorItem["status"].as<int>(), targetAngValue
             );
             LX_20S_SerialServoMove(Serial2, pwmMotorItem["index"].as<int>(),targetAngValue,500);
+            vTaskDelay(50/portTICK_PERIOD_MS);
+            LX_20S_SerialServoMove(Serial2, pwmMotorItem["index"].as<int>(),targetAngValue,500);
+            vTaskDelay(50/portTICK_PERIOD_MS);
           }
           vTaskDelay(2000/portTICK_PERIOD_MS);
           for (JsonObject pwmMotorItem : eventItem["pwm_motor_list"].as<JsonArray>()) {
@@ -876,7 +879,11 @@ void PiplelineFlowTask(void* parameter)
                 pwmMotorItem["index"].as<int>(), pwmMotorItem["status"].as<int>(),
                 map(readAng, 0, 1000, -30, 210)
               );
+              ESP_LOGE("LX-20S", "緊急終止儀器");
+              xSemaphoreGive(Machine_Ctrl.LX_20S_xMutex);
+              Machine_Ctrl.StopDeviceAndINIT();
             }
+            vTaskDelay(50/portTICK_PERIOD_MS);
           }
           Serial2.end();
           xSemaphoreGive(Machine_Ctrl.LX_20S_xMutex);
