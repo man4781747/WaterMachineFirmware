@@ -757,7 +757,7 @@ void CWIFI_Ctrler::setAPIs()
       // JsonArray root = response->getRoot().createNestedArray("data");
       JsonArray root = response->getRoot();
       Machine_Ctrl.db_exec_http(Machine_Ctrl.DB_Log,SQL_String, &root);
-      response->setLength()
+      response->setLength();
       request->send(response);
     }
   );
