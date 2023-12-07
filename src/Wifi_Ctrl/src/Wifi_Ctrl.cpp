@@ -454,9 +454,10 @@ void OTAServiceTask(void* parameter) {
 
 void CWIFI_Ctrler::ConnectToWifi()
 {
-  WiFi.mode(WIFI_AP_STA);
+  // WiFi.mode(WIFI_AP_STA);
+  WiFi.mode(WIFI_STA);
   ESP_LOGI(LOG_TAG_WIFI, "Start to connect to wifi");
-  CreateSoftAP();
+  // CreateSoftAP();
   // WiFi.disconnect();
   // WiFi.begin(
   //   (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Name"].as<String>().c_str(),

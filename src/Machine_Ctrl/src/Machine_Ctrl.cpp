@@ -693,11 +693,11 @@ void TimeCheckTask(void* parameter)
         lasUpdatetime = now();
       }
     }
-    else if (now() > lasUpdatetime + 3600) {
-      Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
-      lasUpdatetime = now();
-    }
-    vTaskDelay(5000/portTICK_PERIOD_MS);
+    // else if (now() > lasUpdatetime + 3600) {
+    //   Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
+    //   lasUpdatetime = now();
+    // }
+    vTaskDelay(600000/portTICK_PERIOD_MS);
   }
 }
 
