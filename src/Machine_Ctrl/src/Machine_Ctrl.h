@@ -29,6 +29,8 @@ class SMachine_Ctrl
 {
   public:
     SMachine_Ctrl(void){
+      pinMode(48, OUTPUT);
+      digitalWrite(48, LOW);
       vSemaphoreCreateBinary(LOAD__ACTION_V2_xMutex);
       vSemaphoreCreateBinary(SQL_xMutex);
       vSemaphoreCreateBinary(LX_20S_xMutex);
