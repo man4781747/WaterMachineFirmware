@@ -691,13 +691,14 @@ void TimeCheckTask(void* parameter)
       if (WiFi.isConnected()) {
         Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
         lasUpdatetime = now();
+        vTaskDelay(10000/portTICK_PERIOD_MS);
       }
     }
     // else if (now() > lasUpdatetime + 3600) {
     //   Machine_Ctrl.BackendServer.UpdateMachineTimerByNTP();
     //   lasUpdatetime = now();
     // }
-    vTaskDelay(600000/portTICK_PERIOD_MS);
+    vTaskDelay(1000/portTICK_PERIOD_MS);
   }
 }
 
