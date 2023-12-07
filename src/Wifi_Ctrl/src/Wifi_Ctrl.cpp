@@ -736,7 +736,7 @@ void CWIFI_Ctrler::setAPIs()
         LevelList = request->getParam("lv")->value();
       }
 
-      // String SQL_String = "SELECT * FROM logs DESC LIMIT 1000";
+      // String SQL_String = "SELECT * FROM logs DESC LIMIT 100";
 
       String SQL_String = "SELECT * FROM logs WHERE level in (";
       SQL_String += LevelList;
@@ -744,16 +744,16 @@ void CWIFI_Ctrler::setAPIs()
       SQL_String += StartTime;
       SQL_String += "' AND '";
       SQL_String += EndTime;
-      SQL_String += "' LIMIT 1000";
+      SQL_String += "' LIMIT 100";
       // String SQL_String = "SELECT * FROM logs WHERE time BETWEEN '";
       // SQL_String += StartTime;
       // SQL_String += "' AND '";
       // SQL_String += EndTime;
-      // SQL_String += "' LIMIT 1000";
+      // SQL_String += "' LIMIT 100";
 
       // String SQL_String = "SELECT * FROM logs WHERE level in (";
       // SQL_String += LevelList;
-      // SQL_String += ") ORDER BY time DESC LIMIT 1000";
+      // SQL_String += ") ORDER BY time DESC LIMIT 100";
       AsyncJsonResponse *response = new AsyncJsonResponse(true, 100000);
       // JsonArray root = response->getRoot().createNestedArray("data");
       JsonArray root = response->getRoot();
@@ -810,7 +810,7 @@ void CWIFI_Ctrler::setAPIs()
       SQL_String += StartTime;
       SQL_String += "' AND '";
       SQL_String += EndTime;
-      SQL_String += "' ORDER BY time DESC LIMIT 1000";
+      SQL_String += "' LIMIT 100";
       // Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor,SQL_String, &ReturnData);
 
 
@@ -852,10 +852,10 @@ void CWIFI_Ctrler::setAPIs()
         String StartTime = request->getParam("st")->value();
         String EndTime = request->getParam("et")->value();
         // Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor WHERE time >= "+StartTime+" AND time <="+EndTime+" ORDER BY time DESC LIMIT 100", &ReturnData);
-        Machine_Ctrl.db_exec_http(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor WHERE time BETWEEN '"+StartTime+" 00:00:00' AND '"+EndTime+" 00:00:00' ORDER BY time DESC LIMIT 100", &root);
+        Machine_Ctrl.db_exec_http(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor WHERE time BETWEEN '"+StartTime+" 00:00:00' AND '"+EndTime+" 00:00:00' LIMIT 100", &root);
       }
       else {
-        Machine_Ctrl.db_exec_http(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor ORDER BY id DESC LIMIT 1000", &root);
+        Machine_Ctrl.db_exec_http(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor LIMIT 100", &root);
       }
 
 
@@ -870,7 +870,7 @@ void CWIFI_Ctrler::setAPIs()
       //   Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor WHERE time BETWEEN '"+StartTime+" 00:00:00' AND '"+EndTime+" 00:00:00' ORDER BY time DESC LIMIT 100", &ReturnData);
       // }
       // else {
-      //   Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor ORDER BY id DESC LIMIT 1000", &ReturnData);
+      //   Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor, "SELECT * FROM sensor ORDER BY id DESC LIMIT 100", &ReturnData);
       // }
       
       // String RetuenString;
