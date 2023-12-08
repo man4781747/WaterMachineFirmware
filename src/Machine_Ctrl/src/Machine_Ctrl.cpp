@@ -679,10 +679,6 @@ void SMachine_Ctrl::BuildOLEDCheckTask()
     NULL, UBaseType__OLEDCheck, StackType__OLEDCheck, 
     &StaticTask__OLEDCheck
   );
-  // xTaskCreate(
-  //   OLEDCheckTask, "OLEDCheckTask",
-  //   10000, NULL, 1, &TASK__OLEDCheck
-  // );
 }
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -716,10 +712,6 @@ void SMachine_Ctrl::BuildTimeCheckTask()
     NULL, UBaseType__TimeCheck, StackType__TimeCheck, 
     &StaticTask__TimeCheck
   );
-  // xTaskCreate(
-  //   TimeCheckTask, "TimeCheckTask",
-  //   10000, NULL, 1, &TASK__TimeCheck
-  // );
 }
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -798,12 +790,11 @@ void ScheduleManager(void* parameter)
 
 void SMachine_Ctrl::CreateScheduleManagerTask() 
 {
-  if (TASK__ScheduleManager == NULL) {
-    xTaskCreate(
-      ScheduleManager, "ScheduleManager",
-      10000, NULL, 4, &TASK__ScheduleManager
-    );
-  }
+  xTaskCreateStatic(
+    ScheduleManager, "ScheduleManager", StackDepth__ScheduleManager, 
+    NULL, UBaseType__ScheduleManager, StackType__ScheduleManager, 
+    &StaticTask__ScheduleManager
+  );
 }
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -2227,10 +2218,6 @@ void SMachine_Ctrl::CreatePipelineFlowScanTask(DynamicJsonDocument *pipelineStac
   }
   else {
     if (TASK__pipelineFlowScan == NULL) {
-      // xTaskCreate(
-      //   PipelineFlowScan, "PipelineScan",
-      //   20000, (void*)pipelineStackList, 4, &TASK__pipelineFlowScan
-      // );
       TASK__pipelineFlowScan = xTaskCreateStatic(
         PipelineFlowScan, "PipelineScan", 20000,(void*)pipelineStackList, 4,
         PipelineFlowScanTask_xStack, &PipelineFlowScanTask_xTaskBuffer
@@ -2488,10 +2475,6 @@ void SMachine_Ctrl::BuildDeviceInfoCheckTask() {
     NULL, UBaseType__DeviceInfoCheck, StackType__DeviceInfoCheck, 
     &StaticTask__DeviceInfoCheck
   );
-  // xTaskCreate(
-  //   DeviceInfoCheckTask, "DeviceInfoCheck",
-  //   10000, NULL, 1, &TASK__DeviceInfoChecker
-  // );
 }
 
 

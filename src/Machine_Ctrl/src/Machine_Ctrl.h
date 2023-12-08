@@ -136,7 +136,11 @@ class SMachine_Ctrl
 
     //? 建立排程管理Task，負責定期檢查當前時間是否有排程需要執行
     void CreateScheduleManagerTask();
-    TaskHandle_t TASK__ScheduleManager = NULL;
+    uint32_t StackDepth__ScheduleManager = 10000;
+    UBaseType_t  UBaseType__ScheduleManager = 4;
+    StackType_t StackType__ScheduleManager[10000* sizeof(StackType_t)];
+    StaticTask_t StaticTask__ScheduleManager;
+    // TaskHandle_t TASK__ScheduleManager = NULL;
 
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //! SPIFFS系統相關

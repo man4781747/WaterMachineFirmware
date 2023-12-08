@@ -70,6 +70,7 @@ void setup() {
   Machine_Ctrl.CreateScheduleManagerTask();
   Machine_Ctrl.BuildTimeCheckTask();
   Machine_Ctrl.BuildOLEDCheckTask();
+  // Machine_Ctrl.BackendServer.StartSTAConnectCheck();
   Machine_Ctrl.SetLog(3, "儀器啟動完畢", "");
   ESP_LOGD("", "儀器啟動完畢!");
   delay(1000);
