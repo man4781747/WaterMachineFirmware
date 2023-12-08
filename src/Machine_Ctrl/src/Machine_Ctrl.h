@@ -115,12 +115,15 @@ class SMachine_Ctrl
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     void BuildOLEDCheckTask();
+    TaskHandle_t TASK__OLEDCheck = NULL;
+
 
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //! 儀器時鐘確認Task
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     void BuildTimeCheckTask();
+    TaskHandle_t TASK__TimeCheck = NULL;
 
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //! 排程功能相關
@@ -198,9 +201,23 @@ class SMachine_Ctrl
     );
     //? 更新最新資料儲存檔案
     void ReWriteLastDataSaveFile(String filePath, JsonObject tempData);
-    DynamicJsonDocument SetLog(int Level, String Title, String description, AsyncWebSocket *server=NULL, AsyncWebSocketClient *client=NULL, bool Save=true);
+    DynamicJsonDocument SetLog(
+      int Level, String Title, 
+      String description, AsyncWebSocket *server=NULL, 
+      AsyncWebSocketClient *client=NULL, 
+      bool Save=true, bool SQL=true);
+
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //! 自我檢查
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    void BuildAPICheckerTask();
+    TaskHandle_t TASK__APIChecker = NULL;
+    void BuildDeviceInfoCheckTask();
+    TaskHandle_t TASK__DeviceInfoChecker = NULL;
 
 
+    TaskHandle_t TASK__OTAService = NULL;
 
     //* 廣播指定池的感測器資料出去
     //!! 注意，這個廣撥出去的資料是會進資料庫的

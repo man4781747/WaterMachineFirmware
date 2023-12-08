@@ -1,3 +1,9 @@
+// https://github.com/espressif/arduino-esp32/issues/1089
+#include <FreeRTOSConfig.h>
+// 請到 FreeRTOSConfig.h 新增.
+// #define CONFIG_FREERTOS_USE_TRACE_FACILITY 1
+// #define CONFIG_FREERTOS_USE_STATS_FORMATTING_FUNCTIONS 1
+
 // 如果要更改 log level，請去這邊找
 // #include <sdkconfig.h>
 // #undef CONFIG_ARDUHAL_LOG_DEFAULT_LEVEL
@@ -9,7 +15,6 @@
 #include <Wire.h>
 #include <esp_log.h>
 #include "Machine_Ctrl/src/Machine_Ctrl.h"
-// #include "lx_20s.h"
 
 //TODO oled暫時這樣寫死
 // #include <Wire.h> 
@@ -20,9 +25,7 @@
 #include "../lib/QRCode/src/qrcode.h"
 //TODO oled暫時這樣寫死
 
-const char* FIRMWARE_VERSION = "V3.23.1201.1";
-
-void scanI2C();
+const char* FIRMWARE_VERSION = "V3.23.1201.2";
 
 void setup() {
   Serial.begin(115200);
@@ -30,12 +33,7 @@ void setup() {
   pinMode(17, OUTPUT);
   digitalWrite(16, LOW);
   digitalWrite(17, LOW);
-  // digitalWrite(16, HIGH);
-  // digitalWrite(17, HIGH);
-  // Machine_Ctrl.INIT_TaskMemeryPoolItemMap();
-  // Serial2.begin(115200,SERIAL_8N1, 9, 10);
   Machine_Ctrl.INIT_I2C_Wires();
-  // scanI2C();
   Machine_Ctrl.PrintOnScreen("Load SD Card");
   ESP_LOGD("", "儀器啟動，韌體版本為: %s", FIRMWARE_VERSION);
   ESP_LOGD("", "準備讀取SD卡內資訊");
@@ -58,7 +56,7 @@ void setup() {
   Machine_Ctrl.motorCtrl.INIT_Motors(Machine_Ctrl.WireOne);
   ESP_LOGD("", "停止所有馬達動作");
   Machine_Ctrl.StopDeviceAndINIT();
-  // ESP_LOGD("", "準備讀取log資訊");
+  ESP_LOGD("", "準備讀取log資訊");
   Machine_Ctrl.PrintOnScreen("Load Logs");
   Machine_Ctrl.SD__LoadOldLogs();
   ESP_LOGD("", "準備使用WIFI連線");
@@ -70,73 +68,17 @@ void setup() {
   ESP_LOGD("", "準備建立排程管理");
   Machine_Ctrl.PrintOnScreen("INIT Task Manager");
   Machine_Ctrl.CreateScheduleManagerTask();
-  // Machine_Ctrl.ShowIPAndQRCodeOnOled();
-  // Machine_Ctrl.PrintOnScreen("Wait For WiFi Connect");
   Machine_Ctrl.BuildTimeCheckTask();
   Machine_Ctrl.BuildOLEDCheckTask();
   Machine_Ctrl.SetLog(3, "儀器啟動完畢", "");
   ESP_LOGD("", "儀器啟動完畢!");
-  // digitalWrite(16, LOW);
-  // digitalWrite(17, LOW);
-  // Serial2.begin(115200,SERIAL_8N1, 9, 10);
   delay(1000);
-  // pinMode(4, OUTPUT);
-  // digitalWrite(4, HIGH);
+  // Machine_Ctrl.BuildAPICheckerTask();
+  Machine_Ctrl.BuildDeviceInfoCheckTask();
 }
 
 void loop() {
-  // for (int MotorChose=1;MotorChose<=6;MotorChose++) {
-  //   LX_20S_SerialServoMove(Serial2, MotorChose,0,500);
-  // }
-  // delay(2000);
-  // Serial.println("=====================================");
-  // Serial.println("NO,\tPosition,\tTemp,\tV");
-  // for (int MotorChose=1;MotorChose<=6;MotorChose++) {
-  //   Serial.printf("%d,\t%d,\t%d,\t%d\n", 
-  //     MotorChose, 
-  //     LX_20S_SerialServoReadPosition(Serial2, MotorChose),
-  //     LX_20S_SerialServoReadTeampature(Serial2, MotorChose),
-  //     LX_20S_SerialServoReadVIN(Serial2, MotorChose)
-  //   );
-  // }
-
-  // for (int MotorChose=1;MotorChose<=6;MotorChose++) {
-  //   LX_20S_SerialServoMove(Serial2, MotorChose,1000,500);
-  // }
-  // delay(2000);
-  // Serial.println("=====================================");
-  // Serial.println("NO,\tPosition,\tTemp,\tV");
-  // for (int MotorChose=1;MotorChose<=6;MotorChose++) {
-  //   Serial.printf("%d,\t%d,\t%d,\t%d\n", 
-  //     MotorChose, 
-  //     LX_20S_SerialServoReadPosition(Serial2, MotorChose),
-  //     LX_20S_SerialServoReadTeampature(Serial2, MotorChose),
-  //     LX_20S_SerialServoReadVIN(Serial2, MotorChose)
-  //   );
-  // }
   vTaskDelay(9999999/portTICK_PERIOD_MS);
-}
-
-void scanI2C(){
-  byte error, address;
-  int devices = 0;
-  for (address = 1; address < 127; address++) {
-    Wire.setTimeOut(10);
-    Wire.beginTransmission(address);
-    error = Wire.endTransmission();
-    if (error == 0) {
-      Serial.print("I2C device found at address 0x");
-      if (address < 16) {
-        Serial.print("0");
-      }
-      Serial.println(address, HEX);
-
-      devices++;
-    }
-  }
-  if (devices == 0) {
-    Serial.println("No I2C devices found");
-  }
 }
 
 //                                `-+syhddmmmddhyo+:`                              

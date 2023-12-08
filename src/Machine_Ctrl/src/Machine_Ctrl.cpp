@@ -27,6 +27,8 @@
 #include <ESPAsyncWebServer.h>
 // #include <AsyncWebServer_ESP32_W5500.h>
 #include "AsyncTCP.h"
+#include <HTTPClient.h>
+// #include <WebSocketClient.h>
 
 #include <TimeLib.h>   
 
@@ -99,7 +101,6 @@ static int callback_v2(void *data, int argc, char **argv, char **azColName){
     // Serial.printf("%s: %s\n", KeyName.c_str(), Value.c_str());
   }
   (*targetJsonObj).add(oneLogData);
-  // (*targetJsonObj).add("123");
   return 0;
 }
 
@@ -675,7 +676,7 @@ void SMachine_Ctrl::BuildOLEDCheckTask()
 {
   xTaskCreate(
     OLEDCheckTask, "OLEDCheckTask",
-    10000, NULL, 1, NULL
+    10000, NULL, 1, &TASK__OLEDCheck
   );
 }
 
@@ -707,7 +708,7 @@ void SMachine_Ctrl::BuildTimeCheckTask()
 {
   xTaskCreate(
     TimeCheckTask, "TimeCheckTask",
-    10000, NULL, 1, NULL
+    10000, NULL, 1, &TASK__TimeCheck
   );
 }
 
@@ -2296,7 +2297,7 @@ SemaphoreHandle_t SetLog_xMutex = xSemaphoreCreateMutex();
  * @param wsBroadcast 
  * @return DynamicJsonDocument 
  */
-DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String description, AsyncWebSocket *server, AsyncWebSocketClient *client, bool Save)
+DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String description, AsyncWebSocket *server, AsyncWebSocketClient *client, bool Save, bool SQL)
 {
   DynamicJsonDocument logItem(500);
   String timeString = GetDatetimeString();
@@ -2305,17 +2306,6 @@ DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String descri
   logItem["title"].set(Title);
   logItem["desp"].set(description);
   // db_exec(DB_Log, "Select * from domain_rank where domain = 'zoho.com'");
-  String SqlString = "INSERT INTO logs ( level, time, title, desp ) VALUES ( ";
-  SqlString += String(Level);
-  SqlString += " ,'";
-  SqlString += GetDatetimeString();
-  SqlString += "' ,'";
-  SqlString += Title;
-  SqlString += "','";
-  SqlString += description;
-  SqlString += "' );";
-  db_exec(DB_Log, SqlString);
-
   // serializeJsonPretty(logItem, Serial);
   if (Save==true) {
     // vTaskDelay(10);
@@ -2390,8 +2380,99 @@ DynamicJsonDocument SMachine_Ctrl::SetLog(int Level, String Title, String descri
     }
     D_baseInfo.clear();
   }
+  
+  if (SQL==true) {
+    String SqlString = "INSERT INTO logs ( level, time, title, desp ) VALUES ( ";
+    SqlString += String(Level);
+    SqlString += " ,'";
+    SqlString += GetDatetimeString();
+    SqlString += "' ,'";
+    SqlString += Title;
+    SqlString += "','";
+    SqlString += description;
+    SqlString += "' );";
+    db_exec(DB_Log, SqlString);
+  }
+  
   return logItem;
 }
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//! 自我檢查
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+void APICheckerTask(void* parameter)
+{ 
+  HTTPClient http;
+  // WebSocketClient webSocketClient;
+  http.setTimeout(1000);
+  for (;;) {
+    vTaskDelay(60000/portTICK_PERIOD_MS);
+    http.begin("http://www.google.com.tw/");
+    int httpResponseCode = http.GET();
+    // http.disconnect();
+    http.end();
+    Serial.println(httpResponseCode);
+    if (httpResponseCode != 200) {
+      Machine_Ctrl.BackendServer.asyncServer_->end();
+      Machine_Ctrl.BackendServer.asyncServer_->begin();
+    }
+    String webPath = "http://"+WiFi.localIP().toString()+":80/api/hi";
+    http.begin(webPath);
+    httpResponseCode = http.GET();
+    // http.disconnect();
+    http.end();
+    Serial.println(httpResponseCode);
+
+  }
+}
+
+void SMachine_Ctrl::BuildAPICheckerTask() {
+  xTaskCreate(
+    APICheckerTask, "APIChecker",
+    10000, NULL, 1, &TASK__APIChecker
+  );
+}
+
+void DeviceInfoCheckTask(void* parameter)
+{ 
+  char pWriteBuffer[10240];
+  for (;;) {
+    vTaskDelay(60000/portTICK_PERIOD_MS);
+    ESP_LOGI("定期檢查", "===== 開始定期檢查儀器各項狀態 =====");
+    if (WiFi.isConnected()) {
+      ESP_LOGI("定期檢查", "WiFi連線狀態: 正常");
+    } 
+    else {
+      ESP_LOGI("定期檢查", "WiFi連線狀態: 無連線");
+    }
+    ESP_LOGI("定期檢查", "WebSocket 連線數: %d", Machine_Ctrl.BackendServer.ws_->count());
+    // Machine_Ctrl.BackendServer.asyncServer_.
+    int connectCount = 1;
+    for (AsyncWebSocketClient *clientChose : Machine_Ctrl.BackendServer.ws_->getClients()) {
+      ESP_LOGI("定期檢查", " - %d, %s:%d", connectCount, clientChose->remoteIP().toString().c_str(), clientChose->remotePort());
+      // Serial.println(clientChose->remoteIP().toString());
+      // Serial.println(clientChose->remotePort());
+      // Serial.println(clientChose->canSend());
+      // Serial.println(clientChose->status());
+      // clientChose->keepAlivePeriod(1);
+      connectCount++;
+    }
+    // ESP_LOGI("定期檢查", "WebSocket 連線數: %d", Machine_Ctrl.BackendServer.ws_->getClients().length());
+
+    // vTaskList((char *)&pWriteBuffer);
+    // Serial.printf("%s", pWriteBuffer);
+    ESP_LOGI("定期檢查", "===== 定期檢查儀器各項狀態結束 =====");
+  }
+}
+
+void SMachine_Ctrl::BuildDeviceInfoCheckTask() {
+  xTaskCreate(
+    DeviceInfoCheckTask, "DeviceInfoCheck",
+    10000, NULL, 1, &TASK__DeviceInfoChecker
+  );
+}
+
 
 //* 廣播指定池的感測器資料出去
 //!! 注意，這個廣撥出去的資料是會進資料庫的

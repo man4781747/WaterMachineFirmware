@@ -451,49 +451,49 @@ void OTAServiceTask(void* parameter) {
  */
 void WiFiEvent(WiFiEvent_t event)
 {
-  Serial.printf("[WiFi-event] event: %d\n", event);
-
+  Machine_Ctrl.SetLog(0,"WiFiEvent", "[WiFi-event] event: "+String(event), NULL, NULL, true, false);
   switch (event) {
       case ARDUINO_EVENT_WIFI_READY: 
-          Serial.println("WiFi interface ready");
-          break;
+        Machine_Ctrl.SetLog(0,"ARDUINO_EVENT_WIFI_READY", "WiFi interface ready", NULL, NULL, true, false);
+        break;
       case ARDUINO_EVENT_WIFI_SCAN_DONE:
-          Serial.println("Completed scan for access points");
-          break;
+        Machine_Ctrl.SetLog(0,"ARDUINO_EVENT_WIFI_SCAN_DONE", "Completed scan for access points", NULL, NULL, true, false);
+          // Serial.println("Completed scan for access points");
+        break;
       case ARDUINO_EVENT_WIFI_STA_START:
+        Machine_Ctrl.SetLog(0,"ARDUINO_EVENT_WIFI_STA_START", "WiFi client started", NULL, NULL, true, false);
           Serial.println("WiFi client started");
-          break;
+        break;
       case ARDUINO_EVENT_WIFI_STA_STOP:
-          Serial.println("WiFi clients stopped");
-          break;
+        Machine_Ctrl.SetLog(0,"ARDUINO_EVENT_WIFI_STA_STOP", "WiFi clients stopped", NULL, NULL, true, false);
+        break;
       case ARDUINO_EVENT_WIFI_STA_CONNECTED:
-          Serial.println("Connected to access point");
-          break;
+        Machine_Ctrl.SetLog(0,"ARDUINO_EVENT_WIFI_STA_CONNECTED", "Connected to access point", NULL, NULL, true, false);
+        break;
       case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-          Serial.println("Disconnected from WiFi access point");
-          break;
+        Machine_Ctrl.SetLog(0,"ARDUINO_EVENT_WIFI_STA_DISCONNECTED", "Disconnected from WiFi access point", NULL, NULL, true, false);
+        break;
       case ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE:
-          Serial.println("Authentication mode of access point has changed");
-          break;
+        Machine_Ctrl.SetLog(0,"ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE", "Authentication mode of access point has changed", NULL, NULL, true, false);
+        break;
       case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-          Serial.print("Obtained IP address: ");
-          Serial.println(WiFi.localIP());
-          break;
+        Machine_Ctrl.SetLog(0,"ARDUINO_EVENT_WIFI_STA_GOT_IP", "Obtained IP address: "+WiFi.localIP().toString(), NULL, NULL, true, false);
+        break;
       case ARDUINO_EVENT_WIFI_STA_LOST_IP:
-          Serial.println("Lost IP address and IP address is reset to 0");
-          break;
+        Machine_Ctrl.SetLog(0,"ARDUINO_EVENT_WIFI_STA_LOST_IP", "Lost IP address and IP address is reset to 0", NULL, NULL, true, false);
+        break;
       case ARDUINO_EVENT_WPS_ER_SUCCESS:
-          Serial.println("WiFi Protected Setup (WPS): succeeded in enrollee mode");
-          break;
+        Machine_Ctrl.SetLog(0,"ARDUINO_EVENT_WPS_ER_SUCCESS", "WiFi Protected Setup (WPS): succeeded in enrollee mode", NULL, NULL, true, false);
+        break;
       case ARDUINO_EVENT_WPS_ER_FAILED:
-          Serial.println("WiFi Protected Setup (WPS): failed in enrollee mode");
-          break;
+        Machine_Ctrl.SetLog(0,"ARDUINO_EVENT_WPS_ER_FAILED", "WiFi Protected Setup (WPS): failed in enrollee mode", NULL, NULL, true, false);
+        break;
       case ARDUINO_EVENT_WPS_ER_TIMEOUT:
-          Serial.println("WiFi Protected Setup (WPS): timeout in enrollee mode");
-          break;
+        Machine_Ctrl.SetLog(0,"ARDUINO_EVENT_WPS_ER_TIMEOUT", "WiFi Protected Setup (WPS): timeout in enrollee mode", NULL, NULL, true, false);
+        break;
       case ARDUINO_EVENT_WPS_ER_PIN:
-          Serial.println("WiFi Protected Setup (WPS): pin code in enrollee mode");
-          break;
+        Machine_Ctrl.SetLog(0,"ARDUINO_EVENT_WPS_ER_PIN", "WiFi Protected Setup (WPS): pin code in enrollee mode", NULL, NULL, true, false);
+        break;
       case ARDUINO_EVENT_WIFI_AP_START:
           Serial.println("WiFi access point started");
           break;
@@ -576,7 +576,7 @@ void CWIFI_Ctrler::ConnectToWifi()
   WiFi.setAutoReconnect(true);
   xTaskCreate(
     OTAServiceTask, "TASK__OTAService",
-    10000, NULL, 1, NULL
+    10000, NULL, 1, &Machine_Ctrl.TASK__OTAService
   );
 }
 
@@ -657,6 +657,7 @@ void CWIFI_Ctrler::ServerStart()
   asyncServer.addHandler(&ws);
   asyncServer.begin();
   createWebServer();
+  // ws.closeAll();
 }
 
 void CWIFI_Ctrler::StartSTAConnectCheck()
@@ -688,6 +689,11 @@ void CWIFI_Ctrler::setAPIs()
 
   asyncServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     AsyncWebServerResponse* response = request->beginResponse(SPIFFS, "/web/index.html", "text/html");
+    SendHTTPesponse(request, response);
+  });
+
+  asyncServer.on("/api/hi", HTTP_GET, [](AsyncWebServerRequest *request){
+    AsyncWebServerResponse* response = request->beginResponse(200, "text/plain", "HI");
     SendHTTPesponse(request, response);
   });
 
@@ -814,7 +820,6 @@ void CWIFI_Ctrler::setAPIs()
   );
 
   //LOG系統
-
   //? default的log api是抓取最新100筆log
   asyncServer.on("/api/logs", HTTP_GET,
     [&](AsyncWebServerRequest *request)
