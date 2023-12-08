@@ -76,6 +76,8 @@ void setup() {
   delay(1000);
   // Machine_Ctrl.BuildAPICheckerTask();
   Machine_Ctrl.BuildDeviceInfoCheckTask();
+  digitalWrite(16, LOW);
+  digitalWrite(17, LOW);
 }
 
 void loop() {

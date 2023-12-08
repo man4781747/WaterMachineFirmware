@@ -514,28 +514,6 @@ bool SMachine_Ctrl::INIT_PoolData()
     }
   }
   ESP_LOGE("", "找不到或讀取最新各池感測器測量數值失敗，重建資料庫");
-  // for (int poolIndex=1;poolIndex<5;poolIndex++) {
-  //   String poolName = "pool-"+String(poolIndex);
-  //   (*JSON__sensorDataSave)[poolName]["PoolID"].set(poolName);
-  //   (*JSON__sensorDataSave)[poolName]["PoolName"].set(D_poolItem.value().as<JsonObject>()["title"].as<String>());
-  //   (*JSON__sensorDataSave)[poolName]["PoolDescription"].set(D_poolItem.value().as<JsonObject>()["desp"].as<String>());
-  //   (*JSON__sensorDataSave)[poolName]["NO2_wash_volt"]["Value"].set(-1.);
-  //   (*JSON__sensorDataSave)[poolName]["NO2_wash_volt"]["data_time"].set("1990-01-01 00:00:00");
-  //   (*JSON__sensorDataSave)[poolName]["NO2_test_volt"]["Value"].set(-1.);
-  //   (*JSON__sensorDataSave)[poolName]["NO2_test_volt"]["data_time"].set("1990-01-01 00:00:00");
-  //   (*JSON__sensorDataSave)[poolName]["NO2"]["Value"].set(-1.);
-  //   (*JSON__sensorDataSave)[poolName]["NO2"]["data_time"].set("1990-01-01 00:00:00");
-  //   (*JSON__sensorDataSave)[poolName]["NH4_wash_volt"]["Value"].set(-1.);
-  //   (*JSON__sensorDataSave)[poolName]["NH4_wash_volt"]["data_time"].set("1990-01-01 00:00:00");
-  //   (*JSON__sensorDataSave)[poolName]["NH4_test_volt"]["Value"].set(-1.);
-  //   (*JSON__sensorDataSave)[poolName]["NH4_test_volt"]["data_time"].set("1990-01-01 00:00:00");
-  //   (*JSON__sensorDataSave)[poolName]["NH4"]["Value"].set(-1.);
-  //   (*JSON__sensorDataSave)[poolName]["NH4"]["data_time"].set("1990-01-01 00:00:00");
-  //   (*JSON__sensorDataSave)[poolName]["pH_volt"]["Value"].set(-1.);
-  //   (*JSON__sensorDataSave)[poolName]["pH_volt"]["data_time"].set("1990-01-01 00:00:00");
-  //   (*JSON__sensorDataSave)[poolName]["pH"]["Value"].set(-1.);
-  //   (*JSON__sensorDataSave)[poolName]["pH"]["data_time"].set("1990-01-01 00:00:00");
-  // }
   for (JsonVariant SinPoolInfo : (*JSON__PoolConfig).as<JsonArray>()) {
     JsonObject Array_SinPoolInfo = SinPoolInfo.as<JsonObject>();
     String PoolID = Array_SinPoolInfo["id"].as<String>();
@@ -559,28 +537,6 @@ bool SMachine_Ctrl::INIT_PoolData()
     (*JSON__sensorDataSave)[PoolID]["DataItem"]["pH"]["Value"].set(-1.);
     (*JSON__sensorDataSave)[PoolID]["DataItem"]["pH"]["data_time"].set("1990-01-01 00:00:00");
   }
-  // JsonObject D_pools = (*Machine_Ctrl.JSON__DeviceBaseInfo)["pools"].as<JsonObject>();
-  // for (JsonPair D_poolItem : D_pools) {
-  //   (*JSON__sensorDataSave)[D_poolItem.key()]["PoolID"].set(D_poolItem.key());
-  //   (*JSON__sensorDataSave)[D_poolItem.key()]["PoolName"].set(D_poolItem.value().as<JsonObject>()["title"].as<String>());
-  //   (*JSON__sensorDataSave)[D_poolItem.key()]["PoolDescription"].set(D_poolItem.value().as<JsonObject>()["desp"].as<String>());
-  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NO2_wash_volt"]["Value"].set(-1.);
-  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NO2_wash_volt"]["data_time"].set("1990-01-01 00:00:00");
-  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NO2_test_volt"]["Value"].set(-1.);
-  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NO2_test_volt"]["data_time"].set("1990-01-01 00:00:00");
-  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NO2"]["Value"].set(-1.);
-  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NO2"]["data_time"].set("1990-01-01 00:00:00");
-  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NH4_wash_volt"]["Value"].set(-1.);
-  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NH4_wash_volt"]["data_time"].set("1990-01-01 00:00:00");
-  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NH4_test_volt"]["Value"].set(-1.);
-  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NH4_test_volt"]["data_time"].set("1990-01-01 00:00:00");
-  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NH4"]["Value"].set(-1.);
-  //   (*JSON__sensorDataSave)[D_poolItem.key()]["NH4"]["data_time"].set("1990-01-01 00:00:00");
-  //   (*JSON__sensorDataSave)[D_poolItem.key()]["pH_volt"]["Value"].set(-1.);
-  //   (*JSON__sensorDataSave)[D_poolItem.key()]["pH_volt"]["data_time"].set("1990-01-01 00:00:00");
-  //   (*JSON__sensorDataSave)[D_poolItem.key()]["pH"]["Value"].set(-1.);
-  //   (*JSON__sensorDataSave)[D_poolItem.key()]["pH"]["data_time"].set("1990-01-01 00:00:00");
-  // }
   return false;
 }
 
