@@ -674,10 +674,15 @@ void OLEDCheckTask(void* parameter)
 
 void SMachine_Ctrl::BuildOLEDCheckTask() 
 {
-  xTaskCreate(
-    OLEDCheckTask, "OLEDCheckTask",
-    10000, NULL, 1, &TASK__OLEDCheck
+  xTaskCreateStatic(
+    OLEDCheckTask, "OLEDCheckTask", StackDepth__OLEDCheck, 
+    NULL, UBaseType__OLEDCheck, StackType__OLEDCheck, 
+    &StaticTask__OLEDCheck
   );
+  // xTaskCreate(
+  //   OLEDCheckTask, "OLEDCheckTask",
+  //   10000, NULL, 1, &TASK__OLEDCheck
+  // );
 }
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -706,10 +711,15 @@ void TimeCheckTask(void* parameter)
 
 void SMachine_Ctrl::BuildTimeCheckTask() 
 {
-  xTaskCreate(
-    TimeCheckTask, "TimeCheckTask",
-    10000, NULL, 1, &TASK__TimeCheck
+  xTaskCreateStatic(
+    TimeCheckTask, "TimeCheckTask", StackDepth__TimeCheck, 
+    NULL, UBaseType__TimeCheck, StackType__TimeCheck, 
+    &StaticTask__TimeCheck
   );
+  // xTaskCreate(
+  //   TimeCheckTask, "TimeCheckTask",
+  //   10000, NULL, 1, &TASK__TimeCheck
+  // );
 }
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1795,7 +1805,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
     int nameLength = stepsGroupName.length();
     (*ThisTaskInfo).stepsGroupName = (char*)malloc((nameLength + 1) * sizeof(char));
     strcpy((*ThisTaskInfo).stepsGroupName, stepsGroupName.c_str());
-
+    String pcName;
     (*JSON__pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("RUNNING");
 
     if (TaskThread_Free_1) {
@@ -1804,6 +1814,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
       (*ThisTaskInfo).TaskThreadFree = &TaskThread_Free_1;
       (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_1;
       (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_1;
+      pcName = "1st-thread";
     }
     else if (TaskThread_Free_2) {
       TaskThread_Free_2 = false;
@@ -1811,6 +1822,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
       (*ThisTaskInfo).TaskThreadFree = &TaskThread_Free_2;
       (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_2;
       (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_2;
+      pcName = "2nd-thread";
     }
     else if (TaskThread_Free_3) {
       TaskThread_Free_3 = false;
@@ -1818,6 +1830,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
       (*ThisTaskInfo).TaskThreadFree = &TaskThread_Free_3;
       (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_3;
       (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_3;
+      pcName = "3rd-thread";
     }
     else if (TaskThread_Free_4) {
       TaskThread_Free_4 = false;
@@ -1825,6 +1838,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
       (*ThisTaskInfo).TaskThreadFree = &TaskThread_Free_4;
       (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_4;
       (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_4;
+      pcName = "4th-thread";
     }
     else if (TaskThread_Free_5) {
       TaskThread_Free_5 = false;
@@ -1832,6 +1846,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
       (*ThisTaskInfo).TaskThreadFree = &TaskThread_Free_5;
       (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_5;
       (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_5;
+      pcName = "5th-thread";
     }
     else if (TaskThread_Free_6) {
       TaskThread_Free_6 = false;
@@ -1839,8 +1854,9 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
       (*ThisTaskInfo).TaskThreadFree = &TaskThread_Free_6;
       (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_6;
       (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_6;
+      pcName = "6th-thread";
     }
-    pipelineTaskHandleMap[stepsGroupName] = xTaskCreateStatic(PiplelineFlowTask, NULL, 15000, (void*)ThisTaskInfo, 3, (*ThisTaskInfo).TaskThreadStackBuffer, (*ThisTaskInfo).TaskThreadTaskBuffer);
+    pipelineTaskHandleMap[stepsGroupName] = xTaskCreateStatic(PiplelineFlowTask, pcName.c_str(), 15000, (void*)ThisTaskInfo, 3, (*ThisTaskInfo).TaskThreadStackBuffer, (*ThisTaskInfo).TaskThreadTaskBuffer);
   }
   else {
     ESP_LOGE("", "設定中找不到名為: %s 的 steps group", stepsGroupName.c_str());
@@ -2467,10 +2483,15 @@ void DeviceInfoCheckTask(void* parameter)
 }
 
 void SMachine_Ctrl::BuildDeviceInfoCheckTask() {
-  xTaskCreate(
-    DeviceInfoCheckTask, "DeviceInfoCheck",
-    10000, NULL, 1, &TASK__DeviceInfoChecker
+  xTaskCreateStatic(
+    DeviceInfoCheckTask, "DeviceInfoCheck", StackDepth__DeviceInfoCheck, 
+    NULL, UBaseType__DeviceInfoCheck, StackType__DeviceInfoCheck, 
+    &StaticTask__DeviceInfoCheck
   );
+  // xTaskCreate(
+  //   DeviceInfoCheckTask, "DeviceInfoCheck",
+  //   10000, NULL, 1, &TASK__DeviceInfoChecker
+  // );
 }
 
 

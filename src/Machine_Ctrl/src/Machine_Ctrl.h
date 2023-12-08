@@ -115,15 +115,20 @@ class SMachine_Ctrl
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     void BuildOLEDCheckTask();
-    TaskHandle_t TASK__OLEDCheck = NULL;
-
+    uint32_t StackDepth__OLEDCheck = 10000;
+    UBaseType_t  UBaseType__OLEDCheck = 1;
+    StackType_t StackType__OLEDCheck[10000* sizeof(StackType_t)];
+    StaticTask_t StaticTask__OLEDCheck; 
 
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //! 儀器時鐘確認Task
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     void BuildTimeCheckTask();
-    TaskHandle_t TASK__TimeCheck = NULL;
+    uint32_t StackDepth__TimeCheck = 10000;
+    UBaseType_t  UBaseType__TimeCheck = 1;
+    StackType_t StackType__TimeCheck[10000* sizeof(StackType_t)];
+    StaticTask_t StaticTask__TimeCheck;
 
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //! 排程功能相關
@@ -214,7 +219,12 @@ class SMachine_Ctrl
     void BuildAPICheckerTask();
     TaskHandle_t TASK__APIChecker = NULL;
     void BuildDeviceInfoCheckTask();
-    TaskHandle_t TASK__DeviceInfoChecker = NULL;
+    uint32_t StackDepth__DeviceInfoCheck = 10000;
+    UBaseType_t  UBaseType__DeviceInfoCheck = 1;
+    StackType_t StackType__DeviceInfoCheck[10000* sizeof(StackType_t)];
+    StaticTask_t StaticTask__DeviceInfoCheck; 
+
+    // TaskHandle_t TASK__DeviceInfoChecker = NULL;
 
 
     TaskHandle_t TASK__OTAService = NULL;
