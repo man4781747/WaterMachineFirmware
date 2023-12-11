@@ -2397,6 +2397,7 @@ void DeviceInfoCheckTask(void* parameter)
 { 
   char pWriteBuffer[10240];
   for (;;) {
+    Machine_Ctrl.BackendServer.ws_->cleanupClients(3);
     vTaskDelay(60000/portTICK_PERIOD_MS);
     ESP_LOGI("定期檢查", "===== 開始定期檢查儀器各項狀態 =====");
     if (WiFi.isConnected()) {

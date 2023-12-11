@@ -654,6 +654,7 @@ void CWIFI_Ctrler::ServerStart()
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "*");
   ws.onEvent(onWebSocketEvent);
+  
   asyncServer.addHandler(&ws);
   asyncServer.begin();
   createWebServer();
