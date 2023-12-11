@@ -39,7 +39,7 @@ class SMachine_Ctrl
 
     void INIT_I2C_Wires();
     bool INIT_PoolData();
-
+    char* fileContent;
     //? 緊急終止所有動作，並且回歸初始狀態
     void StopDeviceAndINIT();
 
