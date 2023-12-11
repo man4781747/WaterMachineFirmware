@@ -699,7 +699,6 @@ void CWIFI_Ctrler::setAPIs()
   setAPI(*This);
 
   asyncServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    // AsyncWebServerResponse* response = request->beginResponse(SPIFFS, "/web/index.html", "text/html");
     // File file = SPIFFS.open("/web/index.html", "r");
     // size_t fileSize = file.size();
     // char* fileContent = (char*)malloc(fileSize);
@@ -707,8 +706,11 @@ void CWIFI_Ctrler::setAPIs()
     // file.close();
     // memcpy_P((void*)index_html, fileContent, fileSize);
     // free(fileContent);
-    request->send_P(200, "text/html", Machine_Ctrl.fileContent);
-    // SendHTTPesponse(request, response);
+    // request->send_P(200, "text/html", Machine_Ctrl.fileContent);
+
+    AsyncWebServerResponse* response = request->beginResponse(SPIFFS, "/web/index.html.gz", "text/html", false);
+    response->addHeader("Content-Encoding", "gzip");
+    request->send(response);
   });
 
   asyncServer.on("/api/hi", HTTP_GET, [](AsyncWebServerRequest *request){
