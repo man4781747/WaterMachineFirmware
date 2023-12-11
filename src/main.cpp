@@ -28,7 +28,9 @@
 const char* FIRMWARE_VERSION = "V3.23.1201.2";
 
 void setup() {
+  setCpuFrequencyMhz(240);
   Serial.begin(115200);
+  Serial.println(getCpuFrequencyMhz());
   pinMode(16, OUTPUT);
   pinMode(17, OUTPUT);
   digitalWrite(16, LOW);
@@ -81,7 +83,13 @@ void setup() {
 }
 
 void loop() {
-  vTaskDelay(9999999/portTICK_PERIOD_MS);
+  if (Serial.available()){
+    String getMessage = Serial.readString();
+    if (getMessage == "restart") {
+      esp_restart();
+    }
+  }
+  vTaskDelay(1000/portTICK_PERIOD_MS);
 }
 
 //                                `-+syhddmmmddhyo+:`                              
