@@ -810,13 +810,14 @@ void PiplelineFlowTask(void* parameter)
         // digitalWrite(16, HIGH);
         // digitalWrite(17, HIGH);
         pinMode(4, OUTPUT);
-        digitalWrite(4, HIGH);
         int ServoMotorType = (*Machine_Ctrl.JSON__DeviceConfig)["ServoMotorType"].as<int>();
         // int ServoMotorType = 2;
         if (ServoMotorType==2) {
+          String anyFail = "";
           xSemaphoreTake(Machine_Ctrl.LX_20S_xMutex, portMAX_DELAY);
+          digitalWrite(4, HIGH);
           Serial2.begin(115200,SERIAL_8N1, 9, 10);
-          vTaskDelay(500/portTICK_PERIOD_MS);
+          vTaskDelay(1000/portTICK_PERIOD_MS);
           for (JsonObject pwmMotorItem : eventItem["pwm_motor_list"].as<JsonArray>()) {
             int targetAngValue = map(pwmMotorItem["status"].as<int>(), -30, 210, 0, 1000);
             ESP_LOGI("LOADED_ACTION","       - (LX-20S) %d 轉至 %d 度(%d)", 
@@ -831,22 +832,34 @@ void PiplelineFlowTask(void* parameter)
           vTaskDelay(2000/portTICK_PERIOD_MS);
           for (JsonObject pwmMotorItem : eventItem["pwm_motor_list"].as<JsonArray>()) {
             int targetAngValue = map(pwmMotorItem["status"].as<int>(), -30, 210, 0, 1000);
-            int readAng = LX_20S_SerialServoReadPosition(Serial2, pwmMotorItem["index"].as<int>());
+            int readAng;
+            readAng = LX_20S_SerialServoReadPosition(Serial2, pwmMotorItem["index"].as<int>());
+            if (readAng < -100) {
+              vTaskDelay(200/portTICK_PERIOD_MS);
+              readAng = LX_20S_SerialServoReadPosition(Serial2, pwmMotorItem["index"].as<int>());
+            }
             int d_ang = targetAngValue - readAng;
             if (abs(d_ang)>15) {
               ESP_LOGE("LX-20S", "       - 伺服馬達(LX-20S) 編號 %d 並無轉到指定角度: %d，讀取到的角度為: %d",
                 pwmMotorItem["index"].as<int>(), pwmMotorItem["status"].as<int>(),
                 map(readAng, 0, 1000, -30, 210)
               );
-              ESP_LOGE("LX-20S", "緊急終止儀器");
-              xSemaphoreGive(Machine_Ctrl.LX_20S_xMutex);
-              Machine_Ctrl.StopDeviceAndINIT();
+              anyFail += String(pwmMotorItem["index"].as<int>());
+              anyFail += ",";
             }
-            vTaskDelay(50/portTICK_PERIOD_MS);
+            vTaskDelay(100/portTICK_PERIOD_MS);
           }
-          Serial2.end();
+          // Serial2.end();
+          digitalWrite(4, LOW);
           xSemaphoreGive(Machine_Ctrl.LX_20S_xMutex);
+
+          if (anyFail != "") {
+            ESP_LOGE("LX-20S", "緊急終止儀器");
+            Machine_Ctrl.StopDeviceAndINIT();
+          }
+
         } else {
+          digitalWrite(4, HIGH);
           vTaskDelay(50/portTICK_PERIOD_MS);
           Machine_Ctrl.motorCtrl.ResetPCA9685();
           for (JsonObject pwmMotorItem : eventItem["pwm_motor_list"].as<JsonArray>()) {
@@ -859,9 +872,8 @@ void PiplelineFlowTask(void* parameter)
           }
           vTaskDelay(2000/portTICK_PERIOD_MS);
           Machine_Ctrl.motorCtrl.ResetPCA9685();
+          digitalWrite(4, LOW);
         }
-        digitalWrite(4, LOW);
-        
         // digitalWrite(16, LOW);
         // digitalWrite(17, LOW);
       }
@@ -1761,7 +1773,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
       (*ThisTaskInfo).TaskThreadFree = &TaskThread_Free_1;
       (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_1;
       (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_1;
-      pcName = "1st-thread";
+      pcName = "1st_thread";
     }
     else if (TaskThread_Free_2) {
       TaskThread_Free_2 = false;
@@ -1769,7 +1781,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
       (*ThisTaskInfo).TaskThreadFree = &TaskThread_Free_2;
       (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_2;
       (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_2;
-      pcName = "2nd-thread";
+      pcName = "2nd_thread";
     }
     else if (TaskThread_Free_3) {
       TaskThread_Free_3 = false;
@@ -1777,7 +1789,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
       (*ThisTaskInfo).TaskThreadFree = &TaskThread_Free_3;
       (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_3;
       (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_3;
-      pcName = "3rd-thread";
+      pcName = "3rd_thread";
     }
     else if (TaskThread_Free_4) {
       TaskThread_Free_4 = false;
@@ -1785,7 +1797,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
       (*ThisTaskInfo).TaskThreadFree = &TaskThread_Free_4;
       (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_4;
       (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_4;
-      pcName = "4th-thread";
+      pcName = "4th_thread";
     }
     else if (TaskThread_Free_5) {
       TaskThread_Free_5 = false;
@@ -1793,7 +1805,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
       (*ThisTaskInfo).TaskThreadFree = &TaskThread_Free_5;
       (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_5;
       (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_5;
-      pcName = "5th-thread";
+      pcName = "5th_thread";
     }
     else if (TaskThread_Free_6) {
       TaskThread_Free_6 = false;
@@ -1801,7 +1813,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
       (*ThisTaskInfo).TaskThreadFree = &TaskThread_Free_6;
       (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_6;
       (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_6;
-      pcName = "6th-thread";
+      pcName = "6th_thread";
     }
     pipelineTaskHandleMap[stepsGroupName] = xTaskCreateStatic(PiplelineFlowTask, pcName.c_str(), 15000, (void*)ThisTaskInfo, 3, (*ThisTaskInfo).TaskThreadStackBuffer, (*ThisTaskInfo).TaskThreadTaskBuffer);
   }
@@ -2395,6 +2407,8 @@ void SMachine_Ctrl::BuildAPICheckerTask() {
 
 void DeviceInfoCheckTask(void* parameter)
 { 
+  HTTPClient http;
+  http.setTimeout(1000);
   char pWriteBuffer[10240];
   for (;;) {
     Machine_Ctrl.BackendServer.ws_->cleanupClients(3);
@@ -2402,26 +2416,34 @@ void DeviceInfoCheckTask(void* parameter)
     ESP_LOGI("定期檢查", "===== 開始定期檢查儀器各項狀態 =====");
     if (WiFi.isConnected()) {
       ESP_LOGI("定期檢查", "WiFi連線狀態: 正常");
+      http.begin("http://www.google.com.tw/");
+      int httpResponseCode = http.GET();
+      if (httpResponseCode != 200) {
+        ESP_LOGW("定期檢查", "偵測到WiFi連線異常，重新連線");
+        // Machine_Ctrl.BackendServer.asyncServer_->end();
+        // Machine_Ctrl.BackendServer.asyncServer_->reset();
+        // Machine_Ctrl.BackendServer.ServerStart();
+        WiFi.reconnect();
+        // WiFi.disconnect();
+        // WiFi.begin(
+        //   (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Name"].as<String>().c_str(),
+        //   (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Password"].as<String>().c_str()
+        // );
+      }
     } 
     else {
-      ESP_LOGI("定期檢查", "WiFi連線狀態: 無連線");
+      ESP_LOGI("定期檢查", "WiFi連線狀態: 無連線，嘗試重新連接");
+      WiFi.reconnect();
     }
     ESP_LOGI("定期檢查", "WebSocket 連線數: %d", Machine_Ctrl.BackendServer.ws_->count());
     // Machine_Ctrl.BackendServer.asyncServer_.
     int connectCount = 1;
     for (AsyncWebSocketClient *clientChose : Machine_Ctrl.BackendServer.ws_->getClients()) {
       ESP_LOGI("定期檢查", " - %d, %s:%d", connectCount, clientChose->remoteIP().toString().c_str(), clientChose->remotePort());
-      // Serial.println(clientChose->remoteIP().toString());
-      // Serial.println(clientChose->remotePort());
-      // Serial.println(clientChose->canSend());
-      // Serial.println(clientChose->status());
-      // clientChose->keepAlivePeriod(1);
       connectCount++;
     }
     // ESP_LOGI("定期檢查", "WebSocket 連線數: %d", Machine_Ctrl.BackendServer.ws_->getClients().length());
 
-    // vTaskList((char *)&pWriteBuffer);
-    // Serial.printf("%s", pWriteBuffer);
     ESP_LOGI("定期檢查", "===== 定期檢查儀器各項狀態結束 =====");
   }
 }
