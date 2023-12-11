@@ -91,6 +91,7 @@ class CWIFI_Ctrler
     void ConnectOtherWiFiAP(String SSID, String PW="");
     void UpdateMachineTimerByNTP();
     void ServerStart();
+    void INIT_WebPageFileContent();
 
     ////////////////////////////////////////////////////
     // For WIFI Manager相關

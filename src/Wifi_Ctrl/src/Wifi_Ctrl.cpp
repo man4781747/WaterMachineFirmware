@@ -63,6 +63,7 @@ size_t oteUpdateFileBufferLen;
 uint8_t *newConfigUpdateFileBuffer;
 size_t newConfigUpdateFileBufferLen;
 
+const char index_html[] PROGMEM = {};
 
 enum OTAByFileStatus {
   OTAByFileStatusNO,
@@ -386,6 +387,15 @@ void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
 // For 初始化
 ////////////////////////////////////////////////////
 
+void CWIFI_Ctrler::INIT_WebPageFileContent()
+{
+  File file = SPIFFS.open("/web/index.html", "r");
+  size_t fileSize = file.size();
+  Machine_Ctrl.fileContent = (char*)malloc(fileSize);
+  file.readBytes(Machine_Ctrl.fileContent, fileSize);
+  file.close();
+}
+
 void WiFiConnectChecker(void* parameter) {
   ESP_LOGW("WiFiConnectChecker","開始偵測WiFi是否斷線");
   for (;;) {
@@ -651,10 +661,10 @@ void CWIFI_Ctrler::UpdateMachineTimerByNTP()
  */
 void CWIFI_Ctrler::ServerStart()
 {
+  // INIT_WebPageFileContent();
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "*");
   ws.onEvent(onWebSocketEvent);
-  
   asyncServer.addHandler(&ws);
   asyncServer.begin();
   createWebServer();
@@ -689,8 +699,16 @@ void CWIFI_Ctrler::setAPIs()
   setAPI(*This);
 
   asyncServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    AsyncWebServerResponse* response = request->beginResponse(SPIFFS, "/web/index.html", "text/html");
-    SendHTTPesponse(request, response);
+    // AsyncWebServerResponse* response = request->beginResponse(SPIFFS, "/web/index.html", "text/html");
+    // File file = SPIFFS.open("/web/index.html", "r");
+    // size_t fileSize = file.size();
+    // char* fileContent = (char*)malloc(fileSize);
+    // file.readBytes(fileContent, fileSize);
+    // file.close();
+    // memcpy_P((void*)index_html, fileContent, fileSize);
+    // free(fileContent);
+    request->send_P(200, "text/html", Machine_Ctrl.fileContent);
+    // SendHTTPesponse(request, response);
   });
 
   asyncServer.on("/api/hi", HTTP_GET, [](AsyncWebServerRequest *request){
