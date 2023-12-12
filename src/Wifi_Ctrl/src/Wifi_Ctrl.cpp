@@ -687,10 +687,10 @@ void CWIFI_Ctrler::createWebServer()
 
 void CWIFI_Ctrler::setStaticAPIs()
 {
-  asyncServer.serveStatic("/static/SPIFFS/",SPIFFS,"/");
+  // asyncServer.serveStatic("/assets/",SPIFFS,"/assets").setCacheControl("max-age=31536000");
+  asyncServer.serveStatic("/static/SPIFFS/",SPIFFS,"/").setCacheControl("max-age=31536000");
   asyncServer.serveStatic("/static/SD/",SD,"/");
-  asyncServer.serveStatic("/",SPIFFS,"/").setDefaultFile("index.html");
-  
+  // asyncServer.serveStatic("/",SPIFFS,"/").setDefaultFile("index.html");
 }
 
 void CWIFI_Ctrler::setAPIs()
@@ -708,10 +708,48 @@ void CWIFI_Ctrler::setAPIs()
     // free(fileContent);
     // request->send_P(200, "text/html", Machine_Ctrl.fileContent);
 
-    AsyncWebServerResponse* response = request->beginResponse(SPIFFS, "/web/index.html.gz", "text/html", false);
-    response->addHeader("Content-Encoding", "gzip");
+    // AsyncWebServerResponse* response = request->beginResponse(SPIFFS, "/web/index.html.gz", "text/html", false);
+    // response->addHeader("Content-Encoding", "gzip");
+    // response->addHeader("Cache-Control", "max-age=3600");
+    // request->send(response);
+
+    AsyncWebServerResponse* response = request->beginResponse(SPIFFS, "/web/index.html", "text/html", false);
     request->send(response);
   });
+
+  asyncServer.on("^\\/assets\\/index\\.([a-zA-Z0-9_.-]+)\\.(css|js)$", HTTP_GET,
+    [&](AsyncWebServerRequest *request)
+    { 
+      AsyncWebServerResponse* response;
+      String hash = request->pathArg(0);
+      String type = request->pathArg(1);
+      String fullApi = "/assets/index."+hash+"."+type+".gz";
+      Serial.println(fullApi);
+      if (type=="css") {
+        response = request->beginResponse(SPIFFS, fullApi, "text/css", false);
+      } else if (type=="js") {
+        response = request->beginResponse(SPIFFS, fullApi, "application/javascript", false);
+      }
+      response->addHeader("Content-Encoding", "gzip");
+      response->addHeader("Cache-Control", "public, max-age=691200");
+      request->send(response);
+
+      // AsyncWebServerResponse* response = request->beginResponse(200, "text/plain", fullApi);
+      // SendHTTPesponse(request, response);
+    }
+  );
+
+  asyncServer.on("^\\/assets\\/mainIcon\\.([a-zA-Z0-9_.-]+)\\.ico$", HTTP_GET,
+    [&](AsyncWebServerRequest *request)
+    { 
+      AsyncWebServerResponse* response;
+      String hash = request->pathArg(0);
+      String fullApi = "/assets/mainIcon."+hash+".ico";
+      response = request->beginResponse(SPIFFS, fullApi, "image/x-icon", false);
+      response->addHeader("Cache-Control", "public, max-age=691200");
+      request->send(response);
+    }
+  );
 
   asyncServer.on("/api/hi", HTTP_GET, [](AsyncWebServerRequest *request){
     AsyncWebServerResponse* response = request->beginResponse(200, "text/plain", "HI");
