@@ -2420,6 +2420,7 @@ void DeviceInfoCheckTask(void* parameter)
       ESP_LOGI("定期檢查", "WiFi連線狀態: 正常");
       http.begin("http://www.google.com.tw/");
       int httpResponseCode = http.GET();
+      http.end();
       if (httpResponseCode != 200) {
         ESP_LOGW("定期檢查", "偵測到WiFi連線異常，重新連線");
         // Machine_Ctrl.BackendServer.asyncServer_->end();

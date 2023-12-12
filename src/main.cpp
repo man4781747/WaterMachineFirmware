@@ -25,7 +25,7 @@
 #include "../lib/QRCode/src/qrcode.h"
 //TODO oled暫時這樣寫死
 
-const char* FIRMWARE_VERSION = "V3.23.1201.2";
+const char* FIRMWARE_VERSION = "V3.23.1202.0";
 
 void setup() {
   setCpuFrequencyMhz(240);
