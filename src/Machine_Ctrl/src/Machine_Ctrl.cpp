@@ -546,7 +546,14 @@ void SMachine_Ctrl::StopDeviceAndINIT()
 {
   CleanAllStepTask();
   peristalticMotorsCtrl.SetAllMotorStop();
-  MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
+  int SensorVersion = (*Machine_Ctrl.JSON__DeviceConfig)["SensorVersion"].as<int>();
+  if (SensorVersion==1) {
+    MULTI_LTR_329ALS_01_Ctrler.closeAllSensor();
+  }
+  else if (SensorVersion == 2) {
+    digitalWrite(16, LOW);
+    digitalWrite(17, LOW);
+  }
   digitalWrite(48, LOW);
   xSemaphoreGive(LOAD__ACTION_V2_xMutex);
 }
@@ -809,8 +816,6 @@ void PiplelineFlowTask(void* parameter)
     for (JsonObject eventItem : eventList) {
       //! 伺服馬達控制設定
       if (eventItem.containsKey("pwm_motor_list")) {
-        // digitalWrite(16, HIGH);
-        // digitalWrite(17, HIGH);
         pinMode(4, OUTPUT);
         int ServoMotorType = (*Machine_Ctrl.JSON__DeviceConfig)["ServoMotorType"].as<int>();
         // int ServoMotorType = 2;
@@ -876,8 +881,6 @@ void PiplelineFlowTask(void* parameter)
           Machine_Ctrl.motorCtrl.ResetPCA9685();
           digitalWrite(4, LOW);
         }
-        // digitalWrite(16, LOW);
-        // digitalWrite(17, LOW);
       }
       //! 蠕動馬達控制設定
       else if (eventItem.containsKey("peristaltic_motor_list")) {
@@ -1705,8 +1708,6 @@ void PiplelineFlowTask(void* parameter)
             pHValue,
             Machine_Ctrl.TaskUUID
           );
-
-          Serial.println(14);
           char logBuffer[1000];
           sprintf(
             logBuffer, 
