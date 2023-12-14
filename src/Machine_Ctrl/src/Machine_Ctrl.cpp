@@ -554,6 +554,9 @@ void SMachine_Ctrl::StopDeviceAndINIT()
     digitalWrite(16, LOW);
     digitalWrite(17, LOW);
   }
+  pinMode(48, OUTPUT);
+  digitalWrite(48, LOW);
+  pinMode(48, OUTPUT);
   digitalWrite(48, LOW);
   xSemaphoreGive(LOAD__ACTION_V2_xMutex);
 }

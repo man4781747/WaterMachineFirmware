@@ -30,7 +30,6 @@ const char* FIRMWARE_VERSION = "V3.23.1202.0";
 void setup() {
   setCpuFrequencyMhz(240);
   Serial.begin(115200);
-  Serial.println(getCpuFrequencyMhz());
   pinMode(16, OUTPUT);
   pinMode(17, OUTPUT);
   digitalWrite(16, LOW);
@@ -72,11 +71,9 @@ void setup() {
   Machine_Ctrl.CreateScheduleManagerTask();
   Machine_Ctrl.BuildTimeCheckTask();
   Machine_Ctrl.BuildOLEDCheckTask();
-  // Machine_Ctrl.BackendServer.StartSTAConnectCheck();
   Machine_Ctrl.SetLog(3, "儀器啟動完畢", "");
   ESP_LOGD("", "儀器啟動完畢!");
   delay(1000);
-  // Machine_Ctrl.BuildAPICheckerTask();
   Machine_Ctrl.BuildDeviceInfoCheckTask();
   digitalWrite(16, LOW);
   digitalWrite(17, LOW);
