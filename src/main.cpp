@@ -1,5 +1,5 @@
 // https://github.com/espressif/arduino-esp32/issues/1089
-#include <FreeRTOSConfig.h>
+// #include <FreeRTOSConfig.h>
 // 請到 FreeRTOSConfig.h 新增.
 // #define CONFIG_FREERTOS_USE_TRACE_FACILITY 1
 // #define CONFIG_FREERTOS_USE_STATS_FORMATTING_FUNCTIONS 1
@@ -24,7 +24,7 @@
 #include "../lib/QRCode/src/qrcode.h"
 //TODO oled暫時這樣寫死
 
-const char* FIRMWARE_VERSION = "V3.23.1202.0";
+const char* FIRMWARE_VERSION = "V3.23.1203.0";
 
 void setup() {
   setCpuFrequencyMhz(240);
