@@ -584,9 +584,13 @@ void CWIFI_Ctrler::ConnectToWifi()
     (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Password"].as<String>().c_str()
   );
   WiFi.setAutoReconnect(true);
-  xTaskCreate(
+  // xTaskCreate(
+  //   OTAServiceTask, "TASK__OTAService",
+  //   10000, NULL, 1, &Machine_Ctrl.TASK__OTAService
+  // );
+  xTaskCreatePinnedToCore(
     OTAServiceTask, "TASK__OTAService",
-    10000, NULL, 1, &Machine_Ctrl.TASK__OTAService
+    10000, NULL, 1, &Machine_Ctrl.TASK__OTAService, 1
   );
 }
 
@@ -699,6 +703,7 @@ void CWIFI_Ctrler::setAPIs()
   setAPI(*This);
 
   asyncServer.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    Serial.println("API: /");
     // int headers = request->headers();
     // int i;
     // bool runGz = true;
@@ -736,48 +741,53 @@ void CWIFI_Ctrler::setAPIs()
       String hash = request->pathArg(0);
       String type = request->pathArg(1);
 
+      int headers = request->headers();
+      int i;
+      bool runGz = true;
+      for(i=0;i<headers;i++){
+        AsyncWebHeader* h = request->getHeader(i);
+        Serial.printf("HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
+      }
+      if(request->hasHeader("User-Agent")){
+        AsyncWebHeader* h = request->getHeader("User-Agent");
+        String AgentContent = h->value();
+        if (AgentContent.indexOf("Mobile") != -1) {
+          runGz = false;
+        }
+      }
 
-      // int headers = request->headers();
-      // int i;
-      // bool runGz = true;
-      // for(i=0;i<headers;i++){
-      //   AsyncWebHeader* h = request->getHeader(i);
-      //   Serial.printf("HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
-      // }
-      // if(request->hasHeader("User-Agent")){
-      //   AsyncWebHeader* h = request->getHeader("User-Agent");
-      //   String AgentContent = h->value();
-      //   if (AgentContent.indexOf("Mobile") != -1) {
-      //     runGz = false;
-      //   }
-      // }
+      if (runGz) {
+        String fullApi = "/assets/index."+hash+"."+type+".gz";
+        Serial.println(fullApi);
+        if (!SPIFFS.exists(fullApi)) {
 
-      // if (runGz) {
-      //   String fullApi = "/assets/index."+hash+"."+type+".gz";
-      //   Serial.println(fullApi);
-      //   if (type=="css") {
-      //     response = request->beginResponse(SPIFFS, fullApi, "text/css", false);
-      //   } else if (type=="js") {
-      //     response = request->beginResponse(SPIFFS, fullApi, "application/javascript", false);
-      //   }
-      //   response->addHeader("Content-Encoding", "gzip");
-      //   response->addHeader("Cache-Control", "public, max-age=691200");
-      //   request->send(response);
-      // }
-      // else {
-      //   String fullApi = "/assets/index."+hash+"."+type;
-      //   Serial.println(fullApi);
-      //   if (type=="css") {
-      //     response = request->beginResponse(SPIFFS, fullApi, "text/css", false);
-      //   } else if (type=="js") {
-      //     response = request->beginResponse(SPIFFS, fullApi, "application/javascript", false);
-      //   }
-      //   response->addHeader("Cache-Control", "public, max-age=691200");
-      //   request->send(response);
-      // }
-      String fullApi = "/assets/index."+hash+"."+type;
-      Serial.println(fullApi);
-      if (SPIFFS.exists(fullApi)) {
+        }
+        if (!SD.exists(fullApi)){
+          ExFile_CreateFile(SD, fullApi);
+          File SD_File = SD.open(fullApi, "w");
+          File spiffsFile = SPIFFS.open(fullApi, "r");
+          while (spiffsFile.available()) {
+            char data = spiffsFile.read();
+            SD_File.write(data);
+          }
+          SD_File.close();
+          spiffsFile.close();
+        }
+        
+        if (type=="css") {
+          response = request->beginResponse(SD, fullApi, "text/css", false);
+          // response = request->beginResponse(SPIFFS, fullApi, "text/css", false);
+        } else if (type=="js") {
+          response = request->beginResponse(SD, fullApi, "application/javascript", false);
+          // response = request->beginResponse(SPIFFS, fullApi, "application/javascript", false);
+        }
+        response->addHeader("Content-Encoding", "gzip");
+        response->addHeader("Cache-Control", "public, max-age=691200");
+        request->send(response);
+      }
+      else {
+        String fullApi = "/assets/index."+hash+"."+type;
+        Serial.println(fullApi);
         if (type=="css") {
           response = request->beginResponse(SPIFFS, fullApi, "text/css", false);
         } else if (type=="js") {
@@ -786,10 +796,21 @@ void CWIFI_Ctrler::setAPIs()
         response->addHeader("Cache-Control", "public, max-age=691200");
         request->send(response);
       }
-      else {
-        AsyncWebServerResponse* response = request->beginResponse(200, "text/plain", fullApi);
-        SendHTTPesponse(request, response);
-      }
+      // String fullApi = "/assets/index."+hash+"."+type;
+      // Serial.println(fullApi);
+      // if (SPIFFS.exists(fullApi)) {
+      //   if (type=="css") {
+      //     response = request->beginResponse(SPIFFS, fullApi, "text/css", false);
+      //   } else if (type=="js") {
+      //     response = request->beginResponse(SPIFFS, fullApi, "application/javascript", false);
+      //   }
+      //   response->addHeader("Cache-Control", "public, max-age=691200");
+      //   request->send(response);
+      // }
+      // else {
+      //   AsyncWebServerResponse* response = request->beginResponse(200, "text/plain", fullApi);
+      //   SendHTTPesponse(request, response);
+      // }
       // AsyncWebServerResponse* response = request->beginResponse(200, "text/plain", fullApi);
       // SendHTTPesponse(request, response);
     }

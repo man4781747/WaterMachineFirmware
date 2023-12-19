@@ -642,11 +642,16 @@ void OLEDCheckTask(void* parameter)
 
 void SMachine_Ctrl::BuildOLEDCheckTask() 
 {
-  xTaskCreateStatic(
+  xTaskCreateStaticPinnedToCore(
     OLEDCheckTask, "OLEDCheckTask", StackDepth__OLEDCheck, 
-    NULL, UBaseType__OLEDCheck, StackType__OLEDCheck, 
-    &StaticTask__OLEDCheck
+    NULL, (UBaseType_t)TaskPriority::OLEDCheckTask, StackType__OLEDCheck, 
+    &StaticTask__OLEDCheck,1 
   );
+  // xTaskCreateStatic(
+  //   OLEDCheckTask, "OLEDCheckTask", StackDepth__OLEDCheck, 
+  //   NULL, UBaseType__OLEDCheck, StackType__OLEDCheck, 
+  //   &StaticTask__OLEDCheck
+  // );
 }
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -675,11 +680,16 @@ void TimeCheckTask(void* parameter)
 
 void SMachine_Ctrl::BuildTimeCheckTask() 
 {
-  xTaskCreateStatic(
+  xTaskCreateStaticPinnedToCore(
     TimeCheckTask, "TimeCheckTask", StackDepth__TimeCheck, 
-    NULL, UBaseType__TimeCheck, StackType__TimeCheck, 
-    &StaticTask__TimeCheck
+    NULL, (UBaseType_t)TaskPriority::TimeCheckTask, StackType__TimeCheck, 
+    &StaticTask__TimeCheck, 1
   );
+  // xTaskCreateStatic(
+  //   TimeCheckTask, "TimeCheckTask", StackDepth__TimeCheck, 
+  //   NULL, UBaseType__TimeCheck, StackType__TimeCheck, 
+  //   &StaticTask__TimeCheck
+  // );
 }
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -758,11 +768,16 @@ void ScheduleManager(void* parameter)
 
 void SMachine_Ctrl::CreateScheduleManagerTask() 
 {
-  xTaskCreateStatic(
+  xTaskCreateStaticPinnedToCore(
     ScheduleManager, "ScheduleManager", StackDepth__ScheduleManager, 
-    NULL, UBaseType__ScheduleManager, StackType__ScheduleManager, 
-    &StaticTask__ScheduleManager
+    NULL, (UBaseType_t)TaskPriority::ScheduleManager, StackType__ScheduleManager, 
+    &StaticTask__ScheduleManager, 1
   );
+  // xTaskCreateStatic(
+  //   ScheduleManager, "ScheduleManager", StackDepth__ScheduleManager, 
+  //   NULL, UBaseType__ScheduleManager, StackType__ScheduleManager, 
+  //   &StaticTask__ScheduleManager
+  // );
 }
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1772,7 +1787,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
     strcpy((*ThisTaskInfo).stepsGroupName, stepsGroupName.c_str());
     String pcName;
     (*JSON__pipelineConfig)["steps_group"][stepsGroupName]["RESULT"].set("RUNNING");
-
+    UBaseType_t priority;
     if (TaskThread_Free_1) {
       TaskThread_Free_1 = false;
       Serial.println("使用第一");
@@ -1780,6 +1795,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
       (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_1;
       (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_1;
       pcName = "1st_thread";
+      priority = (UBaseType_t)TaskPriority::PiplelineFlowTask_1;
     }
     else if (TaskThread_Free_2) {
       TaskThread_Free_2 = false;
@@ -1788,6 +1804,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
       (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_2;
       (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_2;
       pcName = "2nd_thread";
+      priority = (UBaseType_t)TaskPriority::PiplelineFlowTask_2;
     }
     else if (TaskThread_Free_3) {
       TaskThread_Free_3 = false;
@@ -1796,6 +1813,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
       (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_3;
       (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_3;
       pcName = "3rd_thread";
+      priority = (UBaseType_t)TaskPriority::PiplelineFlowTask_3;
     }
     else if (TaskThread_Free_4) {
       TaskThread_Free_4 = false;
@@ -1804,6 +1822,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
       (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_4;
       (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_4;
       pcName = "4th_thread";
+      priority = (UBaseType_t)TaskPriority::PiplelineFlowTask_4;
     }
     else if (TaskThread_Free_5) {
       TaskThread_Free_5 = false;
@@ -1812,6 +1831,7 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
       (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_5;
       (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_5;
       pcName = "5th_thread";
+      priority = (UBaseType_t)TaskPriority::PiplelineFlowTask_5;
     }
     else if (TaskThread_Free_6) {
       TaskThread_Free_6 = false;
@@ -1820,8 +1840,10 @@ void SMachine_Ctrl::AddNewPiplelineFlowTask(String stepsGroupName)
       (*ThisTaskInfo).TaskThreadStackBuffer = TaskThread_xStack_6;
       (*ThisTaskInfo).TaskThreadTaskBuffer = &TaskThread_xTaskBuffer_6;
       pcName = "6th_thread";
+      priority = (UBaseType_t)TaskPriority::PiplelineFlowTask_6;
     }
-    pipelineTaskHandleMap[stepsGroupName] = xTaskCreateStatic(PiplelineFlowTask, pcName.c_str(), 15000, (void*)ThisTaskInfo, 3, (*ThisTaskInfo).TaskThreadStackBuffer, (*ThisTaskInfo).TaskThreadTaskBuffer);
+    pipelineTaskHandleMap[stepsGroupName] = xTaskCreateStaticPinnedToCore(PiplelineFlowTask, pcName.c_str(), 15000, (void*)ThisTaskInfo, priority, (*ThisTaskInfo).TaskThreadStackBuffer, (*ThisTaskInfo).TaskThreadTaskBuffer,1);
+    // pipelineTaskHandleMap[stepsGroupName] = xTaskCreateStatic(PiplelineFlowTask, pcName.c_str(), 15000, (void*)ThisTaskInfo, 3, (*ThisTaskInfo).TaskThreadStackBuffer, (*ThisTaskInfo).TaskThreadTaskBuffer);
   }
   else {
     ESP_LOGE("", "設定中找不到名為: %s 的 steps group", stepsGroupName.c_str());
@@ -2192,10 +2214,14 @@ void SMachine_Ctrl::CreatePipelineFlowScanTask(DynamicJsonDocument *pipelineStac
   }
   else {
     if (TASK__pipelineFlowScan == NULL) {
-      TASK__pipelineFlowScan = xTaskCreateStatic(
-        PipelineFlowScan, "PipelineScan", 20000,(void*)pipelineStackList, 4,
-        PipelineFlowScanTask_xStack, &PipelineFlowScanTask_xTaskBuffer
+      TASK__pipelineFlowScan = xTaskCreateStaticPinnedToCore(
+        PipelineFlowScan, "PipelineScan", 20000,(void*)pipelineStackList, (UBaseType_t)TaskPriority::PipelineFlowScan,
+        PipelineFlowScanTask_xStack, &PipelineFlowScanTask_xTaskBuffer, 1
       );
+      // TASK__pipelineFlowScan = xTaskCreateStatic(
+      //   PipelineFlowScan, "PipelineScan", 20000,(void*)pipelineStackList, 4,
+      //   PipelineFlowScanTask_xStack, &PipelineFlowScanTask_xTaskBuffer
+      // );
     }
     else {
       ESP_LOGE("LOAD__ACTION_V2", "發現不合理的流程觸發，TASK__pipelineFlowScan不為NULL，請排查code是否錯誤");
@@ -2405,10 +2431,15 @@ void APICheckerTask(void* parameter)
 }
 
 void SMachine_Ctrl::BuildAPICheckerTask() {
-  xTaskCreate(
+  xTaskCreatePinnedToCore(
     APICheckerTask, "APIChecker",
-    10000, NULL, 1, &TASK__APIChecker
+    10000, NULL, (UBaseType_t)TaskPriority::APICheckerTask, &TASK__APIChecker, 1
   );
+
+  // xTaskCreate(
+  //   APICheckerTask, "APIChecker",
+  //   10000, NULL, 1, &TASK__APIChecker
+  // );
 }
 
 void DeviceInfoCheckTask(void* parameter)
@@ -2421,21 +2452,17 @@ void DeviceInfoCheckTask(void* parameter)
     vTaskDelay(60000/portTICK_PERIOD_MS);
     ESP_LOGI("定期檢查", "===== 開始定期檢查儀器各項狀態 =====");
     if (WiFi.isConnected()) {
+      Serial.println(WiFi.localIP().toString());
       ESP_LOGI("定期檢查", "WiFi連線狀態: 正常");
       http.begin("http://www.google.com.tw/");
       int httpResponseCode = http.GET();
       http.end();
       if (httpResponseCode != 200) {
         ESP_LOGW("定期檢查", "偵測到WiFi連線異常，重新連線");
+        WiFi.reconnect();
         // Machine_Ctrl.BackendServer.asyncServer_->end();
         // Machine_Ctrl.BackendServer.asyncServer_->reset();
         // Machine_Ctrl.BackendServer.ServerStart();
-        WiFi.reconnect();
-        // WiFi.disconnect();
-        // WiFi.begin(
-        //   (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Name"].as<String>().c_str(),
-        //   (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Password"].as<String>().c_str()
-        // );
       }
     } 
     else {
@@ -2456,11 +2483,16 @@ void DeviceInfoCheckTask(void* parameter)
 }
 
 void SMachine_Ctrl::BuildDeviceInfoCheckTask() {
-  xTaskCreateStatic(
+  xTaskCreateStaticPinnedToCore(
     DeviceInfoCheckTask, "DeviceInfoCheck", StackDepth__DeviceInfoCheck, 
-    NULL, UBaseType__DeviceInfoCheck, StackType__DeviceInfoCheck, 
-    &StaticTask__DeviceInfoCheck
+    NULL, (UBaseType_t)TaskPriority::DeviceInfoCheckTask, StackType__DeviceInfoCheck, 
+    &StaticTask__DeviceInfoCheck,1 
   );
+  // xTaskCreateStatic(
+  //   DeviceInfoCheckTask, "DeviceInfoCheck", StackDepth__DeviceInfoCheck, 
+  //   NULL, UBaseType__DeviceInfoCheck, StackType__DeviceInfoCheck, 
+  //   &StaticTask__DeviceInfoCheck
+  // );
 }
 
 

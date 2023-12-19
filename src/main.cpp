@@ -3,7 +3,6 @@
 // 請到 FreeRTOSConfig.h 新增.
 // #define CONFIG_FREERTOS_USE_TRACE_FACILITY 1
 // #define CONFIG_FREERTOS_USE_STATS_FORMATTING_FUNCTIONS 1
-
 // 如果要更改 log level，請去這邊找
 // #include <sdkconfig.h>
 // #undef CONFIG_ARDUHAL_LOG_DEFAULT_LEVEL

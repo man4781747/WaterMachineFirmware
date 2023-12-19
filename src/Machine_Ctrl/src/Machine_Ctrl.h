@@ -22,6 +22,26 @@
 
 #include "Wifi_Ctrl/src/Wifi_Ctrl.h"
 
+//! 為了保證各Task優先級不會打架，用enum來自動分配優先級數字，
+//! 所有Task應該都要先在此定義優先級，也方便統計當前有多少Task
+//! 越往下數字越大，優先級越高
+enum class TaskPriority : UBaseType_t {
+  NoUSE = 0,
+  DeviceInfoCheckTask,  //? 定期自我檢查並記錄儀器各項數值與狀態
+  OLEDCheckTask,        //? OLED螢幕顯示專用Task
+  skip_1,
+  APICheckerTask,       
+  TimeCheckTask,        //? 時鐘檢查用Task
+  ScheduleManager,      //? 儀器本地端排程檢查Task
+  PiplelineFlowTask_6,  //? 流程Thread-6
+  PiplelineFlowTask_5,  //? 流程Thread-5
+  PiplelineFlowTask_4,  //? 流程Thread-4
+  PiplelineFlowTask_3,  //? 流程Thread-3
+  PiplelineFlowTask_2,  //? 流程Thread-2
+  PiplelineFlowTask_1,  //? 流程Thread-1
+  PipelineFlowScan      //? 整理流程管理
+};
+
 /**
  * 儀器控制主體
 */
