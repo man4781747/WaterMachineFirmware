@@ -49,7 +49,8 @@ extern byte ethernet_mac;
 extern IPAddress ethernet_ip;
 // IPAddress ethernet_gateway(192, 168, 20, 1);
 
-
+uint8_t *webJS_Buffer;
+size_t webJS_BufferLen;
 
 const long  gmtOffset_sec = 3600*8; // GMT+8
 const int   daylightOffset_sec = 0; // DST+0
@@ -396,6 +397,16 @@ void CWIFI_Ctrler::INIT_WebPageFileContent()
   file.close();
 }
 
+void CWIFI_Ctrler::ReloadWebJSFile() 
+{
+  File JSFile = SPIFFS.open("/assets/index.afe8dfd1.js.gz", "r");
+  webJS_BufferLen = JSFile.size();
+  webJS_Buffer = (uint8_t *)malloc(webJS_BufferLen);
+  JSFile.read(webJS_Buffer, webJS_BufferLen);
+  JSFile.close();
+  ESP_LOGD("網頁檔案初始化", "大小: %d", webJS_BufferLen);
+}
+
 void WiFiConnectChecker(void* parameter) {
   ESP_LOGW("WiFiConnectChecker","開始偵測WiFi是否斷線");
   for (;;) {
@@ -734,87 +745,119 @@ void CWIFI_Ctrler::setAPIs()
     request->send(response);
   });
 
-  asyncServer.on("^\\/assets\\/index\\.([a-zA-Z0-9_.-]+)\\.(css|js)$", HTTP_GET,
-    [&](AsyncWebServerRequest *request)
-    { 
-      AsyncWebServerResponse* response;
-      String hash = request->pathArg(0);
-      String type = request->pathArg(1);
+  asyncServer.on("^\\/assets\\/index\\.([a-zA-Z0-9_.-]+)\\.(css|js)$", HTTP_GET, [](AsyncWebServerRequest *request){
+    // AsyncWebServerResponse *response = request->beginResponse(
+    //   "application/javascript", webJS_BufferLen, 
+    //   [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+    //   //Write up to "maxLen" bytes into "buffer" and return the amount written.
+    //   //index equals the amount of bytes that have been already sent
+    //   //You will not be asked for more bytes once the content length has been reached.
+    //   //Keep in mind that you can not delay or yield waiting for more data!
+    //   //Send what you currently have and you will be asked for more again
+    //     return webJS_Buffer.read(buffer, maxLen);
+    //   }
+    // );
 
-      int headers = request->headers();
-      int i;
-      bool runGz = true;
-      for(i=0;i<headers;i++){
-        AsyncWebHeader* h = request->getHeader(i);
-        Serial.printf("HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
-      }
-      if(request->hasHeader("User-Agent")){
-        AsyncWebHeader* h = request->getHeader("User-Agent");
-        String AgentContent = h->value();
-        if (AgentContent.indexOf("Mobile") != -1) {
-          runGz = false;
-        }
-      }
+    // AsyncWebServerResponse *response = request->beginResponse_P(
+    //   200, "application/javascript", webJS_Buffer, webJS_BufferLen
+    // );
 
-      if (runGz) {
-        String fullApi = "/assets/index."+hash+"."+type+".gz";
-        Serial.println(fullApi);
-        if (!SPIFFS.exists(fullApi)) {
+    AsyncWebServerResponse *response = request->beginChunkedResponse("application/javascript", [](uint8_t *buffer, size_t maxLen,
+                                                                                          size_t filledLength) -> size_t
+    {
+      ESP_LOGD("beginChunkedResponse", "maxLen: %d, filledLength: %d", maxLen, filledLength);
+      size_t len = min(maxLen, webJS_BufferLen - filledLength);
+      memcpy(buffer, webJS_Buffer + filledLength, len);
 
-        }
-        if (!SD.exists(fullApi)){
-          ExFile_CreateFile(SD, fullApi);
-          File SD_File = SD.open(fullApi, "w");
-          File spiffsFile = SPIFFS.open(fullApi, "r");
-          while (spiffsFile.available()) {
-            char data = spiffsFile.read();
-            SD_File.write(data);
-          }
-          SD_File.close();
-          spiffsFile.close();
-        }
+      return len;
+    });                                                                    
+
+    response->addHeader("Content-Encoding", "gzip");
+    request->send(response);
+
+  });
+
+  // asyncServer.on("^\\/assets\\/index\\.([a-zA-Z0-9_.-]+)\\.(css|js)$", HTTP_GET,
+  //   [&](AsyncWebServerRequest *request)
+  //   { 
+  //     AsyncWebServerResponse* response;
+  //     String hash = request->pathArg(0);
+  //     String type = request->pathArg(1);
+
+  //     int headers = request->headers();
+  //     int i;
+  //     bool runGz = true;
+  //     for(i=0;i<headers;i++){
+  //       AsyncWebHeader* h = request->getHeader(i);
+  //       Serial.printf("HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
+  //     }
+  //     if(request->hasHeader("User-Agent")){
+  //       AsyncWebHeader* h = request->getHeader("User-Agent");
+  //       String AgentContent = h->value();
+  //       if (AgentContent.indexOf("Mobile") != -1) {
+  //         runGz = false;
+  //       }
+  //     }
+
+  //     if (runGz) {
+  //       String fullApi = "/assets/index."+hash+"."+type+".gz";
+  //       Serial.println(fullApi);
+  //       if (!SPIFFS.exists(fullApi)) {
+
+  //       }
+  //       if (!SD.exists(fullApi)){
+  //         ExFile_CreateFile(SD, fullApi);
+  //         File SD_File = SD.open(fullApi, "w");
+  //         File spiffsFile = SPIFFS.open(fullApi, "r");
+  //         while (spiffsFile.available()) {
+  //           char data = spiffsFile.read();
+  //           SD_File.write(data);
+  //         }
+  //         SD_File.close();
+  //         spiffsFile.close();
+  //       }
         
-        if (type=="css") {
-          response = request->beginResponse(SD, fullApi, "text/css", false);
-          // response = request->beginResponse(SPIFFS, fullApi, "text/css", false);
-        } else if (type=="js") {
-          response = request->beginResponse(SD, fullApi, "application/javascript", false);
-          // response = request->beginResponse(SPIFFS, fullApi, "application/javascript", false);
-        }
-        response->addHeader("Content-Encoding", "gzip");
-        response->addHeader("Cache-Control", "public, max-age=691200");
-        request->send(response);
-      }
-      else {
-        String fullApi = "/assets/index."+hash+"."+type;
-        Serial.println(fullApi);
-        if (type=="css") {
-          response = request->beginResponse(SPIFFS, fullApi, "text/css", false);
-        } else if (type=="js") {
-          response = request->beginResponse(SPIFFS, fullApi, "application/javascript", false);
-        }
-        response->addHeader("Cache-Control", "public, max-age=691200");
-        request->send(response);
-      }
-      // String fullApi = "/assets/index."+hash+"."+type;
-      // Serial.println(fullApi);
-      // if (SPIFFS.exists(fullApi)) {
-      //   if (type=="css") {
-      //     response = request->beginResponse(SPIFFS, fullApi, "text/css", false);
-      //   } else if (type=="js") {
-      //     response = request->beginResponse(SPIFFS, fullApi, "application/javascript", false);
-      //   }
-      //   response->addHeader("Cache-Control", "public, max-age=691200");
-      //   request->send(response);
-      // }
-      // else {
-      //   AsyncWebServerResponse* response = request->beginResponse(200, "text/plain", fullApi);
-      //   SendHTTPesponse(request, response);
-      // }
-      // AsyncWebServerResponse* response = request->beginResponse(200, "text/plain", fullApi);
-      // SendHTTPesponse(request, response);
-    }
-  );
+  //       if (type=="css") {
+  //         response = request->beginResponse(SD, fullApi, "text/css", false);
+  //         // response = request->beginResponse(SPIFFS, fullApi, "text/css", false);
+  //       } else if (type=="js") {
+  //         response = request->beginResponse(SD, fullApi, "application/javascript", false);
+  //         // response = request->beginResponse(SPIFFS, fullApi, "application/javascript", false);
+  //       }
+  //       response->addHeader("Content-Encoding", "gzip");
+  //       response->addHeader("Cache-Control", "public, max-age=691200");
+  //       request->send(response);
+  //     }
+  //     else {
+  //       String fullApi = "/assets/index."+hash+"."+type;
+  //       Serial.println(fullApi);
+  //       if (type=="css") {
+  //         response = request->beginResponse(SPIFFS, fullApi, "text/css", false);
+  //       } else if (type=="js") {
+  //         response = request->beginResponse(SPIFFS, fullApi, "application/javascript", false);
+  //       }
+  //       response->addHeader("Cache-Control", "public, max-age=691200");
+  //       request->send(response);
+  //     }
+  //     // String fullApi = "/assets/index."+hash+"."+type;
+  //     // Serial.println(fullApi);
+  //     // if (SPIFFS.exists(fullApi)) {
+  //     //   if (type=="css") {
+  //     //     response = request->beginResponse(SPIFFS, fullApi, "text/css", false);
+  //     //   } else if (type=="js") {
+  //     //     response = request->beginResponse(SPIFFS, fullApi, "application/javascript", false);
+  //     //   }
+  //     //   response->addHeader("Cache-Control", "public, max-age=691200");
+  //     //   request->send(response);
+  //     // }
+  //     // else {
+  //     //   AsyncWebServerResponse* response = request->beginResponse(200, "text/plain", fullApi);
+  //     //   SendHTTPesponse(request, response);
+  //     // }
+  //     // AsyncWebServerResponse* response = request->beginResponse(200, "text/plain", fullApi);
+  //     // SendHTTPesponse(request, response);
+  //   }
+  // );
 
   asyncServer.on("^\\/assets\\/mainIcon\\.([a-zA-Z0-9_.-]+)\\.ico$", HTTP_GET,
     [&](AsyncWebServerRequest *request)

@@ -92,6 +92,7 @@ class CWIFI_Ctrler
     void UpdateMachineTimerByNTP();
     void ServerStart();
     void INIT_WebPageFileContent();
+    void ReloadWebJSFile();
 
     ////////////////////////////////////////////////////
     // For WIFI Manager相關
