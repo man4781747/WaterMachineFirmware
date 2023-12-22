@@ -59,6 +59,8 @@ void setup() {
   ESP_LOGD("", "準備讀取log資訊");
   Machine_Ctrl.PrintOnScreen("Load Logs");
   Machine_Ctrl.SD__LoadOldLogs();
+
+  Machine_Ctrl.BackendServer.ReloadWebJSFile();
   ESP_LOGD("", "準備使用WIFI連線");
   Machine_Ctrl.PrintOnScreen("INIT WiFi");
   Machine_Ctrl.BackendServer.ConnectToWifi();
