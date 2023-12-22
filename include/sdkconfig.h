@@ -787,7 +787,22 @@
 #define CONFIG_ESP_TIMER_IMPL_SYSTIMER 1
 #define CONFIG_ESP32_WIFI_ENABLED 1
 #define CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE 1
+/**
+ * https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/api-reference/kconfig.html#config-esp-wifi-static-rx-buffer-num
+ * WiFi 靜態 RX 緩衝區的最大數量
+ * 設定 WiFi 靜態 RX 緩衝區的數量。每個緩衝區大約佔用 1.6KB RAM。靜態 rx 緩衝區在呼叫 esp_wifi_init 時分配，直到呼叫 esp_wifi_deinit 後才會釋放。
+ * WiFi 硬體使用這些緩衝區來接收所有802.11 幀。較大的數字可能允許更高的吞吐量，但會增加記憶體使用量。
+ * 如果啟用ESP_WIFI_AMPDU_RX_ENABLED，建議將該值設為等於或大於ESP_WIFI_RX_BA_WIN，以獲得更好的吞吐量和與兩個站點的兼容性和 AP。
+*/
 #define CONFIG_ESP32_WIFI_STATIC_RX_BUFFER_NUM 64
+/**
+https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/api-reference/kconfig.html#config-esp-wifi-static-rx-buffer-num
+WiFi 動態 RX 緩衝區的最大數量
+設定WiFi動態RX緩衝區的數量，0表示將分配無限的RX緩衝區（提供足夠的空閒RAM）。每個動態RX緩衝區的大小取決於接收到的資料幀的大小。
+對於每個接收到的資料幀，WiFi 驅動程式都會將其複製到 RX 緩衝區，然後將其傳遞到高層 TCP/IP 堆疊。高層成功接收到資料幀後，動態 RX 緩衝區將被釋放。
+對於某些應用程序，WiFi 資料幀的接收速度可能比應用程式處理它們的速度快。在這些情況下，如果 RX 緩衝區數量不受限制 (0)，我們可能會耗盡記憶體。
+如果設定了動態 RX 緩衝區限制，則它至少應為靜態 RX 緩衝區的數量。
+*/
 #define CONFIG_ESP32_WIFI_DYNAMIC_RX_BUFFER_NUM 256
 #define CONFIG_ESP32_WIFI_STATIC_TX_BUFFER 1
 #define CONFIG_ESP32_WIFI_TX_BUFFER_TYPE 0
@@ -801,6 +816,7 @@
 #define CONFIG_ESP32_WIFI_NVS_ENABLED 1
 #define CONFIG_ESP32_WIFI_TASK_PINNED_TO_CORE_0 1
 #define CONFIG_ESP32_WIFI_SOFTAP_BEACON_MAX_LEN 752
+// 設定WiFi管理短緩衝區的數量。
 #define CONFIG_ESP32_WIFI_MGMT_SBUF_NUM 32
 #define CONFIG_ESP32_WIFI_ENABLE_WPA3_SAE 1
 #define CONFIG_ESP_WIFI_FTM_ENABLE 1
@@ -899,17 +915,43 @@
 #define CONFIG_LWIP_IPV6_RDNSS_MAX_DNS_SERVERS 0
 #define CONFIG_LWIP_NETIF_LOOPBACK 1
 #define CONFIG_LWIP_LOOPBACK_MAX_PBUFS 8
-#define CONFIG_LWIP_MAX_ACTIVE_TCP 16
-#define CONFIG_LWIP_MAX_LISTENING_TCP 16
+// 同時活動的 TCP 連線的最大數量。 實際最大限制由運行時可用的堆內存決定。
+// 更改此值本身不會顯著改變 LWIP 的記憶體使用量，除非達到限制後阻止新的 TCP 連線。
+// from 1 to 1024
+#define CONFIG_LWIP_MAX_ACTIVE_TCP 32
+// 同時偵聽 TCP 連線的最大數量。 實際最大限制由運行時可用的堆內存決定。
+// 變更此值本身不會顯著改變 LWIP 的記憶體使用量，除非達到限制後阻止新的偵聽 TCP 連線。
+#define CONFIG_LWIP_MAX_LISTENING_TCP 32
+//加快TCP重傳間隔。 如果停用，建議將 SYN 重送次數變更為 6，將 TCP 初始 rto 時間變更為 3000。
+// !應該是不用變動
 #define CONFIG_LWIP_TCP_HIGH_SPEED_RETRANSMISSION 1
+// 設定資料段的最大重傳次數。
 #define CONFIG_LWIP_TCP_MAXRTX 12
+// 設定SYN段重傳的最大次數。
 #define CONFIG_LWIP_TCP_SYNMAXRTX 6
+// 設定 TCP 傳輸的最大分段大小。
+// 可以設定較低以節省 RAM，預設值 1460(ipv4)/1440(ipv6) 將提供最佳吞吐量 
+// IPv4 TCP_MSS 範圍：576 <= TCP_MSS <= 1460 
+// IPv6 TCP_MSS 範圍：1220<= TCP_MSS <= 1440
 #define CONFIG_LWIP_TCP_MSS 1460
-#define CONFIG_LWIP_TCP_TMR_INTERVAL 250
+// 設定 TCP 計時器間隔（以毫秒為單位）。
+// 可用於加速不良網路上的連線。較低的值將更快地重新傳送未確認的資料包。
+#define CONFIG_LWIP_TCP_TMR_INTERVAL 125
+// 設定最大段生命週期（以毫秒為單位）。
 #define CONFIG_LWIP_TCP_MSL 60000
+// 設定最大段生命週期（以毫秒為單位）。
 #define CONFIG_LWIP_TCP_FIN_WAIT_TIMEOUT 20000
-#define CONFIG_LWIP_TCP_SND_BUF_DEFAULT 5744
-#define CONFIG_LWIP_TCP_WND_DEFAULT 5744
+// 預設傳送緩衝區大小
+/**
+設定新 TCP 套接字的預設發送緩衝區大小。
+每個套接字發送緩衝區大小可以在運行時使用 lwip_setsockopt(s, TCP_SNDBUF, ...) 更改。
+該值必須至少是 MSS 大小的 2 倍，預設值為預設 MSS 大小的 4 倍。
+設定較小的預設 SNDBUF 大小可以節省一些 RAM，但會降低效能。
+ */
+#define CONFIG_LWIP_TCP_SND_BUF_DEFAULT 1460*4
+
+#define CONFIG_LWIP_TCP_WND_DEFAULT 1460*4
+// 推薦 (LWIP_TCP_WND_DEFAULT/CONFIG_LWIP_TCP_MSS)+2
 #define CONFIG_LWIP_TCP_RECVMBOX_SIZE 6
 #define CONFIG_LWIP_TCP_QUEUE_OOSEQ 1
 #define CONFIG_LWIP_TCP_OVERSIZE_MSS 1
@@ -923,7 +965,8 @@
 #define CONFIG_LWIP_IPV6_MEMP_NUM_ND6_QUEUE 3
 #define CONFIG_LWIP_IPV6_ND6_NUM_NEIGHBORS 5
 #define CONFIG_LWIP_ICMP 1
-#define CONFIG_LWIP_MAX_RAW_PCBS 16
+// 同時活動的 LWIP RAW 協定控制區塊的最大數量。實際最大限制由運行時可用的堆記憶體決定。
+#define CONFIG_LWIP_MAX_RAW_PCBS 32
 #define CONFIG_LWIP_SNTP_MAX_SERVERS 3
 #define CONFIG_LWIP_DHCP_GET_NTP_SRV 1
 #define CONFIG_LWIP_DHCP_MAX_NTP_SERVERS 1
