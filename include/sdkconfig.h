@@ -794,7 +794,7 @@
  * WiFi 硬體使用這些緩衝區來接收所有802.11 幀。較大的數字可能允許更高的吞吐量，但會增加記憶體使用量。
  * 如果啟用ESP_WIFI_AMPDU_RX_ENABLED，建議將該值設為等於或大於ESP_WIFI_RX_BA_WIN，以獲得更好的吞吐量和與兩個站點的兼容性和 AP。
 */
-#define CONFIG_ESP32_WIFI_STATIC_RX_BUFFER_NUM 64
+#define CONFIG_ESP32_WIFI_STATIC_RX_BUFFER_NUM 512
 /**
 https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/api-reference/kconfig.html#config-esp-wifi-static-rx-buffer-num
 WiFi 動態 RX 緩衝區的最大數量
@@ -803,11 +803,11 @@ WiFi 動態 RX 緩衝區的最大數量
 對於某些應用程序，WiFi 資料幀的接收速度可能比應用程式處理它們的速度快。在這些情況下，如果 RX 緩衝區數量不受限制 (0)，我們可能會耗盡記憶體。
 如果設定了動態 RX 緩衝區限制，則它至少應為靜態 RX 緩衝區的數量。
 */
-#define CONFIG_ESP32_WIFI_DYNAMIC_RX_BUFFER_NUM 256
+#define CONFIG_ESP32_WIFI_DYNAMIC_RX_BUFFER_NUM 512
 #define CONFIG_ESP32_WIFI_STATIC_TX_BUFFER 1
 #define CONFIG_ESP32_WIFI_TX_BUFFER_TYPE 0
-#define CONFIG_ESP32_WIFI_STATIC_TX_BUFFER_NUM 32
-#define CONFIG_ESP32_WIFI_CACHE_TX_BUFFER_NUM 64
+#define CONFIG_ESP32_WIFI_STATIC_TX_BUFFER_NUM 128
+#define CONFIG_ESP32_WIFI_CACHE_TX_BUFFER_NUM 512
 #define CONFIG_ESP32_WIFI_CSI_ENABLED 1
 #define CONFIG_ESP32_WIFI_AMPDU_TX_ENABLED 1
 #define CONFIG_ESP32_WIFI_TX_BA_WIN 6
@@ -918,10 +918,10 @@ WiFi 動態 RX 緩衝區的最大數量
 // 同時活動的 TCP 連線的最大數量。 實際最大限制由運行時可用的堆內存決定。
 // 更改此值本身不會顯著改變 LWIP 的記憶體使用量，除非達到限制後阻止新的 TCP 連線。
 // from 1 to 1024
-#define CONFIG_LWIP_MAX_ACTIVE_TCP 32
+#define CONFIG_LWIP_MAX_ACTIVE_TCP 128
 // 同時偵聽 TCP 連線的最大數量。 實際最大限制由運行時可用的堆內存決定。
 // 變更此值本身不會顯著改變 LWIP 的記憶體使用量，除非達到限制後阻止新的偵聽 TCP 連線。
-#define CONFIG_LWIP_MAX_LISTENING_TCP 32
+#define CONFIG_LWIP_MAX_LISTENING_TCP 128
 //加快TCP重傳間隔。 如果停用，建議將 SYN 重送次數變更為 6，將 TCP 初始 rto 時間變更為 3000。
 // !應該是不用變動
 #define CONFIG_LWIP_TCP_HIGH_SPEED_RETRANSMISSION 1
@@ -948,20 +948,20 @@ WiFi 動態 RX 緩衝區的最大數量
 該值必須至少是 MSS 大小的 2 倍，預設值為預設 MSS 大小的 4 倍。
 設定較小的預設 SNDBUF 大小可以節省一些 RAM，但會降低效能。
  */
-#define CONFIG_LWIP_TCP_SND_BUF_DEFAULT 1460*4
+#define CONFIG_LWIP_TCP_SND_BUF_DEFAULT 1460*8
 
-#define CONFIG_LWIP_TCP_WND_DEFAULT 1460*4
+#define CONFIG_LWIP_TCP_WND_DEFAULT 1460*8
 // 推薦 (LWIP_TCP_WND_DEFAULT/CONFIG_LWIP_TCP_MSS)+2
-#define CONFIG_LWIP_TCP_RECVMBOX_SIZE 6
+#define CONFIG_LWIP_TCP_RECVMBOX_SIZE 10
 #define CONFIG_LWIP_TCP_QUEUE_OOSEQ 1
 #define CONFIG_LWIP_TCP_OVERSIZE_MSS 1
 #define CONFIG_LWIP_TCP_RTO_TIME 3000
 #define CONFIG_LWIP_MAX_UDP_PCBS 16
 #define CONFIG_LWIP_UDP_RECVMBOX_SIZE 6
 #define CONFIG_LWIP_CHECKSUM_CHECK_ICMP 1
-#define CONFIG_LWIP_TCPIP_TASK_STACK_SIZE 2560*4
+#define CONFIG_LWIP_TCPIP_TASK_STACK_SIZE 2560*8
 #define CONFIG_LWIP_TCPIP_TASK_AFFINITY_CPU0 1
-#define CONFIG_LWIP_TCPIP_TASK_AFFINITY 0x0
+#define CONFIG_LWIP_TCPIP_TASK_AFFINITY 0x0 
 #define CONFIG_LWIP_IPV6_MEMP_NUM_ND6_QUEUE 3
 #define CONFIG_LWIP_IPV6_ND6_NUM_NEIGHBORS 5
 #define CONFIG_LWIP_ICMP 1
