@@ -399,7 +399,7 @@ void CWIFI_Ctrler::INIT_WebPageFileContent()
 
 void CWIFI_Ctrler::ReloadWebJSFile() 
 {
-  File JSFile = SPIFFS.open("/assets/index.afe8dfd1.js.gz", "r");
+  File JSFile = SPIFFS.open("/assets/index.js.gz", "r");
   webJS_BufferLen = JSFile.size();
   webJS_Buffer = (uint8_t *)malloc(webJS_BufferLen);
   JSFile.read(webJS_Buffer, webJS_BufferLen);
@@ -564,6 +564,9 @@ void WiFiEvent(WiFiEvent_t event)
 
 void CWIFI_Ctrler::ConnectToWifi()
 {
+  
+  // DCONFIG_LWIP_TCP_MSS;
+  ESP_LOGI(LOG_TAG_WIFI, "CONFIG_LWIP_TCP_MSS: %d",CONFIG_LWIP_TCP_MSS);
   WiFi.onEvent(WiFiEvent);
   // WiFi.mode(WIFI_AP_STA);
   WiFi.mode(WIFI_STA);
@@ -599,10 +602,12 @@ void CWIFI_Ctrler::ConnectToWifi()
   //   OTAServiceTask, "TASK__OTAService",
   //   10000, NULL, 1, &Machine_Ctrl.TASK__OTAService
   // );
-  xTaskCreatePinnedToCore(
-    OTAServiceTask, "TASK__OTAService",
-    10000, NULL, 1, &Machine_Ctrl.TASK__OTAService, 1
-  );
+  if (Machine_Ctrl.TASK__OTAService == NULL) {
+    xTaskCreatePinnedToCore(
+      OTAServiceTask, "TASK__OTAService",
+      10000, NULL, 1, &Machine_Ctrl.TASK__OTAService, 1
+    );
+  }
 }
 
 bool CWIFI_Ctrler::CreateSoftAP()
@@ -768,13 +773,14 @@ void CWIFI_Ctrler::setAPIs()
       ESP_LOGD("beginChunkedResponse", "maxLen: %d, filledLength: %d", maxLen, filledLength);
       size_t len = min(maxLen, webJS_BufferLen - filledLength);
       memcpy(buffer, webJS_Buffer + filledLength, len);
-
       return len;
     });                                                                    
-
     response->addHeader("Content-Encoding", "gzip");
+    response->addHeader("Cache-Control", "public, max-age=691200");
     request->send(response);
-
+    // CONFIG_ESP32_WIFI_TASK_PINNED_TO_CORE_0
+    // CONFIG_ESP32_WIFI_TX_BUFFER_TYPE
+    // CONFIG_ESP32_WIFI_STATIC_RX_BUFFER_NUM
   });
 
   // asyncServer.on("^\\/assets\\/index\\.([a-zA-Z0-9_.-]+)\\.(css|js)$", HTTP_GET,
@@ -873,6 +879,37 @@ void CWIFI_Ctrler::setAPIs()
 
   asyncServer.on("/api/hi", HTTP_GET, [](AsyncWebServerRequest *request){
     AsyncWebServerResponse* response = request->beginResponse(200, "text/plain", "HI");
+    SendHTTPesponse(request, response);
+  });
+
+
+  asyncServer.on("^\\/api\\/pipeline\\/config\\/([a-zA-Z0-9_.-]+)\\.json$", HTTP_GET,[&](AsyncWebServerRequest *request){ 
+    String fileName = request->pathArg(0);
+    String fullPath = "/pipelines/"+fileName+".json";
+    AsyncWebServerResponse* response;
+    if (!SD.exists(fullPath)) {
+      response = request->beginResponse(500, "application/json", "{\"Result\":\"Can't Find: "+fileName+"\"}");
+    }
+    else {
+
+      File FileChose = SD.open(fullPath, "r");
+      String ContentString = FileChose.readString();
+      // size_t ContentLen = FileChose.size();
+      // uint8_t* FileContentBuffer = (uint8_t *)malloc(ContentLen);
+      // FileChose.read(FileContentBuffer, ContentLen);
+      FileChose.close();
+
+      // response = request->beginChunkedResponse("application/json", [](uint8_t *buffer, size_t maxLen, ize_t filledLength) -> size_t
+      // {
+      //   size_t len = min(maxLen, FileContentBuffer - filledLength);
+      //   memcpy(buffer, FileContentBuffer + filledLength, len);
+      //   if (len < maxLen) {
+      //     free(FileContentBuffer);
+      //   }
+      //   return len;
+      // });                        
+      response = request->beginResponse(200, "application/json", ContentString);       
+    }
     SendHTTPesponse(request, response);
   });
 
@@ -1167,6 +1204,17 @@ void CWIFI_Ctrler::setAPIs()
       String RetuenString;
       serializeJson((*Machine_Ctrl.JSON__DeviceConfig), RetuenString);
       AsyncWebServerResponse* response = request->beginResponse(200, "application/json", RetuenString);
+      SendHTTPesponse(request, response);
+    }
+  );
+
+  asyncServer.on("/api/config/schedule_config", HTTP_GET,
+    [&](AsyncWebServerRequest *request)
+    { 
+      File FileChose = SD.open("/config/schedule_config.json", "r");
+      String ContentString = FileChose.readString();;
+      FileChose.close();
+      AsyncWebServerResponse* response = request->beginResponse(200, "application/json", ContentString);
       SendHTTPesponse(request, response);
     }
   );

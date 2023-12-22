@@ -28,6 +28,7 @@
 // #include <AsyncWebServer_ESP32_W5500.h>
 #include "AsyncTCP.h"
 #include <HTTPClient.h>
+#include <ESP32Ping.h>
 // #include <WebSocketClient.h>
 
 #include <TimeLib.h>   
@@ -2451,23 +2452,39 @@ void DeviceInfoCheckTask(void* parameter)
     Machine_Ctrl.BackendServer.ws_->cleanupClients(3);
     vTaskDelay(60000/portTICK_PERIOD_MS);
     ESP_LOGI("定期檢查", "===== 開始定期檢查儀器各項狀態 =====");
+    Serial.println(WiFi.status());
     if (WiFi.isConnected()) {
       Serial.println(WiFi.localIP().toString());
       ESP_LOGI("定期檢查", "WiFi連線狀態: 正常");
-      http.begin("http://www.google.com.tw/");
-      int httpResponseCode = http.GET();
-      http.end();
-      if (httpResponseCode != 200) {
+      if (!Ping.ping("www.google.com", 2)) {
         ESP_LOGW("定期檢查", "偵測到WiFi連線異常，重新連線");
-        WiFi.reconnect();
-        // Machine_Ctrl.BackendServer.asyncServer_->end();
-        // Machine_Ctrl.BackendServer.asyncServer_->reset();
-        // Machine_Ctrl.BackendServer.ServerStart();
+        WiFi.disconnect();
+        WiFi.mode(WIFI_OFF);
+        vTaskDelay(1000/portTICK_PERIOD_MS);
+        Machine_Ctrl.BackendServer.ConnectToWifi();
       }
+
+      // http.begin("http://www.google.com.tw/");
+      // int httpResponseCode = http.GET();
+      // http.end();
+      // if (httpResponseCode != 200) {
+      //   ESP_LOGW("定期檢查", "偵測到WiFi連線異常，重新連線");
+      //   WiFi.disconnect();
+      //   WiFi.mode(WIFI_OFF);
+      //   vTaskDelay(1000/portTICK_PERIOD_MS);
+      //   Machine_Ctrl.BackendServer.ConnectToWifi();
+      //   // WiFi.reconnect();
+      //   // Machine_Ctrl.BackendServer.asyncServer_->end();
+      //   // Machine_Ctrl.BackendServer.asyncServer_->reset();
+      //   // Machine_Ctrl.BackendServer.ServerStart();
+      // }
     } 
     else {
       ESP_LOGI("定期檢查", "WiFi連線狀態: 無連線，嘗試重新連接");
-      WiFi.reconnect();
+      WiFi.disconnect();
+      WiFi.mode(WIFI_OFF);
+      vTaskDelay(1000/portTICK_PERIOD_MS);
+      Machine_Ctrl.BackendServer.ConnectToWifi();
     }
     ESP_LOGI("定期檢查", "WebSocket 連線數: %d", Machine_Ctrl.BackendServer.ws_->count());
     // Machine_Ctrl.BackendServer.asyncServer_.
