@@ -64,6 +64,8 @@ size_t oteUpdateFileBufferLen;
 uint8_t *newConfigUpdateFileBuffer;
 size_t newConfigUpdateFileBufferLen;
 
+bool FirstBuildWifi = true;
+
 const char index_html[] PROGMEM = {};
 
 enum OTAByFileStatus {
@@ -566,8 +568,12 @@ void CWIFI_Ctrler::ConnectToWifi()
 {
   
   // DCONFIG_LWIP_TCP_MSS;
+  
   ESP_LOGI(LOG_TAG_WIFI, "CONFIG_LWIP_TCP_MSS: %d",CONFIG_LWIP_TCP_MSS);
-  WiFi.onEvent(WiFiEvent);
+  if (FirstBuildWifi) {
+    WiFi.onEvent(WiFiEvent);
+    FirstBuildWifi = false;
+  }
   // WiFi.mode(WIFI_AP_STA);
   WiFi.mode(WIFI_STA);
   ESP_LOGI(LOG_TAG_WIFI, "Start to connect to wifi");
@@ -597,7 +603,7 @@ void CWIFI_Ctrler::ConnectToWifi()
     (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Name"].as<String>().c_str(),
     (*Machine_Ctrl.JSON__WifiConfig)["Remote"]["remote_Password"].as<String>().c_str()
   );
-  WiFi.setAutoReconnect(true);
+  WiFi.setAutoReconnect(false);
   // xTaskCreate(
   //   OTAServiceTask, "TASK__OTAService",
   //   10000, NULL, 1, &Machine_Ctrl.TASK__OTAService
