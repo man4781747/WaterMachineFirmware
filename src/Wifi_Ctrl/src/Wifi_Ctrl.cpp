@@ -1134,7 +1134,7 @@ void CWIFI_Ctrler::setAPIs()
       SQL_String += StartTime;
       SQL_String += "' AND '";
       SQL_String += EndTime;
-      SQL_String += "' LIMIT 100";
+      SQL_String += "' ORDER BY rowid DESC LIMIT 100";
       // Machine_Ctrl.db_exec(Machine_Ctrl.DB_Sensor,SQL_String, &ReturnData);
 
 
