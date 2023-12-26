@@ -417,7 +417,10 @@ void SMachine_Ctrl::SD__UpdatePipelineConfigList()
 
 void SMachine_Ctrl::SD__LoadOldLogs()
 {
-  db_exec(DB_Log, "SELECT * FROM logs DESC LIMIT 100", JSON__DeviceLogSave);
+  // db_exec(DB_Log, "SELECT COUNT(time) as Count FROM logs", JSON__DeviceLogSave);
+  // db_exec(DB_Log, "SELECT *,rowid FROM logs ORDER BY rowid DESC LIMIT 100", JSON__DeviceLogSave);
+  // serializeJsonPretty(*JSON__DeviceLogSave, Serial);
+  db_exec(DB_Log, "SELECT * FROM logs ORDER BY rowid DESC LIMIT 100", JSON__DeviceLogSave);
   // std::vector<String> logFileNameList;
   // File logsFolder = SD.open("/logs");
   // while (true) {

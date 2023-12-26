@@ -1068,7 +1068,7 @@ void CWIFI_Ctrler::setAPIs()
       SQL_String += StartTime;
       SQL_String += "' AND '";
       SQL_String += EndTime;
-      SQL_String += "' LIMIT 100";
+      SQL_String += "' ORDER BY rowid DESC LIMIT 100";
       // String SQL_String = "SELECT * FROM logs WHERE time BETWEEN '";
       // SQL_String += StartTime;
       // SQL_String += "' AND '";
