@@ -1676,13 +1676,14 @@ void PiplelineFlowTask(void* parameter)
         ESP_LOGI("LOADED_ACTION","      PH計控制");
         for (JsonObject PHmeterItem : eventItem["ph_meter"].as<JsonArray>()) {
           pinMode(15, INPUT);
-          pinMode(7, OUTPUT);
-          digitalWrite(7, HIGH);
+          // pinMode(7, OUTPUT);
+          // digitalWrite(7, HIGH);
           vTaskDelay(1000/portTICK_PERIOD_MS);
           String poolChose = PHmeterItem["pool"].as<String>();
           uint16_t phValue[30];
           for (int i=0;i<30;i++) {
             phValue[i] = analogRead(15);
+            vTaskDelay(50/portTICK_PERIOD_MS);
           }
           //* 原始電壓數值獲得
           double PH_RowValue = afterFilterValue(phValue, 30);
@@ -1703,7 +1704,7 @@ void PiplelineFlowTask(void* parameter)
           (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["DataItem"]["pH"]["data_time"].set(Machine_Ctrl.GetDatetimeString());
           // (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["pH_volt"].set(String(PH_RowValue,2).toDouble());
           // (*Machine_Ctrl.JSON__sensorDataSave)[poolChose]["pH"].set(String(pHValue,2).toDouble());
-          digitalWrite(7, LOW);
+          // digitalWrite(7, LOW);
           Machine_Ctrl.ReWriteLastDataSaveFile(Machine_Ctrl.FilePath__SD__LastSensorDataSave, (*Machine_Ctrl.JSON__sensorDataSave).as<JsonObject>());
           String DataFileFullPath = Machine_Ctrl.SensorDataFolder + Machine_Ctrl.GetDateString("") + "_data.csv";
           Machine_Ctrl.SaveSensorData_photometer(

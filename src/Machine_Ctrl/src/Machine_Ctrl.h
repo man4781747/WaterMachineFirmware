@@ -55,6 +55,8 @@ class SMachine_Ctrl
       vSemaphoreCreateBinary(SQL_xMutex);
       vSemaphoreCreateBinary(LX_20S_xMutex);
       // sqlite3_initialize();
+      pinMode(7, OUTPUT);
+      digitalWrite(7, HIGH);
     };
 
     void INIT_I2C_Wires();
